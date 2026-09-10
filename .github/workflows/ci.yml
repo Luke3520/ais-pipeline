@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore --configuration Release
+
+      # Unit tests reference only AisPipeline.Core and touch no database or filesystem
+      # (ADR-0003). They must stay fast enough to run on every push.
+      - name: Unit tests
+        run: dotnet test tests/AisPipeline.Tests --no-build --configuration Release --verbosity normal
+
+      # Integration tests run the pipeline against fixtures/sample.csv into a temporary
+      # SQLite database. They never require the large DMA files, which are gitignored.
+      - name: Integration tests
+        run: dotnet test tests/AisPipeline.IntegrationTests --no-build --configuration Release --verbosity normal
