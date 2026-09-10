@@ -1,0 +1,24 @@
+# Data: never commit the large DMA dumps
+data/
+*.zip
+*.csv
+!fixtures/*.csv
+
+# .NET
+bin/
+obj/
+*.user
+[Dd]ebug/
+[Rr]elease/
+TestResults/
+*.db
+*.db-shm
+*.db-wal
+
+# OS / editor
+.DS_Store
+.vs/
+.idea/
+
+# Planning notes kept local: they reference context that does not belong in a public repo
+ais-pipeline-plan_1.md
