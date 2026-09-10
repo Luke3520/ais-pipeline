@@ -1,8 +1,10 @@
-# Data: never commit the large DMA dumps
+# Data: never commit the large DMA dumps.
+# These are deliberately anchored rather than bare globs. A plain *.csv also matches the
+# DIRECTORY src/AisPipeline.Adapters.Csv, because git sets core.ignorecase=true on macOS --
+# which silently excluded that whole project until CI failed on a fresh clone.
 data/
-*.zip
-*.csv
-!fixtures/*.csv
+/*.csv
+/*.zip
 
 # .NET
 bin/
