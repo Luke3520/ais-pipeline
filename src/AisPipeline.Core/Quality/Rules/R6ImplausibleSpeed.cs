@@ -18,7 +18,7 @@ public sealed class R6ImplausibleSpeed : IRecordRule
     /// <summary>At or above this but not above <see cref="RejectAboveKn"/>, the row is flagged.</summary>
     public const double FlagAtOrAboveKn = 30.0;
 
-    public string Id => "R6";
+    public string Id => RuleIds.ImplausibleSpeed;
 
     public string Description => "Speed over ground implausible for a tanker";
 

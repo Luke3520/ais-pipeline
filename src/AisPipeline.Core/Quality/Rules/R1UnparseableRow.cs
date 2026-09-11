@@ -12,7 +12,7 @@ namespace AisPipeline.Core.Quality.Rules;
 /// </summary>
 public sealed class R1UnparseableRow : ILineRule
 {
-    public string Id => "R1";
+    public string Id => RuleIds.UnparseableRow;
 
     public string Description => "Row could not be parsed: wrong field count or malformed value";
 

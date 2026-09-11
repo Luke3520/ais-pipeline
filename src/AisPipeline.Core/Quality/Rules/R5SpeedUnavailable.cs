@@ -14,7 +14,7 @@ namespace AisPipeline.Core.Quality.Rules;
 /// </summary>
 public sealed class R5SpeedUnavailable : IRecordRule
 {
-    public string Id => "R5";
+    public string Id => RuleIds.SpeedUnavailable;
 
     public string Description => "Speed over ground unavailable; stored as null and flagged";
 

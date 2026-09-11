@@ -18,7 +18,7 @@ public sealed class R4PositionSentinel : IRecordRule
     public const double MaxLatitude = 90.0;
     public const double MaxLongitude = 180.0;
 
-    public string Id => "R4";
+    public string Id => RuleIds.PositionSentinel;
 
     public string Description => "Position sentinel, null island, or coordinate out of range";
 

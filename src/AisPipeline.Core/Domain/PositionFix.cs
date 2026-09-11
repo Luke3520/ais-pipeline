@@ -30,5 +30,5 @@ public sealed record PositionFix
     /// </summary>
     public bool PositionUnreliable =>
         QualityFlags.Split(',', StringSplitOptions.RemoveEmptyEntries)
-            .Any(id => id is "R7" or "R11");
+            .Any(RuleIds.PositionUnreliable.Contains);
 }

@@ -27,9 +27,22 @@ public sealed class R11SpeedConsistency : ISequenceRule
     /// <summary>Absolute margin, so ordinary GPS scatter at low speed is not a finding.</summary>
     public const double MinimumExcessKn = 3.0;
 
-    public string Id => "R11";
+    /// <summary>
+    /// The vessel must also appear to have gone somewhere. Without this the rule fires on GPS
+    /// scatter exactly as a speed-only R7 did: measured over seven days it produced 35,303 hits
+    /// with a median displacement of 57 metres across a median interval of 2 seconds, and 87% of
+    /// them moved under 100 m (ADR-0025).
+    ///
+    /// Set below R7's 0.5 nm deliberately -- R11 exists to catch movement too slow to trip a
+    /// teleport threshold, so it must be the more sensitive of the two. GPS scatter here reaches
+    /// 118 m at the 90th percentile, so 0.1 nm (185 m) sits clear of it.
+    /// </summary>
+    public const double MinimumDistanceNm = 0.1;
 
-    public string Description => "Reported speed contradicts the speed implied by consecutive positions";
+    public string Id => RuleIds.SpeedConsistency;
+
+    public string Description =>
+        $"Reported speed contradicted by movement over more than {MinimumDistanceNm} nm";
 
     public RuleHit? Evaluate(PositionFix previous, PositionFix current)
     {
@@ -42,6 +55,11 @@ public sealed class R11SpeedConsistency : ISequenceRule
 
         var distanceNm = Haversine.DistanceNm(
             previous.Latitude, previous.Longitude, current.Latitude, current.Longitude);
+
+        if (distanceNm <= MinimumDistanceNm)
+        {
+            return null;
+        }
 
         if (Haversine.ImpliedSpeedKn(distanceNm, current.TimestampUtc - previous.TimestampUtc)
             is not { } impliedKn)

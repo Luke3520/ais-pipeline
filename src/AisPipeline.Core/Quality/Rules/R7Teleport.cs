@@ -26,7 +26,7 @@ public sealed class R7Teleport : ISequenceRule
     /// </summary>
     public const double MinimumDistanceNm = 0.5;
 
-    public string Id => "R7";
+    public string Id => RuleIds.Teleport;
 
     public string Description =>
         $"Implied speed over {ImpossibleSpeedKn} kn across more than {MinimumDistanceNm} nm";

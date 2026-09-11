@@ -24,7 +24,7 @@ public sealed class R8CoverageGap : ISequenceRule
 
     public TimeSpan MaximumGap { get; }
 
-    public string Id => "R8";
+    public string Id => RuleIds.CoverageGap;
 
     public string Description => $"No fix for more than {MaximumGap.TotalMinutes:F0} minutes";
 
