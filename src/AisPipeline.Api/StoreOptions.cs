@@ -14,11 +14,16 @@ public sealed class StoreOptions
 
     public string SqlitePath { get; init; } = IoPath.Combine("data", "ais.db");
 
-    public SqlDialect Dialect => Postgres is null ? SqlDialect.Sqlite : SqlDialect.Postgres;
+    /// <summary>
+    /// Engine selection and connection opening live in <see cref="ReadConnection"/>, shared with
+    /// the CLI. Two copies drifted within a day of the second one existing -- one opened SQLite
+    /// read-only and the other did not.
+    /// </summary>
+    private ReadConnection Connection => ReadConnection.Resolve(Postgres, SqlitePath);
 
-    public Func<DbConnection> ConnectionFactory => Postgres is { } connectionString
-        ? () => new NpgsqlConnection(connectionString)
-        : () => new SqliteConnection($"Data Source={SqlitePath};Mode=ReadOnly");
+    public SqlDialect Dialect => Connection.Dialect;
+
+    public Func<DbConnection> ConnectionFactory => Connection.Factory;
 
     public static StoreOptions FromConfiguration(IConfiguration configuration)
     {

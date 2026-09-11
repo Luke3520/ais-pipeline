@@ -179,8 +179,18 @@ static int Laytime(string[] args)
         return 2;
     }
 
-    var options = StoreConnection(args);
-    using var queries = new SqlAisQueries(options.Factory, options.Dialect);
+    var connection = ReadConnection.Resolve(ValueOf(args, "--postgres"), ValueOf(args, "--db"));
+
+    if (connection.Dialect == SqlDialect.Sqlite && !File.Exists(connection.SqlitePath))
+    {
+        // Checked rather than caught. The store opens read-only, so a mistyped path throws
+        // "unable to open database file" -- accurate, but a stack trace is not an error message,
+        // and this is the same graceful path every other malformed input on this CLI takes.
+        Console.Error.WriteLine($"no database at {connection.SqlitePath}; run ingest and detect first");
+        return 2;
+    }
+
+    using var queries = connection.OpenQueries();
 
     var call = queries
         .ListPortCalls(new PortCallFilter { Mmsi = mmsi, CompleteOnly = true, Limit = 50 })
@@ -238,17 +248,6 @@ static double Number(string[] args, string name, double fallback) =>
      && double.TryParse(raw, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed)
         ? parsed
         : fallback;
-
-static (Func<System.Data.Common.DbConnection> Factory, SqlDialect Dialect) StoreConnection(string[] args)
-{
-    if (ValueOf(args, "--postgres") is { } connectionString)
-    {
-        return (() => new Npgsql.NpgsqlConnection(connectionString), SqlDialect.Postgres);
-    }
-
-    var database = ValueOf(args, "--db") ?? System.IO.Path.Combine("data", "ais.db");
-    return (() => new Microsoft.Data.Sqlite.SqliteConnection($"Data Source={database}"), SqlDialect.Sqlite);
-}
 
 /// <summary>
 /// Pick the adapter. The pipeline does not know or care which one it got -- that is the whole
