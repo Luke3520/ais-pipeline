@@ -45,6 +45,19 @@ mislabelled and no threshold recovers it. The ceiling here is well below 100%.
 
 Re-calibrate with ADR-0024's method as the window grows, rather than adjusting by feel.
 
+## When the geometry cannot be trusted
+
+Detection excludes positionally unreliable fixes from centroid and drift (ADR-0021). That is only
+safe while the excluded fixes are a minority: with one survivor the centroid **is** that fix, drift
+computes to exactly zero, and the stop classifies as the most confident possible berth — on the
+vessels most likely to have been drifting.
+
+A stop therefore records `reliable_fix_count`, and `max_drift_nm` is meaningful only when
+`geometry_trustworthy` is 1 (at least two reliable fixes, and at least half the stop's fixes).
+Otherwise the phase is `Unknown`, counted as neither waiting nor working and surfaced as
+`unclassified_hours`. Never fold it into either: that puts a number the data does not support into
+a laytime calculation (ADR-0025).
+
 ## Presenting thresholds
 
 Drift and gap thresholds record evidence; they do not classify berths. The README says so, and any

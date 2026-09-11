@@ -51,6 +51,51 @@ public class AnnotatePassTests
     }
 
     [Fact]
+    public void BothHalvesOfAnAnomalousPairAreFlagged()
+    {
+        // ADR-0011 requires R8 to flag "the fixes on either side of the gap" and ADR-0021
+        // requires R11 to "flag both fixes". Flagging only the later one leaves the earlier --
+        // often the one actually carrying the bad position -- eligible to drag a centroid and
+        // supply a drift maximum, which is the aggregate poisoning the mechanism exists to stop.
+        var store = StoreWith(
+            Fix(1, 219000001, 0, 56.0),
+            Fix(2, 219000001, 10, 14.0));
+
+        PassOver(store).Run();
+
+        Assert.All(store.Fixes, f =>
+            Assert.Contains("R7", f.QualityFlags, StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void AFixIsNotFlaggedTwiceWhenBothOfItsPairsFire()
+    {
+        // A middle fix belongs to two pairs. If both fire the same rule, the id must appear
+        // once -- otherwise quality_flags accumulates duplicates and the string grows.
+        var store = StoreWith(
+            Fix(1, 219000001, 0, 56.0),
+            Fix(2, 219000001, 10, 14.0),
+            Fix(3, 219000001, 20, 56.0));
+
+        PassOver(store).Run();
+
+        var middle = store.Fixes.Single(f => f.Id == 2).QualityFlags.Split(',');
+        Assert.Single(middle, id => id == "R7");
+    }
+
+    [Fact]
+    public void HitsAreCountedPerPairNotPerFlaggedFix()
+    {
+        // Two fixes get marked by one firing. The report counts firings, so that a rule's hit
+        // rate stays comparable with the row-local rules counted during ingest.
+        var store = StoreWith(
+            Fix(1, 219000001, 0, 56.0),
+            Fix(2, 219000001, 10, 14.0));
+
+        Assert.Equal(1, PassOver(store).Run().RuleHits["R7"]);
+    }
+
+    [Fact]
     public void IngestTimeFlagsSurviveTheAnnotatePass()
     {
         // R5 and R6 are not this pass's to recompute. Overwriting them would erase the record
@@ -72,7 +117,7 @@ public class AnnotatePassTests
         // otherwise a threshold change can never un-flag anything.
         var store = StoreWith(
             Fix(1, 219000001, 0, 56.0, flags: "R7"),
-            Fix(2, 219000001, 3600, 56.001, flags: "R7"));
+            Fix(2, 219000001, 3600, 56.0001, flags: "R7"));
 
         PassOver(store).Run();
 

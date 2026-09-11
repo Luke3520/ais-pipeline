@@ -79,10 +79,10 @@ predicted 63.1%.
 ```
 $ ais detect
 annotated 5,368,195 fixes
-    R7    492      teleports
-    R8    706      coverage gaps
-    R11   35,303   reported speed contradicting implied speed
-detected across 452 vessels (35.4s)
+    R7    492     teleports
+    R8    706     coverage gaps
+    R11   1,562   reported speed contradicting implied speed
+detected across 452 vessels (35.0s)
   stops 809  (complete 517)  port calls 362
   stops where the vessel's own status contradicted its speed: 299 (37.0%)
 ```

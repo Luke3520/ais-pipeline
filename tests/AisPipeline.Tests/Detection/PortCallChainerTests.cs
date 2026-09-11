@@ -22,6 +22,7 @@ public class PortCallChainerTests
             CentroidLongitude = lon,
             MaxDriftNm = driftNm,
             FixCount = 100,
+            ReliableFixCount = 100,
             ReportedStatus = "Moored",
             StatusAgrees = true,
             IsComplete = true,
@@ -178,6 +179,53 @@ public class PortCallChainerTests
 
         Assert.Equal(T0.AddHours(2), call.ArrivedUtc);
         Assert.Equal(T0.AddHours(15), call.DepartedUtc);
+    }
+
+    [Fact]
+    public void AStopWithOneSurvivingFixIsNotClassifiedAsABerth()
+    {
+        // The collapsed-geometry defect: with a single reliable fix the centroid IS that fix,
+        // so drift computes to exactly 0.0 -- the most confident possible berth value, on the
+        // stops most likely to have been a drifting vessel (ADR-0025).
+        var collapsed = Stop(0, 10, driftNm: 0.0) with { FixCount = 200, ReliableFixCount = 1 };
+
+        Assert.False(collapsed.GeometryTrustworthy);
+        Assert.Equal(StopPhase.Unknown, new PortCallChainer().Classify(collapsed));
+    }
+
+    [Fact]
+    public void AStopWithMostFixesExcludedIsNotClassified()
+    {
+        var mostlyExcluded = Stop(0, 10, driftNm: 0.001) with { FixCount = 200, ReliableFixCount = 99 };
+
+        Assert.False(mostlyExcluded.GeometryTrustworthy);
+        Assert.Equal(StopPhase.Unknown, new PortCallChainer().Classify(mostlyExcluded));
+    }
+
+    [Fact]
+    public void AStopWithAMinorityExcludedIsStillClassified()
+    {
+        // The measured worst case is 27% excluded; that geometry is fine and must not be thrown
+        // away by a guard aimed at collapse.
+        var mostlyFine = Stop(0, 10, driftNm: 0.001) with { FixCount = 200, ReliableFixCount = 146 };
+
+        Assert.True(mostlyFine.GeometryTrustworthy);
+        Assert.Equal(StopPhase.Berth, new PortCallChainer().Classify(mostlyFine));
+    }
+
+    [Fact]
+    public void UnknownPhasesAreCountedAsNeitherWaitingNorWorking()
+    {
+        // Folding them into either figure would put a number the data does not support into a
+        // laytime calculation.
+        var call = Assert.Single(new PortCallChainer().Chain([
+            Stop(0, 5, 0.09),
+            Stop(6, 4, 0.0) with { FixCount = 100, ReliableFixCount = 1 },
+        ]));
+
+        Assert.Equal(5.0, call.WaitingHours, 3);
+        Assert.Equal(0.0, call.WorkingHours, 3);
+        Assert.Equal(4.0, call.UnclassifiedHours, 3);
     }
 
     [Fact]

@@ -1,4 +1,5 @@
 using AisPipeline.Core.Domain;
+using AisPipeline.Core.Geo;
 using AisPipeline.Core.Quality;
 using AisPipeline.Core.Quality.Rules;
 
@@ -19,7 +20,7 @@ public class SequenceRuleTests
     };
 
     /// <summary>Latitude offset for a given distance in nautical miles (1' of latitude = 1 nm).</summary>
-    private static double Nm(double nm) => nm / 60.0;
+    private static double Nm(double nm) => nm / (Units.EarthRadiusNm * Math.PI / 180.0);
 
     // ---- R7 ----
 
@@ -49,9 +50,13 @@ public class SequenceRuleTests
         Assert.Null(hit);
     }
 
+    // The boundary is pinned by the values either side of it rather than at it. A distance of
+    // exactly 0.5 nm is not constructible through coordinates: offsetting latitude by 0.5 nm and
+    // measuring it back yields 0.5000000000000808, which is above the gate, not at it. Asserting
+    // "exactly 0.5 is not flagged" would be testing floating-point round-trip, not the rule.
     [Theory]
-    [InlineData(0.49, false)]  // below the distance gate: ignored however fast
-    [InlineData(0.51, true)]   // above it, and fast enough
+    [InlineData(0.4999, false)]
+    [InlineData(0.5001, true)]
     public void R7DistanceGateBoundary(double distanceNm, bool flagged)
     {
         // One second, so implied speed is enormous either way; only distance decides.
@@ -117,6 +122,31 @@ public class SequenceRuleTests
 
         Assert.NotNull(hit);
         Assert.Equal("R11", hit!.RuleId);
+    }
+
+    // As with R7, the exact threshold is not reachable through a coordinate round-trip, so the
+    // boundary is pinned by the closest representable values on each side.
+    [Theory]
+    [InlineData(0.0999, false)]
+    [InlineData(0.1001, true)]
+    public void R11DistanceGateBoundary(double distanceNm, bool flagged)
+    {
+        // Without the gate the rule produced 35,303 hits over seven days with a median
+        // displacement of 57 metres -- GPS scatter at a 2-second reporting interval, the same
+        // defect ADR-0023 fixed for R7 (ADR-0025).
+        var hit = new R11SpeedConsistency().Evaluate(
+            Fix(0, 56.0, 10.0, sog: 0.0),
+            Fix(10, 56.0 + Nm(distanceNm), 10.0));
+
+        Assert.Equal(flagged, hit is not null);
+    }
+
+    [Fact]
+    public void R11IsMoreSensitiveThanR7ByDesign()
+    {
+        // R11 exists to catch movement too slow to trip a teleport threshold, so its gate must
+        // sit below R7's or it can never see anything R7 does not.
+        Assert.True(R11SpeedConsistency.MinimumDistanceNm < R7Teleport.MinimumDistanceNm);
     }
 
     [Fact]

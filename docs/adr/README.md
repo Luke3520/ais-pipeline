@@ -41,4 +41,5 @@ the design.
 | [0021](0021-sog-consistency-and-rule-ordering.md) | SOG consistency rule and annotate-before-detect ordering | Accepted |
 | [0023](0023-teleport-needs-a-distance-gate.md) | Teleport rule needs a distance gate | Accepted |
 | [0024](0024-berth-threshold-scales-with-duration.md) | Berth threshold scales with stop duration | Accepted |
+| [0025](0025-r11-distance-gate-and-geometry-trust.md) | R11 distance gate; a stop refuses to classify untrustworthy geometry | Accepted |
 | [0022](0022-three-lane-review-harness.md) | Three-lane review harness | Accepted |
