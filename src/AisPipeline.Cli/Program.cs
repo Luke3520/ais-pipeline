@@ -192,10 +192,7 @@ static int Laytime(string[] args)
 
     using var queries = connection.OpenQueries();
 
-    var call = queries
-        .ListPortCalls(new PortCallFilter { Mmsi = mmsi, CompleteOnly = true, Limit = 50 })
-        .OrderByDescending(c => c.ArrivedUtc)
-        .FirstOrDefault();
+    var call = queries.MostRecentCompletePortCall(mmsi);
 
     if (call is null)
     {
@@ -204,21 +201,62 @@ static int Laytime(string[] args)
     }
 
     var phases = queries.GetPhasesForPortCalls([call.Id]);
-    var berth = phases.Where(p => p.Phase.Phase == nameof(StopPhase.Berth)).ToList();
 
-    if (berth.Count == 0)
+    // Rebuild the domain shape and let VoyageTimeline decide what can be measured, rather than
+    // picking berth timestamps out of the rows here. It refuses to fabricate a berth time from an
+    // anchorage-only call, and it reports hours inside the berth span whose geometry the pipeline
+    // does not stand behind.
+    var portCall = new PortCall
+    {
+        Mmsi = call.Mmsi,
+        Phases = [.. phases
+            .OrderBy(p => p.Phase.Sequence)
+            .Select(p => new PortCallPhase(
+                p.Phase.Sequence,
+                Enum.Parse<StopPhase>(p.Phase.Phase),
+                new StopEvent
+                {
+                    Mmsi = p.Stop.Mmsi,
+                    StartedUtc = p.Stop.StartedUtc,
+                    EndedUtc = p.Stop.EndedUtc,
+                    CentroidLatitude = p.Stop.CentroidLatitude,
+                    CentroidLongitude = p.Stop.CentroidLongitude,
+                    MaxDriftNm = p.Stop.ObservedMaxDriftNm,
+                    FixCount = p.Stop.FixCount,
+                    ReliableFixCount = p.Stop.ReliableFixCount,
+                    ReportedStatus = p.Stop.ReportedStatus,
+                    StatusAgrees = p.Stop.StatusAgrees,
+                    IsComplete = p.Stop.IsComplete,
+                    FirstPositionId = p.Stop.FirstPositionId,
+                    LastPositionId = p.Stop.LastPositionId,
+                }))],
+    };
+
+    if (VoyageTimeline.FromPortCall(portCall) is not { } timeline)
     {
         Console.Error.WriteLine(
             $"port call {call.Id} has no berth phase, so there are no cargo operations to measure");
         return 2;
     }
 
-    var berthedUtc = berth.Min(p => p.Stop.StartedUtc);
-    var completedUtc = berth.Max(p => p.Stop.EndedUtc);
+    if (!timeline.BerthSpanIsTrustworthy)
+    {
+        // Neither excluding these hours (which favours the charterer) nor counting them (which
+        // favours the owner) is supportable, so no figure is produced. ADR-0025's own title:
+        // a stop must refuse to guess.
+        Console.Error.WriteLine(
+            $"port call {call.Id}: {timeline.UntrustworthyHoursInBerthSpan:F2}h inside the berth " +
+            "span have geometry the pipeline does not stand behind, so this call cannot be priced. " +
+            "Re-run detect after ingesting more of the window, or price it by hand.");
+        return 2;
+    }
 
-    // NOR is a document, not a physical event -- no transponder emits one. Defaulting it to the
-    // moment the vessel arrived at the anchorage is an assumption, and the output says so rather
-    // than presenting it as observed.
+    var berthedUtc = timeline.BerthedUtc!.Value;
+    var completedUtc = timeline.DepartedBerthUtc!.Value;
+
+    // NOR is a document, not a physical event -- no transponder emits one. Substituting arrival
+    // is an assumption, and it travels with the terms into the statement rather than being
+    // annotated once at the point of printing.
     var norAssumed = ValueOf(args, "--nor") is null;
     var nor = norAssumed
         ? call.ArrivedUtc
@@ -230,6 +268,7 @@ static int Laytime(string[] args)
         LaytimeAllowedHours = Number(args, "--allowed", 72.0),
         DemurrageRatePerDay = Money.FromMajor((decimal)Number(args, "--rate", 28_000.0), "USD"),
         NoticeOfReadinessUtc = nor,
+        NoticeOfReadinessIsAssumed = norAssumed,
         TurnTimeHours = Number(args, "--turn", 6.0),
     };
 

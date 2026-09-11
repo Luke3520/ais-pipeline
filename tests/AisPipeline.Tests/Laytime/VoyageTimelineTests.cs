@@ -66,6 +66,54 @@ public class VoyageTimelineTests
     }
 
     [Fact]
+    public void UntrustworthyHoursInsideTheBerthSpanAreCountedAndTheSpanRefused()
+    {
+        // Laytime prices the whole span from first berth to last, so an untrusted stop sitting
+        // between two berth phases is inside the figure whether or not anyone noticed. ADR-0025
+        // keeps Unknown out of waiting and working precisely so it does not reach a laytime
+        // calculation -- and a laytime calculation is what this feeds.
+        var timeline = VoyageTimeline.FromPortCall(Call(
+            (StopPhase.Berth, 0, 10),
+            (StopPhase.Unknown, 11, 4),
+            (StopPhase.Berth, 16, 8)))!;
+
+        Assert.Equal(4.0, timeline.UntrustworthyHoursInBerthSpan, 6);
+        Assert.False(timeline.BerthSpanIsTrustworthy);
+    }
+
+    [Fact]
+    public void AnUnknownPhaseOutsideTheBerthSpanDoesNotTaintIt()
+    {
+        // Untrusted geometry before the vessel berthed is not inside the priced span.
+        var timeline = VoyageTimeline.FromPortCall(Call(
+            (StopPhase.Unknown, 0, 5),
+            (StopPhase.Berth, 10, 8)))!;
+
+        Assert.Equal(0.0, timeline.UntrustworthyHoursInBerthSpan, 6);
+        Assert.True(timeline.BerthSpanIsTrustworthy);
+    }
+
+    [Fact]
+    public void AnUntrustworthyPhaseStraddlingTheBerthStartIsClipped()
+    {
+        var timeline = VoyageTimeline.FromPortCall(Call(
+            (StopPhase.Unknown, 8, 4),
+            (StopPhase.Berth, 10, 8)))!;
+
+        Assert.Equal(2.0, timeline.UntrustworthyHoursInBerthSpan, 6);
+    }
+
+    [Fact]
+    public void ACleanCallIsTrustworthy()
+    {
+        var timeline = VoyageTimeline.FromPortCall(Call(
+            (StopPhase.Anchorage, 0, 19.3),
+            (StopPhase.Berth, 21, 31.8)))!;
+
+        Assert.True(timeline.BerthSpanIsTrustworthy);
+    }
+
+    [Fact]
     public void AnUnknownPhaseIsNotTreatedAsABerth()
     {
         // Geometry that could not be trusted must not become cargo operations (ADR-0025).

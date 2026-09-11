@@ -152,6 +152,10 @@ line and says why, and `IsBalanced` asserts the lines decompose back to the elap
 accounting identity ingest uses. A total nobody can decompose is a total nobody can dispute, and
 disputing it is the point.
 
+**The terms in that example are illustrative, not from any charter party.** 72 hours and
+$28,000/day are plausible tanker defaults chosen for the demonstration; the engine is correct for
+the terms it is given, and the terms are an input. A real claim uses the real fixture's numbers.
+
 **AIS cannot compute demurrage, and the output says so.** Notice of Readiness is an email; hoses on
 and off happen hours after berthing; free pratique is a document. The CLI defaults NOR to arrival
 and labels that assumption rather than presenting it as observed. What AIS supplies is the half a

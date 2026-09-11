@@ -242,6 +242,33 @@ public class LaytimeCalculatorTests
         Assert.Equal(40.0, statement.UsedHours, 6);
     }
 
+    // ---- an assumed notice ----
+
+    [Fact]
+    public void AnAssumedNoticeIsMarkedInTheStatementItself()
+    {
+        // The statement is the unit of provenance. Annotating the assumption only where the CLI
+        // prints it means any consumer serialising the statement -- an API, a log, a test --
+        // shows an assumed timestamp with the same weight as an observed one.
+        var terms = Terms() with { NoticeOfReadinessIsAssumed = true };
+
+        var statement = Calculator.Calculate(terms, berthedUtc: null, Nor.AddHours(40));
+
+        Assert.Contains("ASSUMED", statement.CommencementReason, StringComparison.Ordinal);
+        Assert.Contains(statement.Lines,
+            l => l.Kind == LaytimeLineKind.BeforeCommencement
+              && l.Reason.Contains("ASSUMED", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void AnObservedNoticeCarriesNoAssumptionMarker()
+    {
+        var statement = Calculator.Calculate(Terms(), berthedUtc: null, Nor.AddHours(40));
+
+        Assert.DoesNotContain("ASSUMED", statement.CommencementReason, StringComparison.Ordinal);
+        Assert.DoesNotContain("ASSUMED", statement.ToString(), StringComparison.Ordinal);
+    }
+
     // ---- the accounting identity ----
 
     [Theory]
