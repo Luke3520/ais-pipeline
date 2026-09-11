@@ -9,7 +9,7 @@ namespace AisPipeline.Api.GraphQL;
 /// GraphQL earns its place here rather than duplicating REST: this data is a graph of nested
 /// aggregates whose clients want wildly different slices of it — vessel → port calls → phases →
 /// stops → fixes. Over REST that is either over-fetching or a growth of ad-hoc `include`
-/// parameters. The operational surface stays REST (ADR-0015).
+/// parameters. The operational surface stays REST (ADR-0027).
 /// </summary>
 public sealed class QueryRoot
 {
@@ -64,12 +64,28 @@ public sealed class QueryRoot
 [ExtendObjectType(typeof(StoredVessel))]
 public sealed class VesselExtensions
 {
-    /// <summary>This vessel's port calls.</summary>
+    /// <summary>
+    /// This vessel's port calls, most recent first, capped at 50. Compare the length against
+    /// <c>portCallCount</c> to tell whether the list was cut short.
+    /// </summary>
     public async Task<IReadOnlyList<StoredPortCall>> PortCalls(
         [Parent] StoredVessel vessel,
         PortCallsByVesselDataLoader loader,
         CancellationToken cancellationToken) =>
         await loader.LoadRequiredAsync(vessel.Mmsi, cancellationToken);
+
+    /// <summary>
+    /// How many port calls this vessel has in total, ignoring the cap on <c>portCalls</c>.
+    ///
+    /// Without this a client cannot distinguish a vessel that made exactly fifty calls from one
+    /// whose list was truncated, and any sum of waiting or working hours over the returned list
+    /// would silently undercount (ADR-0028).
+    /// </summary>
+    public async Task<long> PortCallCount(
+        [Parent] StoredVessel vessel,
+        PortCallCountByVesselDataLoader loader,
+        CancellationToken cancellationToken) =>
+        await loader.LoadAsync(vessel.Mmsi, cancellationToken);
 }
 
 /// <summary>Fields hanging off a port call, resolved through DataLoader.</summary>

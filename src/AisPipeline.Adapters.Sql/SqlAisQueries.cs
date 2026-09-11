@@ -37,7 +37,7 @@ public sealed class SqlAisQueries : IAisQueries
     ///
     /// Counting queries is the only way to prove a batched resolver is actually batched: a
     /// GraphQL response looks identical whether it took one round trip or a hundred, and
-    /// wall-clock timing on a small dataset does not distinguish them reliably (ADR-0015).
+    /// wall-clock timing on a small dataset does not distinguish them reliably (ADR-0027).
     /// </summary>
     public int QueryCount { get; private set; }
 
@@ -155,12 +155,32 @@ public sealed class SqlAisQueries : IAisQueries
         var all = c.Query<StoredPortCall>($"""
             {PortCallColumns}
             WHERE {_dialect.InList("mmsi", "@mmsis")}
-            ORDER BY mmsi, arrived_utc
+            ORDER BY mmsi, arrived_utc DESC
             """, new { mmsis = Ids(mmsis) });
 
+        // Most recent first, so a cap drops the oldest rather than the newest. Ascending order
+        // with a Take() kept the earliest calls and discarded everything after -- the opposite of
+        // what a caller asking for a vessel's port calls wants (ADR-0028).
         return [.. all
             .GroupBy(p => p.Mmsi)
             .SelectMany(g => g.Take(Clamp(limitPerVessel)))];
+    }
+
+    public IReadOnlyDictionary<long, long> CountPortCallsForVessels(IReadOnlyCollection<long> mmsis)
+    {
+        if (mmsis.Count == 0)
+        {
+            return new Dictionary<long, long>();
+        }
+
+        using var c = Open();
+        return c.Query<(long Mmsi, long Total)>($"""
+            SELECT mmsi AS Mmsi, COUNT(*) AS Total
+            FROM port_call
+            WHERE {_dialect.InList("mmsi", "@mmsis")}
+            GROUP BY mmsi
+            """, new { mmsis = Ids(mmsis) })
+            .ToDictionary(r => r.Mmsi, r => r.Total);
     }
 
     public IReadOnlyList<(StoredPhase Phase, StoredStop Stop)> GetPhasesForPortCalls(

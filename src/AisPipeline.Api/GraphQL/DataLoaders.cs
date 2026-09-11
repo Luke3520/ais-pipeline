@@ -12,7 +12,7 @@ namespace AisPipeline.Api.GraphQL;
 /// collects the keys raised during one execution and asks once.
 ///
 /// The reason this is possible at all is that <see cref="IAisQueries.GetVessels"/> exists in
-/// batched form. A resolver cannot batch what the port cannot express (ADR-0015).
+/// batched form. A resolver cannot batch what the port cannot express (ADR-0027).
 /// </summary>
 public sealed class VesselByMmsiDataLoader : BatchDataLoader<long, StoredVessel?>
 {
@@ -36,10 +36,18 @@ public sealed class VesselByMmsiDataLoader : BatchDataLoader<long, StoredVessel?
     }
 }
 
-/// <summary>A vessel's port calls, batched across every vessel in one execution.</summary>
+/// <summary>
+/// A vessel's port calls, batched across every vessel in one execution, most recent first.
+///
+/// The cap bounds the work one query can demand. It is paired with
+/// <see cref="PortCallCountByVesselDataLoader"/> so a client can always tell a vessel that made
+/// exactly <see cref="PerVesselCap"/> calls from one whose list was cut short -- a truncation
+/// nobody can detect is a wrong number, not a limit (ADR-0028).
+/// </summary>
 public sealed class PortCallsByVesselDataLoader : GroupedDataLoader<long, StoredPortCall>
 {
-    private const int PerVesselCap = 50;
+    /// <summary>Exposed so the schema description can state the ceiling rather than imply none.</summary>
+    public const int PerVesselCap = 50;
 
     private readonly IAisQueries _queries;
 
@@ -74,6 +82,22 @@ public sealed class PhasesByPortCallDataLoader : GroupedDataLoader<long, PhaseWi
             .GetPhasesForPortCalls(keys)
             .Select(row => new PhaseWithStop(row.Phase, row.Stop))
             .ToLookup(p => p.Phase.PortCallId));
+}
+
+/// <summary>
+/// How many port calls each vessel really has, so a capped list is detectable.
+/// </summary>
+public sealed class PortCallCountByVesselDataLoader : BatchDataLoader<long, long>
+{
+    private readonly IAisQueries _queries;
+
+    public PortCallCountByVesselDataLoader(
+        IAisQueries queries, IBatchScheduler scheduler, DataLoaderOptions options)
+        : base(scheduler, options) => _queries = queries;
+
+    protected override Task<IReadOnlyDictionary<long, long>> LoadBatchAsync(
+        IReadOnlyList<long> keys, CancellationToken cancellationToken) =>
+        Task.FromResult(_queries.CountPortCallsForVessels(keys));
 }
 
 /// <summary>A phase and the stop it refers to, already joined.</summary>

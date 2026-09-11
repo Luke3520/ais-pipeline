@@ -28,6 +28,7 @@ builder.Services
     .AddTypeExtension<PortCallExtensions>()
     .AddDataLoader<VesselByMmsiDataLoader>()
     .AddDataLoader<PortCallsByVesselDataLoader>()
+    .AddDataLoader<PortCallCountByVesselDataLoader>()
     .AddDataLoader<PhasesByPortCallDataLoader>()
     // The whole point of the analytical surface is nesting, so depth has to be allowed -- but an
     // unbounded depth is a denial of service, since each level multiplies the work.
@@ -41,7 +42,7 @@ app.MapScalarApiReference();
 
 // --- REST: the operational surface. Resource-shaped, stable, cheap to cache. -----------------
 // Anything exploratory and deeply nested belongs in GraphQL instead; the two are not duplicated
-// over the same shapes (ADR-0014, ADR-0015).
+// over the same shapes (ADR-0027).
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }))
    .WithSummary("Liveness check");

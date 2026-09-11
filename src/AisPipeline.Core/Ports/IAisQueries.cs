@@ -12,7 +12,7 @@ namespace AisPipeline.Core.Ports;
 /// concerns, and would blur which methods the ingest path is allowed to call.
 ///
 /// This is read/write separation without ceremony -- one database, two interfaces. It is not
-/// CQRS and the README does not call it that (ADR-0014).
+/// CQRS and the README does not call it that (ADR-0027).
 /// </summary>
 public interface IAisQueries : IDisposable
 {
@@ -23,7 +23,7 @@ public interface IAisQueries : IDisposable
     ///
     /// The batched shape exists for DataLoader. Resolving a page of port calls through a
     /// per-call <see cref="GetVessel"/> is a textbook N+1 -- 100 calls, 100 round trips -- and
-    /// this is what makes the batched path possible rather than merely intended (ADR-0015).
+    /// this is what makes the batched path possible rather than merely intended (ADR-0027).
     /// Callers get back only the vessels that exist; a missing mmsi is simply absent.
     /// </summary>
     IReadOnlyList<StoredVessel> GetVessels(IReadOnlyCollection<long> mmsis);
@@ -37,7 +37,18 @@ public interface IAisQueries : IDisposable
 
     IReadOnlyList<StoredPortCall> ListPortCalls(PortCallFilter filter);
 
+    /// <summary>
+    /// Port calls for several vessels, most recent first, capped per vessel.
+    ///
+    /// The cap is a bound on work, not a statement about the vessel. Pair it with
+    /// <see cref="CountPortCallsForVessels"/> so a caller can tell a vessel that made exactly the
+    /// cap's worth of calls from one whose list was cut short -- otherwise a client summing
+    /// waiting and working hours silently undercounts (ADR-0028).
+    /// </summary>
     IReadOnlyList<StoredPortCall> GetPortCallsForVessels(IReadOnlyCollection<long> mmsis, int limitPerVessel);
+
+    /// <summary>How many port calls each vessel actually has, uncapped.</summary>
+    IReadOnlyDictionary<long, long> CountPortCallsForVessels(IReadOnlyCollection<long> mmsis);
 
     /// <summary>Phases of several port calls at once, with their stops already joined.</summary>
     IReadOnlyList<(StoredPhase Phase, StoredStop Stop)> GetPhasesForPortCalls(IReadOnlyCollection<long> portCallIds);
