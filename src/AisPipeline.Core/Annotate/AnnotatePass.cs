@@ -4,6 +4,9 @@ using AisPipeline.Core.Quality;
 
 namespace AisPipeline.Core.Annotate;
 
+/// <summary>A fix whose flags are still being decided, held until its pair has been judged.</summary>
+internal sealed record Pending(AisPipeline.Core.Domain.PositionFix Fix, List<string> Flags);
+
 /// <summary>A fix whose flags changed, and what they became.</summary>
 public sealed record FlagUpdate(long PositionId, string QualityFlags);
 
@@ -44,7 +47,31 @@ public sealed class AnnotatePass
         var updates = new List<FlagUpdate>(_batchSize);
         long examined = 0;
 
-        PositionFix? previous = null;
+        // A sequence rule judges a PAIR, and both halves of that pair are implicated -- ADR-0011
+        // requires R8 to flag "the fixes on either side of the gap", ADR-0021 requires R11 to
+        // "flag both fixes". So the earlier fix's flags cannot be finalised until the next fix
+        // has been read and the rules have run against the pair. One fix is held back for that.
+        //
+        // Flagging only the later fix would leave the earlier one -- often the one actually
+        // carrying the bad position -- unflagged and therefore still contributing to the
+        // centroid and still able to supply the drift maximum, which is exactly the aggregate
+        // poisoning the flag-and-exclude mechanism exists to prevent.
+        Pending? pending = null;
+
+        void Flush(Pending done)
+        {
+            var recomputed = string.Join(',', done.Flags);
+            if (!string.Equals(recomputed, done.Fix.QualityFlags, StringComparison.Ordinal))
+            {
+                updates.Add(new FlagUpdate(done.Fix.Id, recomputed));
+
+                if (updates.Count >= _batchSize)
+                {
+                    _store.UpdateQualityFlags(updates);
+                    updates.Clear();
+                }
+            }
+        }
 
         foreach (var fix in _store.ReadFixesOrdered())
         {
@@ -59,31 +86,41 @@ public sealed class AnnotatePass
                 .Where(id => !owned.Contains(id))
                 .ToList();
 
-            if (previous is not null && previous.Mmsi == fix.Mmsi)
+            var current = new Pending(fix, kept);
+
+            if (pending is { } earlier && earlier.Fix.Mmsi == fix.Mmsi)
             {
                 foreach (var rule in _rules)
                 {
-                    if (rule.Evaluate(previous, fix) is { } hit)
+                    if (rule.Evaluate(earlier.Fix, fix) is { } hit)
                     {
-                        kept.Add(hit.RuleId);
+                        // Both halves. The count stays per-pair: one firing, two fixes marked.
+                        if (!earlier.Flags.Contains(hit.RuleId, StringComparer.Ordinal))
+                        {
+                            earlier.Flags.Add(hit.RuleId);
+                        }
+
+                        if (!current.Flags.Contains(hit.RuleId, StringComparer.Ordinal))
+                        {
+                            current.Flags.Add(hit.RuleId);
+                        }
+
                         hits[hit.RuleId] = hits.GetValueOrDefault(hit.RuleId) + 1;
                     }
                 }
             }
 
-            var recomputed = string.Join(',', kept);
-            if (!string.Equals(recomputed, fix.QualityFlags, StringComparison.Ordinal))
+            if (pending is { } complete)
             {
-                updates.Add(new FlagUpdate(fix.Id, recomputed));
-
-                if (updates.Count >= _batchSize)
-                {
-                    _store.UpdateQualityFlags(updates);
-                    updates.Clear();
-                }
+                Flush(complete);
             }
 
-            previous = fix;
+            pending = current;
+        }
+
+        if (pending is { } last)
+        {
+            Flush(last);
         }
 
         if (updates.Count > 0)
