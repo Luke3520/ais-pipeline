@@ -60,6 +60,14 @@ public sealed record EventComparison(
         var sof = SofUtc?.ToString("yyyy-MM-dd HH:mm") ?? "—";
         var ais = AisUtc?.ToString("yyyy-MM-dd HH:mm") ?? "—";
         var delta = UnexplainedDelta is { } d ? $"{d.TotalMinutes,+7:F0} min" : "      —";
-        return $"{Kind,-26} SoF {sof}   AIS {ais}   {delta}   {Verdict}";
+
+        // Name the offset wherever the verdict appears. An "Agrees" that already had 45 inferred
+        // minutes subtracted from it is a different claim from one that needed none, and a reader
+        // must not have to find an ADR to learn which they are looking at.
+        var offset = ExpectedOffset == TimeSpan.Zero
+            ? ""
+            : $"  [allowing {ExpectedOffset.TotalMinutes:F0} min inferred lag]";
+
+        return $"{Kind,-26} SoF {sof}   AIS {ais}   {delta}   {Verdict}{offset}";
     }
 }

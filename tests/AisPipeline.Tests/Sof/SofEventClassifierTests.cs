@@ -48,6 +48,26 @@ public class SofEventClassifierTests
         Assert.Equal(SofEventKind.Anchored, SofEventClassifier.Classify("Dropped anchor"));
     }
 
+    [Theory]
+    [InlineData("Vessel unmoored")]
+    [InlineData("Vessel unmoored and departed berth")]
+    [InlineData("Unmoored")]
+    public void UnmooredIsDepartureNotArrival(string label)
+    {
+        // "moored" is a substring of "unmoored". With AllFast tested first, these classified as
+        // the vessel ARRIVING -- so a document using this vocabulary lost its departure time from
+        // both the comparison table and the priced statement, and laytime ended at cargo
+        // completion instead.
+        Assert.Equal(SofEventKind.LeftBerth, SofEventClassifier.Classify(label));
+    }
+
+    [Theory]
+    [InlineData("Vessel moored")]
+    [InlineData("Moored alongside berth 3")]
+    [InlineData("All fast")]
+    public void ArrivalVocabularyStillClassifiesAsAllFast(string label) =>
+        Assert.Equal(SofEventKind.AllFast, SofEventClassifier.Classify(label));
+
     [Fact]
     public void LeftBerthIsNotReadAsCargoDespiteTheWordOrder() =>
         Assert.Equal(SofEventKind.LeftBerth, SofEventClassifier.Classify("Left berth (last line)"));

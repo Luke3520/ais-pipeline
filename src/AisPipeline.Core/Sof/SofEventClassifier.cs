@@ -35,13 +35,16 @@ public static class SofEventClassifier
         (SofEventKind.AnchorAweigh, [["anchor", "aweigh"], ["weigh", "anchor"], ["anchor", "up"]]),
         (SofEventKind.Anchored, [["drop", "anchor"], ["anchored"], ["arrived", "anchorage"]]),
 
+        // Departure BEFORE arrival, because "moored" is a substring of "unmoored": with AllFast
+        // tested first, a document reading "Vessel unmoored" classified as the vessel arriving,
+        // and its departure time vanished from both the comparison and the priced statement.
+        //
+        // Deliberately NOT "cast off": both sample documents use that for tugs -- "Tug boat cast
+        // off" -- which is a different event by up to half an hour.
+        (SofEventKind.LeftBerth, [["left berth"], ["last line"], ["unmoor"], ["vessel", "sailed"]]),
+
         (SofEventKind.AllFast, [["all fast"], ["vessel", "moored"], ["moored", "alongside"]]),
         (SofEventKind.FirstLineAshore, [["first line"], ["first rope"]]),
-
-        // "Left berth (last line)" is the vessel leaving. Deliberately NOT "cast off": both
-        // sample documents use that for tugs -- "Tug boat cast off" -- which is a different event
-        // by up to half an hour.
-        (SofEventKind.LeftBerth, [["left berth"], ["last line"], ["unmoor"], ["vessel", "sailed"]]),
 
         (SofEventKind.CargoCompleted, [
             ["complet", "discharg"], ["complet", "load"], ["complet", "cargo"], ["finish", "cargo"]]),

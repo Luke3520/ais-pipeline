@@ -208,6 +208,80 @@ public class TimelineReconcilerTests
     }
 
     [Fact]
+    public void EveryRecordedEventIsAccountedForSomewhere()
+    {
+        // The Immingham document carries four "NOR re-tendered" lines. Three were invisible:
+        // not in the table, because First() took one, and not in the unclassified list, because
+        // they were classified.
+        var sof = AgreeingSof(
+            Event(SofEventKind.NoticeOfReadinessTendered, "NOR tendered", 1),
+            Event(SofEventKind.NoticeOfReadinessTendered, "NOR re-tendered", 8),
+            Event(SofEventKind.NoticeOfReadinessTendered, "NOR re-tendered", 16));
+
+        var result = Reconciler.Reconcile(sof, AisCall(), Terms());
+
+        var compared = result.Comparisons.Count(c => c.SofUtc is not null);
+        var notCompared = result.ClassifiedButNotCompared.Count;
+        var unclassified = sof.Events.Count(e => e.Kind == SofEventKind.Other);
+
+        Assert.Equal(sof.Events.Count, compared + notCompared + unclassified);
+        Assert.Equal(2, notCompared);
+    }
+
+    [Fact]
+    public void TheComparisonTableShowsTheSameDepartureTheStatementIsPricedFrom()
+    {
+        // The classifier folds "last line" and "vessel sailed" into one kind, so a document
+        // recording both produced two LeftBerth events -- and the table displayed the earlier
+        // while the price used the later. An audit trail that does not match the number printed
+        // under it is worse than no audit trail.
+        var sof = new StatementOfFacts
+        {
+            Mmsi = 219000001,
+            VesselName = "TEST",
+            Port = "Fredericia",
+            Events =
+            [
+                Event(SofEventKind.AllFast, "All fast", 22.75),
+                Event(SofEventKind.LeftBerth, "Left berth (last line)", 70),
+                Event(SofEventKind.LeftBerth, "Vessel sailed", 71.5),
+            ],
+        };
+
+        var result = Reconciler.Reconcile(sof, AisCall(), Terms());
+        var shown = result.Comparisons.Single(c => c.Kind == SofEventKind.LeftBerth).SofUtc;
+
+        Assert.Equal(shown, result.FromStatementOfFacts.CompletedUtc);
+    }
+
+    [Theory]
+    [InlineData(30, ComparisonVerdict.Agrees)]     // boundary: exactly the tolerance is accepted
+    [InlineData(31, ComparisonVerdict.Disagrees)]  // first minute past it
+    [InlineData(-30, ComparisonVerdict.Agrees)]    // and the same on the other side
+    [InlineData(-31, ComparisonVerdict.Disagrees)]
+    public void TheAllFastToleranceBoundaryIsInclusive(int unexplainedMinutes, ComparisonVerdict expected)
+    {
+        // AIS stop at 22h, expected lag 45 min, so an unexplained delta of N minutes means the
+        // document says all fast at 22h + 45min + N.
+        var allFast = T0.AddHours(22).AddMinutes(45 + unexplainedMinutes);
+        var sof = new StatementOfFacts
+        {
+            Mmsi = 219000001,
+            VesselName = "TEST",
+            Port = "Fredericia",
+            Events =
+            [
+                new SofEvent(allFast, SofEventKind.AllFast, "All fast"),
+                Event(SofEventKind.LeftBerth, "Left berth (last line)", 70),
+            ],
+        };
+
+        var result = Reconciler.Reconcile(sof, AisCall(), Terms());
+
+        Assert.Equal(expected, result.Comparisons.Single(c => c.Kind == SofEventKind.AllFast).Verdict);
+    }
+
+    [Fact]
     public void AnUntrustworthyBerthSpanIsRefusedRatherThanCompared()
     {
         var call = new PortCall

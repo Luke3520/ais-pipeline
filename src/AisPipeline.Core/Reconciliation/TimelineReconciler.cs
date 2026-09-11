@@ -22,6 +22,17 @@ public sealed record Reconciliation
         Comparisons.Where(c => c.Verdict == ComparisonVerdict.AisCannotObserve);
 
     /// <summary>
+    /// Events the document records that were classified but not compared, because an earlier
+    /// event of the same kind was used instead.
+    ///
+    /// The real Immingham document carries four "NOR re-tendered" lines. Three of them were
+    /// invisible: not in the table, and not in the CLI's "kept but not classified" list either,
+    /// because they were classified. Unrecognised events were already reported; recognised
+    /// duplicates were the gap.
+    /// </summary>
+    public required IReadOnlyList<SofEvent> ClassifiedButNotCompared { get; init; }
+
+    /// <summary>
     /// What the disagreement is worth: the difference between the two statements' demurrage.
     ///
     /// **Not the sum of the deltas priced individually**, which is the intuitive thing to do and
@@ -126,9 +137,23 @@ public sealed class TimelineReconciler
                 e is null ? ComparisonVerdict.AbsentFromStatement : ComparisonVerdict.AisCannotObserve));
         }
 
+        // Every event the document records must be accounted for somewhere: compared, reported as
+        // uncorroborated, listed as unclassified, or named here.
+        var used = comparisons
+            .Where(c => c.SofUtc is not null)
+            .Select(c => (c.Kind, c.SofUtc!.Value))
+            .ToHashSet();
+
+        var notCompared = sof.Events
+            .Where(e => e.Kind != SofEventKind.Other)
+            .Where(e => !used.Contains((e.Kind, e.TimestampUtc)))
+            .OrderBy(e => e.TimestampUtc)
+            .ToList();
+
         return new Reconciliation
         {
             Comparisons = comparisons,
+            ClassifiedButNotCompared = notCompared,
             FromStatementOfFacts = StatementFrom(sof, terms),
             FromAis = _calculator.Calculate(terms, timeline.BerthedUtc, timeline.DepartedBerthUtc!.Value),
         };
@@ -141,7 +166,14 @@ public sealed class TimelineReconciler
     private LaytimeStatement StatementFrom(StatementOfFacts sof, CharterPartyTerms terms)
     {
         var berthed = sof.First(SofEventKind.AllFast)?.TimestampUtc;
-        var completed = sof.Last(SofEventKind.LeftBerth)?.TimestampUtc
+
+        // First, not Last, and the same event the comparison table shows. The classifier folds
+        // "last line" and "vessel sailed" into one kind, so a document recording both produced two
+        // LeftBerth events -- and the table displayed the earlier while the price used the later.
+        // An audit trail that does not match the number printed under it is worse than no audit
+        // trail. The earliest departure marker is also the right one: it is when the vessel starts
+        // moving, which is what AIS corresponds to and where cargo operations have ended.
+        var completed = sof.First(SofEventKind.LeftBerth)?.TimestampUtc
             ?? sof.Last(SofEventKind.CargoCompleted)?.TimestampUtc
             ?? throw new ArgumentException(
                 "the statement records neither a departure nor a cargo completion, so it defines "
