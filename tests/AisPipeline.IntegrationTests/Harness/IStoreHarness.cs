@@ -1,3 +1,5 @@
+using System.Data.Common;
+using AisPipeline.Adapters.Sql;
 using AisPipeline.Core.Ports;
 
 namespace AisPipeline.IntegrationTests.Harness;
@@ -26,4 +28,10 @@ public interface IStoreHarness : IDisposable
 
     /// <summary>Single numeric value, for assertions about which row won a conflict.</summary>
     long Scalar(string sql);
+
+    /// <summary>A closed connection to this harness's database, for the shared read side.</summary>
+    Func<DbConnection> ConnectionFactory { get; }
+
+    /// <summary>Which engine, for the one predicate the read side cannot spell identically.</summary>
+    SqlDialect Dialect { get; }
 }

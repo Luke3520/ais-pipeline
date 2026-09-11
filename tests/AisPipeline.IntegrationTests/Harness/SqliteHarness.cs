@@ -1,3 +1,5 @@
+using System.Data.Common;
+using AisPipeline.Adapters.Sql;
 using AisPipeline.Adapters.Sqlite;
 using AisPipeline.Core.Ports;
 using Microsoft.Data.Sqlite;
@@ -13,6 +15,11 @@ public sealed class SqliteHarness : IStoreHarness
     public string Name => "SQLite";
 
     public IAisStore Create() => new SqliteAisStore(_path);
+
+    public Func<DbConnection> ConnectionFactory =>
+        () => new SqliteConnection($"Data Source={_path}");
+
+    public SqlDialect Dialect => SqlDialect.Sqlite;
 
     public long Count(string table) => Scalar($"SELECT COUNT(*) FROM {table}");
 

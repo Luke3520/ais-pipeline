@@ -1,3 +1,5 @@
+using System.Data.Common;
+using AisPipeline.Adapters.Sql;
 using AisPipeline.Adapters.Postgres;
 using AisPipeline.Core.Ports;
 using Npgsql;
@@ -41,6 +43,11 @@ public sealed class PostgresHarness : IStoreHarness
         new NpgsqlConnectionStringBuilder(_baseConnectionString) { SearchPath = _schema }.ToString();
 
     public IAisStore Create() => new PostgresAisStore(ScopedConnectionString);
+
+    public Func<DbConnection> ConnectionFactory =>
+        () => new NpgsqlConnection(ScopedConnectionString);
+
+    public SqlDialect Dialect => SqlDialect.Postgres;
 
     public long Count(string table) => Scalar($"SELECT COUNT(*) FROM {table}");
 
