@@ -18,6 +18,8 @@ public sealed class SqliteHarness : IStoreHarness
 
     public long CountWhere(string sql) => Scalar(sql);
 
+    long IStoreHarness.Scalar(string sql) => Scalar(sql);
+
     private long Scalar(string sql)
     {
         using var connection = new SqliteConnection($"Data Source={_path}");

@@ -23,4 +23,7 @@ public interface IStoreHarness : IDisposable
 
     /// <summary>Rows matching a WHERE clause, for the provenance assertions.</summary>
     long CountWhere(string sql);
+
+    /// <summary>Single numeric value, for assertions about which row won a conflict.</summary>
+    long Scalar(string sql);
 }

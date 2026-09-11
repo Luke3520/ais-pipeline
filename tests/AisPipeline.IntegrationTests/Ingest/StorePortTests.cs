@@ -95,6 +95,39 @@ public class StorePortTests
 
     [Theory]
     [ClassData(typeof(StoreHarnesses))]
+    public void BothRunsReadTheSameNumberOfRows(Func<IStoreHarness> make)
+    {
+        // The read side of the accounting identity. IsBalanced only proves each run adds up
+        // internally; if the second run read fewer rows it could still balance while having
+        // quietly skipped part of the file.
+        using var harness = make();
+
+        var first = Ingest(harness);
+        var second = Ingest(harness);
+
+        Assert.Equal(first.Counters.RowsRead, second.Counters.RowsRead);
+    }
+
+    [Theory]
+    [ClassData(typeof(StoreHarnesses))]
+    public void AReRefusedRowStaysAttributedToTheFirstRunThatRefusedIt(Func<IStoreHarness> make)
+    {
+        // ADR-0025: the first run to refuse a row owns it, matching how position_report keeps
+        // its original ingest_run_id. The point is that attribution is unambiguous, not which
+        // run wins -- an auditor asking "which run rejected this" must get one answer.
+        using var harness = make();
+        Ingest(harness);
+        var firstRun = harness.Scalar("SELECT DISTINCT ingest_run_id FROM quarantine");
+
+        Ingest(harness);
+
+        Assert.Equal(1, harness.CountWhere(
+            "SELECT COUNT(*) FROM (SELECT DISTINCT ingest_run_id FROM quarantine) d"));
+        Assert.Equal(firstRun, harness.Scalar("SELECT DISTINCT ingest_run_id FROM quarantine"));
+    }
+
+    [Theory]
+    [ClassData(typeof(StoreHarnesses))]
     public void EachRunIsRecordedSeparatelyEvenThoughItStoredNothing(Func<IStoreHarness> make)
     {
         using var harness = make();

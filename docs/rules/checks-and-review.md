@@ -60,6 +60,23 @@ Both suites carry it. The unit suite was exempt while `AisPipeline.Core` had no 
 unit tests was the correct state; that exemption ended when M1 added the first quality rules, and
 the flag went on in the same change.
 
+## Replacing a test file
+
+When a test file is replaced rather than edited — split, renamed, converted to run against more
+than one adapter — **diff the method names before and after**:
+
+```bash
+git show <base>:path/to/Old.cs | grep -oE 'public void [A-Za-z]+' | sort > /tmp/before
+grep -oE 'public void [A-Za-z]+' path/to/New.cs | sort > /tmp/after
+diff /tmp/before /tmp/after
+```
+
+A dropped assertion is invisible in review: the suite still passes, the count still goes up because
+new cases were added, and nothing reports that a guarantee stopped being checked. It happened in
+M3 — eight of ten assertions were converted and two were lost, including the one proving a
+re-refused row keeps its original run attribution (ADR-0025). Every assertion that is not carried
+over must be deliberately dropped and said out loud.
+
 ## Running against both adapters
 
 `./scripts/check.sh` runs the integration suite against SQLite always, and against Postgres when

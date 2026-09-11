@@ -46,6 +46,8 @@ public sealed class PostgresHarness : IStoreHarness
 
     public long CountWhere(string sql) => Scalar(sql);
 
+    long IStoreHarness.Scalar(string sql) => Scalar(sql);
+
     private long Scalar(string sql)
     {
         using var connection = new NpgsqlConnection(ScopedConnectionString);
