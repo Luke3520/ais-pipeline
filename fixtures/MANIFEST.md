@@ -5,10 +5,11 @@ Real rows taken verbatim from `aisdk-2026-09-05.csv` (DMA open AIS data,
 holds. Every row is here for a reason: this file is the evidence the test suite runs
 against.
 
-**684 rows.** Selected properties:
+**744 rows.** Selected properties:
 
 | Rows | Why it is in the fixture |
 |---:|---|
+| 60 | tanker stationary 159 min while reporting "Under way using engine" -- rule R10, the project's headline finding, which the fixture previously did not contain |
 | 470 | tanker transitioning moving<->stopped (state machine: 3 hysteresis crossings) |
 | 138 | tanker moored alongside (low drift, berth population) |
 | 33 | tanker at anchor (higher drift, anchorage population) |

@@ -26,4 +26,7 @@ else
 fi
 dotnet test tests/AisPipeline.IntegrationTests --configuration Release --no-build --nologo -- RunConfiguration.TreatNoTestsAsError=true
 
+echo "==> API contract tests (in-process host over a fixture-built database)"
+dotnet test tests/AisPipeline.ApiTests --configuration Release --no-build --nologo -- RunConfiguration.TreatNoTestsAsError=true
+
 echo "==> check passed"

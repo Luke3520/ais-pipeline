@@ -54,7 +54,7 @@ public class FixtureIntegrityTests
             Assert.Equal(ExpectedFieldCount, csv.FieldCount);
         }
 
-        Assert.Equal(684, rows);
+        Assert.Equal(744, rows);
     }
 
     [Fact]
@@ -78,6 +78,30 @@ public class FixtureIntegrityTests
         }
 
         Assert.True(withComma > 0, "fixture no longer contains a quoted field holding a comma");
+    }
+
+    [Fact]
+    public void ContainsAVesselThatReportsUnderWayWhileSittingStill()
+    {
+        // Rule R10 -- the disagreement between a vessel's own status and its own speed -- is the
+        // project's central finding, at 63.8% of stationary tanker fixes. The fixture did not
+        // contain a single instance of it until M4, so nothing exercised the case end to end.
+        using var csv = CsvDataReader.Create(FixturePath(), Options());
+
+        var stationaryButClaimingUnderWay = 0;
+        while (csv.Read())
+        {
+            var sog = csv.GetString(7);
+            var status = csv.GetString(5);
+            if (sog.Length > 0 && double.Parse(sog, System.Globalization.CultureInfo.InvariantCulture) < 0.5
+                && status.StartsWith("Under way", StringComparison.Ordinal))
+            {
+                stationaryButClaimingUnderWay++;
+            }
+        }
+
+        Assert.True(stationaryButClaimingUnderWay > 0,
+            "fixture no longer contains a stationary vessel reporting 'Under way'; rule R10 has no coverage");
     }
 
     [Fact]
