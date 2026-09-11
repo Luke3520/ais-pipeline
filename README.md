@@ -6,8 +6,8 @@ when each tanker stopped, for how long, and whether it was waiting at anchor or 
 
 That last distinction is the raw material of a laytime calculation.
 
-> **Status:** in progress. M0 (foundations) complete — see [Milestones](#milestones).
-> Figures below are measured on a 1.7M-row sample; full-window numbers land with M2.
+> **Status:** in progress. M1 (ingest) complete — see [Milestones](#milestones).
+> One day of real data ingests in 57 seconds; stop detection lands with M2.
 
 ## Why
 
@@ -51,6 +51,27 @@ winner.
 **0.25% of rows break a naive comma split.** 4,261 rows carry quoted vessel names containing commas.
 Split on `,` and every subsequent column shifts — speed read from the course field, ship type from
 the name field. Parsed with a conformant CSV reader, exactly **1** row is malformed.
+
+## One day, ingested
+
+```
+$ ais ingest data/aisdk-2026-09-05.zip --ship-type Tanker
+run 1  aisdk-2026-09-05.zip  (56.9s)
+  read 16,420,337  inserted 746,467  dup-in-file 597,005  dup-prior-run 0
+  quarantined 14   filtered 15,076,851
+  vessels in scope: 183
+```
+
+Those numbers add up exactly — `746,467 + 597,005 + 14 + 15,076,851 = 16,420,337` — and the
+pipeline checks that identity itself, exiting non-zero if a single row read is not accounted for.
+That is what "nothing is dropped silently" means in practice rather than in principle.
+
+Run it a second time and it inserts **0**, with all 746,467 attributed to `dup-prior-run`.
+
+**44% of one tanker's own fixes are duplicates of each other** — 597,005 against 746,467 unique —
+because the feed merges receiving stations. And measured across the full day's 77,029 stationary
+tanker fixes, **63.8% report `Under way using engine` while sitting still.** A 1.7M-row sample had
+predicted 63.1%.
 
 ## Design
 
@@ -159,8 +180,8 @@ the same failure mode as having no check at all.
 | | | |
 |---|---|---|
 | **M0** | Foundations — solution, CI, ADRs, fixture | ✅ complete |
-| M1 | Ingest — parser, rules R1–R6, schema, idempotency | next |
-| M2 | Detection — annotate pass, stops, port calls, seven days | |
+| **M1** | Ingest — parser, rules R1–R6, schema, idempotency | ✅ complete |
+| M2 | Detection — annotate pass, stops, port calls, seven days | next |
 | M3 | Postgres behind the same ports, Docker Compose | |
 | M4 | REST + OpenAPI, GraphQL with DataLoader | |
 | M5 | OpenTelemetry → Prometheus + Grafana, k6 | |
