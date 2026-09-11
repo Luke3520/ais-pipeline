@@ -1,6 +1,7 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="src/AisPipeline.Adapters.Csv/AisPipeline.Adapters.Csv.csproj" />
+    <Project Path="src/AisPipeline.Adapters.Postgres/AisPipeline.Adapters.Postgres.csproj" />
     <Project Path="src/AisPipeline.Adapters.Sqlite/AisPipeline.Adapters.Sqlite.csproj" />
     <Project Path="src/AisPipeline.Cli/AisPipeline.Cli.csproj" />
     <Project Path="src/AisPipeline.Core/AisPipeline.Core.csproj" />

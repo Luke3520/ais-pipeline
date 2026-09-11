@@ -1,0 +1,32 @@
+# Local stack for development and for running the integration suite against Postgres.
+#
+#   docker compose up -d
+#   AIS_POSTGRES="Host=localhost;Port=55432;Database=ais;Username=ais;Password=ais" ./scripts/check.sh
+#
+# Port 55432 rather than 5432 so this cannot collide with a Postgres already running
+# on the host -- a silent connection to the wrong database is worse than a refused one.
+services:
+  postgres:
+    # TimescaleDB is Postgres with a hypertable extension. Declared here rather than
+    # plain postgres because position_report is a time series and the extension is the
+    # reason M3 chose this image; nothing depends on it yet (ADR-0026).
+    image: timescale/timescaledb:2.17.2-pg17
+    environment:
+      POSTGRES_DB: ais
+      POSTGRES_USER: ais
+      POSTGRES_PASSWORD: ais
+      # The data here is public AIS and the container is bound to localhost only.
+      # Never reuse this password anywhere that holds charter party or SOF data (ADR-0017).
+    ports:
+      - "127.0.0.1:55432:5432"
+    volumes:
+      - ais-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ais -d ais"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    shm_size: 1gb
+
+volumes:
+  ais-pgdata:
