@@ -8,6 +8,15 @@ public enum StopPhase
 
     /// <summary>Drift above it: swinging on an anchor chain.</summary>
     Anchorage,
+
+    /// <summary>
+    /// Too few reliable fixes for the drift to mean anything, so the question is unanswered.
+    ///
+    /// Recorded rather than guessed. Counting these as a berth is how the collapsed-geometry
+    /// defect produced its most confident wrong answers, and counting them as an anchorage
+    /// would be the same mistake pointed the other way.
+    /// </summary>
+    Unknown,
 }
 
 /// <summary>One stop within a port call, in order.</summary>
@@ -37,6 +46,15 @@ public sealed record PortCall
     /// <summary>Hours spent alongside. Meaningful only when <see cref="IsComplete"/>.</summary>
     public double WorkingHours => Phases
         .Where(p => p.Phase == StopPhase.Berth)
+        .Sum(p => p.Stop.DurationHours);
+
+    /// <summary>
+    /// Hours in phases whose geometry could not be trusted, counted as neither waiting nor
+    /// working. Surfaced rather than absorbed: silently folding it into either figure would put
+    /// a number the data does not support into a laytime calculation.
+    /// </summary>
+    public double UnclassifiedHours => Phases
+        .Where(p => p.Phase == StopPhase.Unknown)
         .Sum(p => p.Stop.DurationHours);
 
     public double CentroidLatitude => Phases.Average(p => p.Stop.CentroidLatitude);

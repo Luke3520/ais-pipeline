@@ -81,6 +81,8 @@ internal static class SqliteSchema
           centroid_lon REAL NOT NULL,
           max_drift_nm REAL NOT NULL,
           fix_count INTEGER NOT NULL,
+          reliable_fix_count INTEGER NOT NULL,
+          geometry_trustworthy INTEGER NOT NULL,
           reported_status TEXT,
           status_agrees INTEGER NOT NULL,
           is_complete INTEGER NOT NULL,
@@ -90,6 +92,10 @@ internal static class SqliteSchema
         );
         -- duration_hours is only meaningful when is_complete = 1. A stop touching a coverage
         -- gap or the edge of the ingested window has an unknown true length (ADR-0011).
+
+        -- max_drift_nm means nothing when geometry_trustworthy = 0: too few fixes survived
+        -- exclusion for a spread to be measurable, and with one survivor the centroid IS that
+        -- fix, so drift computes to exactly 0.0 (ADR-0025).
 
         CREATE INDEX IF NOT EXISTS ix_stop_vessel_time ON stop_event (mmsi, started_utc);
         -- Not redundant, unlike the position index dropped in ADR-0013: port-call chaining
@@ -102,6 +108,7 @@ internal static class SqliteSchema
           departed_utc TEXT NOT NULL,
           waiting_hours REAL NOT NULL,
           working_hours REAL NOT NULL,
+          unclassified_hours REAL NOT NULL,
           centroid_lat REAL NOT NULL,
           centroid_lon REAL NOT NULL,
           is_complete INTEGER NOT NULL,

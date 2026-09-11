@@ -135,6 +135,7 @@ public sealed class StopDetector
             CentroidLongitude = centroidLon,
             MaxDriftNm = maxDrift,
             FixCount = fixes.Count,
+            ReliableFixCount = reliable.Count,
             ReportedStatus = reported,
 
             // R10. The speed said stationary; if the vessel's own status said otherwise, that

@@ -321,8 +321,9 @@ public sealed class SqliteAisStore : IAisStore
         command.Transaction = transaction;
         command.CommandText = """
             INSERT INTO port_call (mmsi, arrived_utc, departed_utc, waiting_hours, working_hours,
-                                   centroid_lat, centroid_lon, is_complete)
-            VALUES ($mmsi, $arrived, $departed, $waiting, $working, $lat, $lon, $complete);
+                                   unclassified_hours, centroid_lat, centroid_lon, is_complete)
+            VALUES ($mmsi, $arrived, $departed, $waiting, $working, $unclassified,
+                    $lat, $lon, $complete);
             SELECT last_insert_rowid();
             """;
         command.Parameters.AddWithValue("$mmsi", call.Mmsi);
@@ -330,6 +331,7 @@ public sealed class SqliteAisStore : IAisStore
         command.Parameters.AddWithValue("$departed", Format(call.DepartedUtc));
         command.Parameters.AddWithValue("$waiting", call.WaitingHours);
         command.Parameters.AddWithValue("$working", call.WorkingHours);
+        command.Parameters.AddWithValue("$unclassified", call.UnclassifiedHours);
         command.Parameters.AddWithValue("$lat", call.CentroidLatitude);
         command.Parameters.AddWithValue("$lon", call.CentroidLongitude);
         command.Parameters.AddWithValue("$complete", call.IsComplete ? 1 : 0);
@@ -342,10 +344,11 @@ public sealed class SqliteAisStore : IAisStore
         command.Transaction = transaction;
         command.CommandText = """
             INSERT INTO stop_event (mmsi, started_utc, ended_utc, duration_hours, centroid_lat,
-                                    centroid_lon, max_drift_nm, fix_count, reported_status,
-                                    status_agrees, is_complete, first_position_id, last_position_id)
-            VALUES ($mmsi, $started, $ended, $duration, $lat, $lon, $drift, $fixes, $status,
-                    $agrees, $complete, $first, $last);
+                                    centroid_lon, max_drift_nm, fix_count, reliable_fix_count,
+                                    geometry_trustworthy, reported_status, status_agrees,
+                                    is_complete, first_position_id, last_position_id)
+            VALUES ($mmsi, $started, $ended, $duration, $lat, $lon, $drift, $fixes, $reliable,
+                    $trustworthy, $status, $agrees, $complete, $first, $last);
             SELECT last_insert_rowid();
             """;
         command.Parameters.AddWithValue("$mmsi", stop.Mmsi);
@@ -356,6 +359,8 @@ public sealed class SqliteAisStore : IAisStore
         command.Parameters.AddWithValue("$lon", stop.CentroidLongitude);
         command.Parameters.AddWithValue("$drift", stop.MaxDriftNm);
         command.Parameters.AddWithValue("$fixes", stop.FixCount);
+        command.Parameters.AddWithValue("$reliable", stop.ReliableFixCount);
+        command.Parameters.AddWithValue("$trustworthy", stop.GeometryTrustworthy ? 1 : 0);
         command.Parameters.AddWithValue("$status", (object?)stop.ReportedStatus ?? DBNull.Value);
         command.Parameters.AddWithValue("$agrees", stop.StatusAgrees ? 1 : 0);
         command.Parameters.AddWithValue("$complete", stop.IsComplete ? 1 : 0);

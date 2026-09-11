@@ -29,6 +29,14 @@ public sealed class PortCallChainer
     /// </summary>
     public StopPhase Classify(StopEvent stop)
     {
+        // No geometry, no answer. With one surviving fix the centroid is that fix and drift is
+        // exactly 0.0, which would classify as the most confident possible berth -- on the
+        // vessels most likely to have been drifting (ADR-0025).
+        if (!stop.GeometryTrustworthy)
+        {
+            return StopPhase.Unknown;
+        }
+
         // A stop shorter than the minimum duration cannot reach here, but guard the root
         // anyway rather than risk a divide-by-zero producing Infinity and a silent Anchorage.
         var hours = Math.Max(stop.DurationHours, 1.0 / 3600.0);

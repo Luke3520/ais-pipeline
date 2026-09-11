@@ -28,6 +28,28 @@ public sealed record StopEvent
 
     public required int FixCount { get; init; }
 
+    /// <summary>
+    /// How many of those fixes contributed to the geometry -- the rest were flagged
+    /// positionally unreliable and excluded (ADR-0021).
+    /// </summary>
+    public required int ReliableFixCount { get; init; }
+
+    /// <summary>
+    /// False when too few fixes survived exclusion for <see cref="MaxDriftNm"/> to mean
+    /// anything, so the berth/anchorage question cannot be answered for this stop.
+    ///
+    /// The failure this prevents is silent and maximally wrong: with a single reliable fix the
+    /// centroid IS that fix, so drift computes to exactly 0.0 and the stop classifies as a
+    /// berth with the most confident possible value -- on precisely the vessels R11 flagged for
+    /// drifting while claiming to be moored (ADR-0025).
+    /// </summary>
+    public bool GeometryTrustworthy =>
+        ReliableFixCount >= MinimumReliableFixes
+        && ReliableFixCount * 2 >= FixCount;
+
+    /// <summary>Two points are the fewest from which a spread can be measured at all.</summary>
+    public const int MinimumReliableFixes = 2;
+
     /// <summary>Most common navigational status the vessel reported during the stop.</summary>
     public string? ReportedStatus { get; init; }
 
