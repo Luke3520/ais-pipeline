@@ -25,6 +25,15 @@ TestResults/
 # Planning notes kept local: they reference context that does not belong in a public repo
 ais-pipeline-plan_1.md
 
-# Reference documents that are not ours to redistribute. This repo is public; BIMCO's forms are
-# BIMCO's. docs/reference/sof/README.md carries the citation instead.
-docs/reference/**/*.pdf
+# Reference documents are NEVER committed. This repo is public; the source material is not ours
+# to redistribute, and some of it carries real commercial data -- vessel names, cargo quantities,
+# agent signatures.
+#
+# Deny everything, allow back only the README that cites it. The previous rule listed *.pdf, which
+# silently failed to cover the .webp scans that were actually added, and two real Statements of
+# Facts reached a public repository as a result. An extension allow-list is the wrong shape here:
+# the rule has to be "nothing, except", or the next unanticipated format walks straight through.
+docs/reference/**
+!docs/reference/
+!docs/reference/**/
+!docs/reference/**/README.md
