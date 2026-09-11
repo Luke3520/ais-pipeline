@@ -1,4 +1,6 @@
 using System.Globalization;
+using AisPipeline.Core.Annotate;
+using AisPipeline.Core.Detection;
 using AisPipeline.Core.Domain;
 using AisPipeline.Core.Ingest;
 using AisPipeline.Core.Ports;
@@ -225,6 +227,161 @@ public sealed class SqliteAisStore : IAisStore
 
         transaction.Commit();
     }
+
+    public IEnumerable<PositionFix> ReadFixesOrdered()
+    {
+        using var command = _connection.CreateCommand();
+
+        // The ORDER BY is served by the prefix of UNIQUE (mmsi, ts_utc, lat, lon), which is why
+        // no separate (mmsi, ts_utc) index exists (ADR-0013). id is the tiebreak so the order is
+        // total: two receivers reporting the same vessel-second at different positions would
+        // otherwise sort arbitrarily, and a non-deterministic order makes re-running detection
+        // produce different stops from identical data.
+        command.CommandText = """
+            SELECT id, mmsi, ts_utc, lat, lon, sog_kn, nav_status, quality_flags
+            FROM position_report
+            ORDER BY mmsi, ts_utc, id;
+            """;
+
+        using var reader = command.ExecuteReader();
+        while (reader.Read())
+        {
+            yield return new PositionFix
+            {
+                Id = reader.GetInt64(0),
+                Mmsi = reader.GetInt64(1),
+                TimestampUtc = ParseTimestamp(reader.GetString(2)),
+                Latitude = reader.GetDouble(3),
+                Longitude = reader.GetDouble(4),
+                SpeedOverGroundKn = reader.IsDBNull(5) ? null : reader.GetDouble(5),
+                NavigationalStatus = reader.IsDBNull(6) ? null : reader.GetString(6),
+                QualityFlags = reader.GetString(7),
+            };
+        }
+    }
+
+    public void UpdateQualityFlags(IReadOnlyList<FlagUpdate> updates)
+    {
+        if (updates.Count == 0)
+        {
+            return;
+        }
+
+        using var transaction = _connection.BeginTransaction();
+        using var command = _connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = "UPDATE position_report SET quality_flags = $flags WHERE id = $id;";
+        var flags = command.Parameters.Add("$flags", SqliteType.Text);
+        var id = command.Parameters.Add("$id", SqliteType.Integer);
+        command.Prepare();
+
+        foreach (var update in updates)
+        {
+            flags.Value = update.QualityFlags;
+            id.Value = update.PositionId;
+            command.ExecuteNonQuery();
+        }
+
+        transaction.Commit();
+    }
+
+    public void ReplaceDetections(IReadOnlyList<PortCall> portCalls)
+    {
+        using var transaction = _connection.BeginTransaction();
+
+        // Delete before insert, inside the same transaction. These are projections over
+        // position_report, so a partial replace would leave a mixture of two computations --
+        // and re-running detection has to land on exactly the previous result (ADR-0009).
+        // Phases first: they reference both of the tables below.
+        foreach (var table in new[] { "port_call_phase", "port_call", "stop_event" })
+        {
+            using var delete = _connection.CreateCommand();
+            delete.Transaction = transaction;
+            delete.CommandText = $"DELETE FROM {table};";
+            delete.ExecuteNonQuery();
+        }
+
+        foreach (var call in portCalls)
+        {
+            var callId = InsertPortCall(transaction, call);
+
+            foreach (var phase in call.Phases)
+            {
+                var stopId = InsertStop(transaction, phase.Stop);
+                InsertPhase(transaction, callId, stopId, phase);
+            }
+        }
+
+        transaction.Commit();
+    }
+
+    private long InsertPortCall(SqliteTransaction transaction, PortCall call)
+    {
+        using var command = _connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = """
+            INSERT INTO port_call (mmsi, arrived_utc, departed_utc, waiting_hours, working_hours,
+                                   centroid_lat, centroid_lon, is_complete)
+            VALUES ($mmsi, $arrived, $departed, $waiting, $working, $lat, $lon, $complete);
+            SELECT last_insert_rowid();
+            """;
+        command.Parameters.AddWithValue("$mmsi", call.Mmsi);
+        command.Parameters.AddWithValue("$arrived", Format(call.ArrivedUtc));
+        command.Parameters.AddWithValue("$departed", Format(call.DepartedUtc));
+        command.Parameters.AddWithValue("$waiting", call.WaitingHours);
+        command.Parameters.AddWithValue("$working", call.WorkingHours);
+        command.Parameters.AddWithValue("$lat", call.CentroidLatitude);
+        command.Parameters.AddWithValue("$lon", call.CentroidLongitude);
+        command.Parameters.AddWithValue("$complete", call.IsComplete ? 1 : 0);
+        return (long)command.ExecuteScalar()!;
+    }
+
+    private long InsertStop(SqliteTransaction transaction, StopEvent stop)
+    {
+        using var command = _connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = """
+            INSERT INTO stop_event (mmsi, started_utc, ended_utc, duration_hours, centroid_lat,
+                                    centroid_lon, max_drift_nm, fix_count, reported_status,
+                                    status_agrees, is_complete, first_position_id, last_position_id)
+            VALUES ($mmsi, $started, $ended, $duration, $lat, $lon, $drift, $fixes, $status,
+                    $agrees, $complete, $first, $last);
+            SELECT last_insert_rowid();
+            """;
+        command.Parameters.AddWithValue("$mmsi", stop.Mmsi);
+        command.Parameters.AddWithValue("$started", Format(stop.StartedUtc));
+        command.Parameters.AddWithValue("$ended", Format(stop.EndedUtc));
+        command.Parameters.AddWithValue("$duration", stop.DurationHours);
+        command.Parameters.AddWithValue("$lat", stop.CentroidLatitude);
+        command.Parameters.AddWithValue("$lon", stop.CentroidLongitude);
+        command.Parameters.AddWithValue("$drift", stop.MaxDriftNm);
+        command.Parameters.AddWithValue("$fixes", stop.FixCount);
+        command.Parameters.AddWithValue("$status", (object?)stop.ReportedStatus ?? DBNull.Value);
+        command.Parameters.AddWithValue("$agrees", stop.StatusAgrees ? 1 : 0);
+        command.Parameters.AddWithValue("$complete", stop.IsComplete ? 1 : 0);
+        command.Parameters.AddWithValue("$first", stop.FirstPositionId);
+        command.Parameters.AddWithValue("$last", stop.LastPositionId);
+        return (long)command.ExecuteScalar()!;
+    }
+
+    private void InsertPhase(SqliteTransaction transaction, long callId, long stopId, PortCallPhase phase)
+    {
+        using var command = _connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = """
+            INSERT INTO port_call_phase (port_call_id, stop_event_id, seq, phase)
+            VALUES ($call, $stop, $seq, $phase);
+            """;
+        command.Parameters.AddWithValue("$call", callId);
+        command.Parameters.AddWithValue("$stop", stopId);
+        command.Parameters.AddWithValue("$seq", phase.Sequence);
+        command.Parameters.AddWithValue("$phase", phase.Phase.ToString());
+        command.ExecuteNonQuery();
+    }
+
+    private static DateTime ParseTimestamp(string text) =>
+        DateTime.ParseExact(text, TimestampFormat, CultureInfo.InvariantCulture,
+            DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal);
 
     public void Dispose() => _connection.Dispose();
 

@@ -1,8 +1,11 @@
 using System.Globalization;
 using AisPipeline.Adapters.Csv;
 using AisPipeline.Adapters.Sqlite;
+using AisPipeline.Core.Annotate;
+using AisPipeline.Core.Detection;
 using AisPipeline.Core.Ingest;
 using AisPipeline.Core.Quality;
+using AisPipeline.Core.Quality.Rules;
 
 if (args.Length == 0 || args[0] is "-h" or "--help")
 {
@@ -13,6 +16,7 @@ if (args.Length == 0 || args[0] is "-h" or "--help")
 return args[0] switch
 {
     "ingest" => Ingest(args[1..]),
+    "detect" => Detect(args[1..]),
     _ => Unknown(args[0]),
 };
 
@@ -27,11 +31,15 @@ static void Usage() => Console.WriteLine("""
     ais - AIS ingestion and analysis
 
       ais ingest <file.csv|file.zip> [--db <path>] [--ship-type <type>] [--limit <n>]
+      ais detect [--db <path>]
 
     Options:
-      --db          SQLite file to write (default: data/ais.db)
+      --db          SQLite file to read/write (default: data/ais.db)
       --ship-type   keep only vessels whose resolved type matches, e.g. Tanker
       --limit       stop after N source lines; for the development loop only
+
+    detect annotates the sequence rules and rebuilds stops and port calls. It is a full
+    recompute: running it twice lands on exactly the same result.
     """);
 
 static int Ingest(string[] args)
@@ -99,6 +107,50 @@ static int Ingest(string[] args)
             $"  ACCOUNTING ERROR: {result.Counters.RowsRead:N0} rows read but " +
             $"{result.Counters.Accounted:N0} accounted for");
         return 1;
+    }
+
+    return 0;
+}
+
+static int Detect(string[] args)
+{
+    var database = ValueOf(args, "--db") ?? Path.Combine("data", "ais.db");
+    if (!File.Exists(database))
+    {
+        Console.Error.WriteLine($"no database at {database}; run ingest first");
+        return 2;
+    }
+
+    using var store = new SqliteAisStore(database);
+    store.EnsureSchema();
+
+    // The annotate pass must finish before detection: detection excludes flagged fixes from
+    // centroid and drift, so the other order would let a corrupt position into the geometry
+    // (ADR-0021).
+    var startedUtc = DateTime.UtcNow;
+    var annotated = new AnnotatePass(
+        store,
+        [new R7Teleport(), new R8CoverageGap(), new R11SpeedConsistency()]).Run();
+
+    Console.WriteLine($"annotated {annotated.FixesExamined:N0} fixes");
+    foreach (var (ruleId, count) in annotated.RuleHits.OrderBy(h => h.Key, StringComparer.Ordinal))
+    {
+        Console.WriteLine($"    {ruleId,-4} {count,12:N0}");
+    }
+
+    var detected = new DetectionPass(store).Run();
+    var elapsed = DateTime.UtcNow - startedUtc;
+
+    Console.WriteLine($"detected across {detected.VesselsExamined:N0} vessels ({elapsed.TotalSeconds:F1}s)");
+    Console.WriteLine($"  stops {detected.StopsDetected:N0}  " +
+        $"(complete {detected.CompleteStops:N0})  port calls {detected.PortCalls:N0}");
+
+    if (detected.StopsDetected > 0)
+    {
+        var share = 100.0 * detected.StopsWhereStatusDisagrees / detected.StopsDetected;
+        Console.WriteLine(
+            $"  stops where the vessel's own status contradicted its speed: " +
+            $"{detected.StopsWhereStatusDisagrees:N0} ({share:F1}%)");
     }
 
     return 0;

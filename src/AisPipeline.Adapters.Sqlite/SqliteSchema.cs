@@ -70,6 +70,53 @@ internal static class SqliteSchema
         -- position_report would stay flat while quarantine doubled (ADR-0006).
 
         CREATE INDEX IF NOT EXISTS ix_quarantine_rule ON quarantine (rule_id);
+
+        CREATE TABLE IF NOT EXISTS stop_event (
+          id INTEGER PRIMARY KEY,
+          mmsi INTEGER NOT NULL,
+          started_utc TEXT NOT NULL,
+          ended_utc TEXT NOT NULL,
+          duration_hours REAL NOT NULL,
+          centroid_lat REAL NOT NULL,
+          centroid_lon REAL NOT NULL,
+          max_drift_nm REAL NOT NULL,
+          fix_count INTEGER NOT NULL,
+          reported_status TEXT,
+          status_agrees INTEGER NOT NULL,
+          is_complete INTEGER NOT NULL,
+          first_position_id INTEGER NOT NULL REFERENCES position_report(id),
+          last_position_id INTEGER NOT NULL REFERENCES position_report(id),
+          UNIQUE (mmsi, started_utc)
+        );
+        -- duration_hours is only meaningful when is_complete = 1. A stop touching a coverage
+        -- gap or the edge of the ingested window has an unknown true length (ADR-0011).
+
+        CREATE INDEX IF NOT EXISTS ix_stop_vessel_time ON stop_event (mmsi, started_utc);
+        -- Not redundant, unlike the position index dropped in ADR-0013: port-call chaining
+        -- walks one vessel's stops in order, and this index and the UNIQUE above coincide.
+
+        CREATE TABLE IF NOT EXISTS port_call (
+          id INTEGER PRIMARY KEY,
+          mmsi INTEGER NOT NULL,
+          arrived_utc TEXT NOT NULL,
+          departed_utc TEXT NOT NULL,
+          waiting_hours REAL NOT NULL,
+          working_hours REAL NOT NULL,
+          centroid_lat REAL NOT NULL,
+          centroid_lon REAL NOT NULL,
+          is_complete INTEGER NOT NULL,
+          UNIQUE (mmsi, arrived_utc)
+        );
+
+        CREATE TABLE IF NOT EXISTS port_call_phase (
+          id INTEGER PRIMARY KEY,
+          port_call_id INTEGER NOT NULL REFERENCES port_call(id),
+          stop_event_id INTEGER NOT NULL REFERENCES stop_event(id),
+          seq INTEGER NOT NULL,
+          phase TEXT NOT NULL
+        );
+
+        CREATE INDEX IF NOT EXISTS ix_phase_call ON port_call_phase (port_call_id);
         """;
 
     /// <summary>
