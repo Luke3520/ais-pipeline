@@ -6,8 +6,9 @@ when each tanker stopped, for how long, and whether it was waiting at anchor or 
 
 That last distinction is the raw material of a laytime calculation.
 
-> **Status:** in progress. M1 (ingest) complete — see [Milestones](#milestones).
-> One day of real data ingests in 57 seconds; stop detection lands with M2.
+> **Status:** in progress. M2 (detection) complete — see [Milestones](#milestones).
+> Seven days ingested, 809 stops and 362 port calls detected, waiting-versus-working time
+> measured without a port dataset.
 
 ## Why
 
@@ -73,6 +74,39 @@ because the feed merges receiving stations. And measured across the full day's 7
 tanker fixes, **63.8% report `Under way using engine` while sitting still.** A 1.7M-row sample had
 predicted 63.1%.
 
+## Seven days, detected
+
+```
+$ ais detect
+annotated 5,368,195 fixes
+    R7    492      teleports
+    R8    706      coverage gaps
+    R11   35,303   reported speed contradicting implied speed
+detected across 452 vessels (35.4s)
+  stops 809  (complete 517)  port calls 362
+  stops where the vessel's own status contradicted its speed: 299 (37.0%)
+```
+
+**517 of 809 stops are complete** — their true start and end are both inside the window. One day
+alone would have yielded 30–50, because roughly a third of tankers are stationary across any given
+midnight. That is the whole reason for a seven-day window: it is what turns a stop into a port call.
+
+Running `detect` twice produces a byte-identical result. These tables are projections over
+`position_report`, so changing a threshold means re-running, not migrating.
+
+## Waiting versus working
+
+```
+636025106  STINGRAY         wait 30.4h   work 46.5h    Anchorage -> Berth
+563045300  EAGLE BARCELONA  wait 12.4h   work 42.3h    Anchorage -> Berth
+538006310  SEAGAS LOYALTY   wait 34.3h   work 23.2h    Anchorage -> Berth
+353576000  MERSINI          wait 69.8h   work 34.4h    Anchorage -> Berth -> Anchorage
+```
+
+Thirty complete port calls carry both. No port boundary dataset was used: the split comes from
+drift geometry and timestamps alone. Waiting at anchor and working alongside are the two quantities
+a laytime calculation is built from.
+
 ## Design
 
 Four ideas, each with a decision record behind it:
@@ -126,10 +160,19 @@ semi-independent label:
 | 0.030 nm | 56 | 73.7% |
 | 0.300 nm | 556 | 52.6% |
 
-The originally assumed 0.3 nm is wrong by a factor of thirty and performs worse than a coin flip.
-Moored vessels sit at a median drift of 3.9 m, anchored ones at 55 m — the populations separate
-cleanly, just far more finely than expected.
-([ADR-0020](docs/adr/0020-berth-drift-threshold.md))
+The originally assumed 0.3 nm was wrong by a factor of thirty and performed worse than a coin flip.
+
+Then seven days showed the *model* was wrong too. A moored vessel's measured drift grows with how
+long it sits — 0.0013 nm under two hours against 0.0346 nm past seventy-two — because GPS error is
+a random walk and `max_drift` is a maximum over fixes, so a longer stop simply gets more draws. No
+fixed threshold tracks that, and the symptom was one vessel at one quay alternating
+`Berth → Anchorage` eleven times in a single call. The classifier now normalises:
+`max_drift_nm / sqrt(duration_hours) < 0.008`, which scores 84.1%, and **81.5% on days it was not
+fitted to.** ([ADR-0020](docs/adr/0020-berth-drift-threshold.md), superseded by
+[ADR-0024](docs/adr/0024-berth-threshold-scales-with-duration.md))
+
+Worth stating plainly: the label is the vessel's own reported status — the very field this project
+distrusts — so 84% is measured against an imperfect proxy and the ceiling is well below 100%.
 
 This reaches waiting-versus-working time **without a port boundary dataset**, from geometry and
 timestamps alone.
@@ -181,8 +224,8 @@ the same failure mode as having no check at all.
 |---|---|---|
 | **M0** | Foundations — solution, CI, ADRs, fixture | ✅ complete |
 | **M1** | Ingest — parser, rules R1–R6, schema, idempotency | ✅ complete |
-| M2 | Detection — annotate pass, stops, port calls, seven days | next |
-| M3 | Postgres behind the same ports, Docker Compose | |
+| **M2** | Detection — annotate pass, stops, port calls, seven days | ✅ complete |
+| M3 | Postgres behind the same ports, Docker Compose | next |
 | M4 | REST + OpenAPI, GraphQL with DataLoader | |
 | M5 | OpenTelemetry → Prometheus + Grafana, k6 | |
 | M6 | Laytime engine | |

@@ -4,7 +4,10 @@ Date: 2026-09-11
 
 ## Status
 
-Accepted
+Superseded by [ADR-0024](0024-berth-threshold-scales-with-duration.md).
+
+The method here stands and ADR-0024 reuses it. What changed is the model: a fixed threshold
+cannot hold, because a moored vessel's measured drift grows with how long it sits there.
 
 ## Context
 

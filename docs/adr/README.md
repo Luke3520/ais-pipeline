@@ -37,6 +37,8 @@ the design.
 | [0012](0012-split-duplicate-counters.md) | Split duplicate counters | Accepted |
 | [0013](0013-drop-redundant-index.md) | Drop the redundant vessel-time index | Accepted |
 | 0014–0019 | *Reserved: API surface, auth, observability, Postgres — recorded when those milestones land* | — |
-| [0020](0020-berth-drift-threshold.md) | Berth/anchorage drift threshold, calibrated | Accepted |
+| [0020](0020-berth-drift-threshold.md) | Berth/anchorage drift threshold, calibrated | Superseded by 0024 |
 | [0021](0021-sog-consistency-and-rule-ordering.md) | SOG consistency rule and annotate-before-detect ordering | Accepted |
+| [0023](0023-teleport-needs-a-distance-gate.md) | Teleport rule needs a distance gate | Accepted |
+| [0024](0024-berth-threshold-scales-with-duration.md) | Berth threshold scales with stop duration | Accepted |
 | [0022](0022-three-lane-review-harness.md) | Three-lane review harness | Accepted |

@@ -27,14 +27,23 @@ duration must filter on it, or it is a wrong number on a published path (blockin
 Consecutive stops chain into one visit when centroids are within ~10 nm and the gap between them is
 under ~12 h. Each phase is classified by `max_drift_nm`.
 
-**Berth is `max_drift_nm < 0.01` (≈19 m).** This was calibrated, not chosen: measured against the
-vessels' own reported status as a semi-independent label, 0.01 nm separates moored from anchored at
-92.1% accuracy, while the originally assumed 0.3 nm scores 52.6% — worse than a coin flip
-(ADR-0020).
+**Berth is `max_drift_nm / sqrt(duration_hours) < 0.008`.** Normalised by duration, not compared
+raw, because a moored vessel's *measured* drift grows with how long it sits there — 0.0013 nm under
+two hours against 0.0346 nm past seventy-two. A moored ship does not wander down the quay: GPS error
+is a random walk whose maximum excursion accumulates as the square root of elapsed time, and
+`max_drift_nm` is a maximum over fixes, so a longer stop simply gets more draws.
 
-It is a **conservative floor.** The calibration window captured only a partial arc of an anchor
-swing, so full-window data should push anchored drift up. Re-calibrate with the method in ADR-0020
-rather than adjusting it by feel.
+The earlier fixed threshold of 0.01 nm (ADR-0020) was calibrated on a 2h40m sample and is superseded
+by ADR-0024. A fixed value peaks at 79.2% on seven days and makes one vessel at one quay alternate
+Berth/Anchorage eleven times within a single port call. Normalised scores 84.1%, and 81.5% on days
+it was not fitted to.
+
+**The label is a proxy, not truth.** Calibration uses the vessel's own reported status — the field
+this project exists to distrust. The calibration set is restricted to stops where status and speed
+agree, which is the more trustworthy subset, but a crew leaving "Moored" set while at anchor is
+mislabelled and no threshold recovers it. The ceiling here is well below 100%.
+
+Re-calibrate with ADR-0024's method as the window grows, rather than adjusting by feel.
 
 ## Presenting thresholds
 
