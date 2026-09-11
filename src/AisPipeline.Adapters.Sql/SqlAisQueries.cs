@@ -143,6 +143,17 @@ public sealed class SqlAisQueries : IAisQueries
         })];
     }
 
+    public StoredPortCall? MostRecentCompletePortCall(long mmsi)
+    {
+        using var c = Open();
+        return c.QuerySingleOrDefault<StoredPortCall>($"""
+            {PortCallColumns}
+            WHERE mmsi = @mmsi AND {_dialect.IsTrue("is_complete")}
+            ORDER BY arrived_utc DESC
+            LIMIT 1
+            """, new { mmsi });
+    }
+
     public IReadOnlyList<StoredPortCall> GetPortCallsForVessels(
         IReadOnlyCollection<long> mmsis, int limitPerVessel)
     {

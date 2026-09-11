@@ -38,6 +38,16 @@ public interface IAisQueries : IDisposable
     IReadOnlyList<StoredPortCall> ListPortCalls(PortCallFilter filter);
 
     /// <summary>
+    /// A vessel's most recent complete port call, or null if it has none.
+    ///
+    /// A dedicated query rather than sorting a page of <see cref="ListPortCalls"/>: that one ranks
+    /// by total duration before applying its limit, so once a vessel has more calls than the page
+    /// holds, the genuinely most recent one can be absent from the page entirely -- and a caller
+    /// sorting what survived would report a stale, longer call as the current one.
+    /// </summary>
+    StoredPortCall? MostRecentCompletePortCall(long mmsi);
+
+    /// <summary>
     /// Port calls for several vessels, most recent first, capped per vessel.
     ///
     /// The cap is a bound on work, not a statement about the vessel. Pair it with

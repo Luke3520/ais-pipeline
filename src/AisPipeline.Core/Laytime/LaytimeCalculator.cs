@@ -40,7 +40,9 @@ public sealed class LaytimeCalculator
             lines.Add(new LaytimeLine(
                 terms.NoticeOfReadinessUtc, commencedUtc,
                 LaytimeLineKind.BeforeCommencement,
-                "notice tendered; laytime not yet running"));
+                terms.NoticeOfReadinessIsAssumed
+                    ? "notice ASSUMED at arrival (AIS cannot observe a notice); laytime not yet running"
+                    : "notice tendered; laytime not yet running"));
         }
 
         var exceptions = Merge(terms.Exceptions, commencedUtc, completedUtc);
@@ -83,7 +85,9 @@ public sealed class LaytimeCalculator
         {
             Lines = lines,
             CommencedUtc = commencedUtc,
-            CommencementReason = reason,
+            CommencementReason = terms.NoticeOfReadinessIsAssumed
+                ? $"{reason}, from an ASSUMED notice time"
+                : reason,
             CompletedUtc = completedUtc,
             AllowedHours = terms.LaytimeAllowedHours,
             DemurrageRatePerDay = terms.DemurrageRatePerDay,

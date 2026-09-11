@@ -51,6 +51,16 @@ public sealed record CharterPartyTerms
     /// <summary>When the master tendered Notice of Readiness.</summary>
     public required DateTime NoticeOfReadinessUtc { get; init; }
 
+    /// <summary>
+    /// True when the notice time was inferred rather than taken from a document.
+    ///
+    /// AIS cannot observe a notice -- it is an email. A caller with no NOR to hand may substitute
+    /// arrival, and that substitution has to travel with the figure rather than being annotated
+    /// once at the point of printing: a statement is the unit of provenance here, and a consumer
+    /// serialising it must not lose the distinction between an observed and an assumed input.
+    /// </summary>
+    public bool NoticeOfReadinessIsAssumed { get; init; }
+
     /// <summary>How commencement is determined from that notice.</summary>
     public LaytimeCommencement Commencement { get; init; } =
         LaytimeCommencement.TurnTimeOrBerthingWhicheverFirst;

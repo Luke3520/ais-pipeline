@@ -24,13 +24,32 @@ namespace AisPipeline.Core.Laytime;
 /// <param name="DepartedBerthUtc">End of the last berth phase.</param>
 /// <param name="WaitingHours">Hours at anchor before working.</param>
 /// <param name="WorkingHours">Hours alongside.</param>
+/// <param name="UntrustworthyHoursInBerthSpan">
+/// Hours inside the berth span belonging to phases whose geometry could not be trusted.
+///
+/// Laytime prices the whole span from first berth to last, so these hours are inside the figure
+/// whether or not anyone noticed. ADR-0025 keeps them out of waiting and working precisely because
+/// folding them into either "would put a number the data does not support into a laytime
+/// calculation" -- and a laytime calculation is exactly what this feeds.
+/// </param>
 public sealed record VoyageTimeline(
     DateTime ArrivedUtc,
     DateTime? BerthedUtc,
     DateTime? DepartedBerthUtc,
     double WaitingHours,
-    double WorkingHours)
+    double WorkingHours,
+    double UntrustworthyHoursInBerthSpan)
 {
+    /// <summary>
+    /// True when every hour between first and last berth is geometry the pipeline stands behind.
+    ///
+    /// When false, the span cannot be priced: we do not know whether the vessel was alongside for
+    /// those hours, and neither excluding them (which favours the charterer) nor counting them
+    /// (which favours the owner) is supportable. The honest output is a refusal with the hours
+    /// named, so a human decides.
+    /// </summary>
+    public bool BerthSpanIsTrustworthy => UntrustworthyHoursInBerthSpan <= 0.0;
+
     /// <summary>
     /// Derive what can be derived from a detected port call.
     ///
@@ -47,13 +66,28 @@ public sealed record VoyageTimeline(
             return null;
         }
 
+        var berthedUtc = berthPhases[0].Stop.StartedUtc;
+        var departedUtc = berthPhases[^1].Stop.EndedUtc;
+
+        // A call can interleave phases, so an untrusted stop can sit between two berth phases and
+        // land inside the span laytime would price.
+        var untrustworthy = portCall.Phases
+            .Where(p => p.Phase == StopPhase.Unknown)
+            .Where(p => p.Stop.StartedUtc < departedUtc && p.Stop.EndedUtc > berthedUtc)
+            .Sum(p => (Min(p.Stop.EndedUtc, departedUtc) - Max(p.Stop.StartedUtc, berthedUtc)).TotalHours);
+
         return new VoyageTimeline(
             ArrivedUtc: portCall.ArrivedUtc,
-            BerthedUtc: berthPhases[0].Stop.StartedUtc,
-            DepartedBerthUtc: berthPhases[^1].Stop.EndedUtc,
+            BerthedUtc: berthedUtc,
+            DepartedBerthUtc: departedUtc,
             WaitingHours: portCall.WaitingHours,
-            WorkingHours: portCall.WorkingHours);
+            WorkingHours: portCall.WorkingHours,
+            UntrustworthyHoursInBerthSpan: untrustworthy);
     }
+
+    private static DateTime Min(DateTime a, DateTime b) => a < b ? a : b;
+
+    private static DateTime Max(DateTime a, DateTime b) => a > b ? a : b;
 
     /// <summary>
     /// The gap between arriving and berthing: time the vessel spent waiting for a berth.
