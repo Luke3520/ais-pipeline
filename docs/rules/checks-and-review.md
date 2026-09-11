@@ -56,10 +56,9 @@ exception is visible:
 identical to a change where everything passed. `RunConfiguration.TreatNoTestsAsError=true` closes
 that, and `scripts/check.sh` sets it on the integration suite.
 
-**The unit suite does not carry the flag yet**, because `AisPipeline.Core` has no types and zero
-unit tests is therefore the correct state. It gains the flag with Core's first quality rule at M1.
-This exception is recorded here rather than as a comment nobody reads; if you are adding to Core
-and this paragraph is still present, add the flag in the same change.
+Both suites carry it. The unit suite was exempt while `AisPipeline.Core` had no types and zero
+unit tests was the correct state; that exemption ended when M1 added the first quality rules, and
+the flag went on in the same change.
 
 ## Enabling the hook
 
