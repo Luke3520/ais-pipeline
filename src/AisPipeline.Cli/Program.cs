@@ -360,9 +360,31 @@ static int Reconcile(string[] args)
 
     Console.WriteLine($"{sof.VesselName} (mmsi {sof.Mmsi})  {sof.Port}");
     Console.WriteLine($"  statement : {Path.GetFileName(sofPath)}  ({sof.Events.Count} events)");
+
+    if (!string.IsNullOrWhiteSpace(sof.PreparedBy))
+    {
+        // Who wrote the document belongs beside the figure derived from it -- not least because
+        // the committed fixture says "constructed fixture", and output that looks like a real
+        // reconciliation should say when it is not one.
+        Console.WriteLine($"  prepared  : {sof.PreparedBy}");
+    }
     Console.WriteLine($"  AIS call  : {call.Id}  {call.ArrivedUtc:yyyy-MM-dd HH:mm} -> {call.DepartedUtc:yyyy-MM-dd HH:mm}");
     Console.WriteLine();
     Console.WriteLine(result);
+
+    if (result.ClassifiedButNotCompared.Count > 0)
+    {
+        // Recognised duplicates. Previously invisible: absent from the table because an earlier
+        // event of the same kind was used, and absent from the unclassified list because they
+        // were classified.
+        Console.WriteLine();
+        Console.WriteLine(
+            $"  {result.ClassifiedButNotCompared.Count} further event(s) of a compared kind, not used:");
+        foreach (var e in result.ClassifiedButNotCompared)
+        {
+            Console.WriteLine($"    {e.TimestampUtc:yyyy-MM-dd HH:mm}  {e.Kind,-26} {e.Label}");
+        }
+    }
 
     var unrecognised = sof.Events.Count(e => e.Kind == SofEventKind.Other);
     if (unrecognised > 0)

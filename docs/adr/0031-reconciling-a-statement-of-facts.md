@@ -69,6 +69,32 @@ signed by three parties and the other is a transponder, and the honest output is
 **Events AIS cannot observe are listed rather than omitted**, so silence does not read as agreement.
 Notice of Readiness is an email; hoses, arms and pumps are not visible from space.
 
+## Amendments from review
+
+Four things the three-lane review surfaced, all fixed before this record settled.
+
+**"Vessel unmoored" classified as arrival.** `"moored"` is a substring of `"unmoored"`, and the
+`AllFast` rule was tested before `LeftBerth`. A document using that vocabulary lost its departure
+time from both the comparison and the priced statement, and laytime ended at cargo completion
+instead. Departure is now tested first.
+
+**The printed audit trail did not match the printed price.** The comparison table showed
+`First(LeftBerth)` while the statement was priced from `Last(LeftBerth)` — and the classifier folds
+"last line" and "vessel sailed" into one kind, so a document recording both showed one time and
+charged another. Both now use the earliest departure marker, which is also the right one: it is
+when the vessel starts moving, which is what AIS corresponds to.
+
+**Recognised duplicates vanished.** Unrecognised labels were reported as "kept but not classified";
+recognised duplicates of a compared kind were not reported at all. The real Immingham document has
+four "NOR re-tendered" lines — three of them appeared nowhere. Every event is now accounted for as
+compared, uncorroborated, unclassified, or explicitly listed as not used.
+
+**The inferred offset was invisible where it mattered.** An "Agrees" that already had 45 unmeasured
+minutes subtracted from it is a different claim from one that needed none, and the caveat lived only
+in this ADR. The offset is now named on the line that prints the verdict, and a document's
+`preparedBy` — which reads "constructed fixture" for the committed sample — prints beside the figure
+derived from it.
+
 ## Consequences
 
 - **The all-fast lag is inferred, not measured.** It comes from the internal structure of two
