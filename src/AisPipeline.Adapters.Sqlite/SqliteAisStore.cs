@@ -131,7 +131,7 @@ public sealed class SqliteAisStore : IAisStore
         return inserted;
     }
 
-    public void InsertQuarantine(IReadOnlyList<QuarantinedRow> rows)
+    public void InsertQuarantine(long runId, IReadOnlyList<QuarantinedRow> rows)
     {
         if (rows.Count == 0)
         {
@@ -142,8 +142,9 @@ public sealed class SqliteAisStore : IAisStore
         using var command = _connection.CreateCommand();
         command.Transaction = transaction;
         command.CommandText = """
-            INSERT OR IGNORE INTO quarantine (rule_id, source_file, source_line, raw_snippet, detail)
-            VALUES ($rule, $file, $line, $raw, $detail);
+            INSERT OR IGNORE INTO quarantine
+              (rule_id, source_file, source_line, raw_snippet, detail, ingest_run_id)
+            VALUES ($rule, $file, $line, $raw, $detail, $run);
             """;
 
         var rule = command.Parameters.Add("$rule", SqliteType.Text);
@@ -151,6 +152,8 @@ public sealed class SqliteAisStore : IAisStore
         var line = command.Parameters.Add("$line", SqliteType.Integer);
         var raw = command.Parameters.Add("$raw", SqliteType.Text);
         var detail = command.Parameters.Add("$detail", SqliteType.Text);
+        var run = command.Parameters.Add("$run", SqliteType.Integer);
+        run.Value = runId;
         command.Prepare();
 
         foreach (var row in rows)
@@ -221,21 +224,6 @@ public sealed class SqliteAisStore : IAisStore
         }
 
         transaction.Commit();
-    }
-
-    public bool PositionExists(long mmsi, DateTime timestampUtc, double latitude, double longitude)
-    {
-        using var command = _connection.CreateCommand();
-        command.CommandText = """
-            SELECT 1 FROM position_report
-            WHERE mmsi = $mmsi AND ts_utc = $ts AND lat = $lat AND lon = $lon
-            LIMIT 1;
-            """;
-        command.Parameters.AddWithValue("$mmsi", mmsi);
-        command.Parameters.AddWithValue("$ts", Format(timestampUtc));
-        command.Parameters.AddWithValue("$lat", latitude);
-        command.Parameters.AddWithValue("$lon", longitude);
-        return command.ExecuteScalar() is not null;
     }
 
     public void Dispose() => _connection.Dispose();

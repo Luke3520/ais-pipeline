@@ -58,8 +58,14 @@ internal static class SqliteSchema
           source_line INTEGER NOT NULL,
           raw_snippet TEXT NOT NULL,
           detail TEXT,
+          ingest_run_id INTEGER NOT NULL REFERENCES ingest_run(id),
           UNIQUE (source_file, source_line, rule_id)
         );
+        -- ingest_run_id is required for the same reason position_report carries it: a refusal
+        -- nobody can trace to a run is not evidence. Two runs over the same filename are a
+        -- supported operation (ADR-0005), so source_file alone cannot identify which run
+        -- refused a row. Combined with INSERT OR IGNORE on the UNIQUE below, the FIRST run to
+        -- refuse a row owns it -- matching how position_report keeps its original run id.
         -- The UNIQUE above is what keeps re-ingest idempotent for this table too. Without it,
         -- position_report would stay flat while quarantine doubled (ADR-0006).
 

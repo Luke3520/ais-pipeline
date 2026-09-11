@@ -1,0 +1,68 @@
+using AisPipeline.Core.Domain;
+using AisPipeline.Core.Ingest;
+using AisPipeline.Core.Ports;
+
+namespace AisPipeline.Tests.Ingest;
+
+/// <summary>
+/// In-memory <see cref="IAisStore"/>. Exists so the pipeline's branching can be exercised in
+/// the Core-only unit suite: it depends on nothing but its ports (ADR-0003), so proving its
+/// accounting through a real CSV reader and a real database was more machinery than the
+/// question needed -- and left the branches dependent on one fixture keeping its exact shape.
+/// </summary>
+internal sealed class FakeAisStore : IAisStore
+{
+    private readonly HashSet<NaturalKey> _stored = [];
+    private readonly HashSet<(string File, long Line, string Rule)> _quarantined = [];
+
+    public bool SchemaEnsured { get; private set; }
+
+    public DateTime StartedUtc { get; private set; }
+
+    public DateTime FinishedUtc { get; private set; }
+
+    public IngestCounters? Counters { get; private set; }
+
+    public List<Vessel> Vessels { get; } = [];
+
+    public List<(long RunId, QuarantinedRow Row)> Quarantine { get; } = [];
+
+    public int StoredCount => _stored.Count;
+
+    public void EnsureSchema() => SchemaEnsured = true;
+
+    public long BeginRun(string sourceFile, DateTime startedUtc)
+    {
+        StartedUtc = startedUtc;
+        return 1;
+    }
+
+    public void CompleteRun(long runId, DateTime finishedUtc, IngestCounters counters)
+    {
+        FinishedUtc = finishedUtc;
+        Counters = counters;
+    }
+
+    /// <summary>Mirrors INSERT OR IGNORE: returns how many rows were genuinely new.</summary>
+    public int InsertPositions(long runId, IReadOnlyList<AcceptedPosition> batch) =>
+        batch.Count(p => _stored.Add(new NaturalKey(
+            p.Record.Mmsi, p.Record.TimestampUtc, p.Record.Latitude, p.Record.Longitude)));
+
+    public void InsertQuarantine(long runId, IReadOnlyList<QuarantinedRow> rows)
+    {
+        foreach (var row in rows)
+        {
+            if (_quarantined.Add((row.SourceFile, row.SourceLine, row.Hit.RuleId)))
+            {
+                Quarantine.Add((runId, row));
+            }
+        }
+    }
+
+    public void UpsertVessels(IReadOnlyList<Vessel> vessels) => Vessels.AddRange(vessels);
+
+    public void Dispose()
+    {
+        // Nothing to release.
+    }
+}

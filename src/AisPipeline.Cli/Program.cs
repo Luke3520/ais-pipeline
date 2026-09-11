@@ -51,9 +51,20 @@ static int Ingest(string[] args)
 
     var database = ValueOf(args, "--db") ?? Path.Combine("data", "ais.db");
     var shipType = ValueOf(args, "--ship-type");
-    var limit = ValueOf(args, "--limit") is { } raw
-        ? long.Parse(raw, CultureInfo.InvariantCulture)
-        : (long?)null;
+    long? limit = null;
+    if (ValueOf(args, "--limit") is { } raw)
+    {
+        // TryParse, not Parse: a malformed value is user error and belongs on the same
+        // graceful path as a missing file, not an unhandled FormatException and a stack trace.
+        if (!long.TryParse(raw, NumberStyles.None, CultureInfo.InvariantCulture, out var parsed)
+            || parsed <= 0)
+        {
+            Console.Error.WriteLine($"--limit needs a positive whole number, got '{raw}'");
+            return 2;
+        }
+
+        limit = parsed;
+    }
 
     Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(database))!);
 
@@ -64,7 +75,7 @@ static int Ingest(string[] args)
         new IngestOptions { ShipType = shipType, Limit = limit });
 
     var startedUtc = DateTime.UtcNow;
-    var result = pipeline.Run(new DmaCsvSource(source), startedUtc);
+    var result = pipeline.Run(new DmaCsvSource(source));
     var elapsed = DateTime.UtcNow - startedUtc;
 
     Console.WriteLine($"run {result.RunId}  {Path.GetFileName(source)}  ({elapsed.TotalSeconds:F1}s)");

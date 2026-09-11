@@ -43,11 +43,8 @@ public interface IAisStore : IDisposable
     /// re-ingesting a file would leave position_report flat while quarantine doubled, breaking
     /// the idempotency guarantee through a side door (ADR-0006).
     /// </summary>
-    void InsertQuarantine(IReadOnlyList<QuarantinedRow> rows);
+    void InsertQuarantine(long runId, IReadOnlyList<QuarantinedRow> rows);
 
     /// <summary>Upsert vessel identities accumulated during pass 1.</summary>
     void UpsertVessels(IReadOnlyList<Vessel> vessels);
-
-    /// <summary>True when this natural key is already stored. Used to separate duplicate counters.</summary>
-    bool PositionExists(long mmsi, DateTime timestampUtc, double latitude, double longitude);
 }

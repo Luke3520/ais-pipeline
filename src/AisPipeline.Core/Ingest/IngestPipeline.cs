@@ -30,17 +30,29 @@ public sealed class IngestPipeline
     private readonly IAisStore _store;
     private readonly RuleRegistry _rules;
     private readonly IngestOptions _options;
+    private readonly TimeProvider _time;
 
-    public IngestPipeline(IAisStore store, RuleRegistry rules, IngestOptions options)
+    /// <param name="time">
+    /// Clock for the run's start and finish stamps. Injected rather than read from
+    /// DateTime.UtcNow so Core carries no ambient dependency (ADR-0003) and so a test can
+    /// assert that finished_utc genuinely advances past started_utc.
+    /// </param>
+    public IngestPipeline(
+        IAisStore store,
+        RuleRegistry rules,
+        IngestOptions options,
+        TimeProvider? time = null)
     {
         _store = store;
         _rules = rules;
         _options = options;
+        _time = time ?? TimeProvider.System;
     }
 
-    public IngestResult Run(IAisSource source, DateTime startedUtc)
+    public IngestResult Run(IAisSource source)
     {
         _store.EnsureSchema();
+        var startedUtc = _time.GetUtcNow().UtcDateTime;
         var runId = _store.BeginRun(source.SourceName, startedUtc);
 
         var pass1 = ResolveIdentities(source);
@@ -49,11 +61,29 @@ public sealed class IngestPipeline
         var inScope = SelectInScope(pass1.Vessels);
         var counters = StorePositions(source, runId, inScope);
 
-        _store.CompleteRun(runId, startedUtc, counters);
+        // The two passes must have seen the same rows. If they did not, the scope set was
+        // computed from one sample and applied to another, and a vessel's genuine fixes would
+        // be counted as out-of-scope with nothing to distinguish that from a real filter --
+        // silent loss. IAisSource requires replayability; this is the backstop that makes a
+        // violation loud instead of invisible.
+        if (counters.RowsRead != pass1.RowsRead)
+        {
+            throw new InvalidOperationException(
+                $"source '{source.SourceName}' is not replayable: pass 1 read {pass1.RowsRead:N0} " +
+                $"rows, pass 2 read {counters.RowsRead:N0}. Scope was resolved against rows that " +
+                "pass 2 did not see, so any row count it reports is untrustworthy.");
+        }
+
+        // Read the clock again. Passing startedUtc here made finished_utc identical to
+        // started_utc on every run, so the audit row claimed a 57-second ingest took no time.
+        _store.CompleteRun(runId, _time.GetUtcNow().UtcDateTime, counters);
         return new IngestResult(runId, counters, pass1.RuleHits, inScope.Count);
     }
 
-    private sealed record Pass1(Dictionary<long, Vessel> Vessels, Dictionary<string, long> RuleHits);
+    private sealed record Pass1(
+        Dictionary<long, Vessel> Vessels,
+        Dictionary<string, long> RuleHits,
+        long RowsRead);
 
     /// <summary>
     /// Pass 1: fold every row into a per-MMSI identity, and count every rule hit across the
@@ -91,7 +121,7 @@ public sealed class IngestPipeline
                 : Vessel.From(record);
         }
 
-        return new Pass1(vessels, hits);
+        return new Pass1(vessels, hits, read);
     }
 
     private HashSet<long> SelectInScope(Dictionary<long, Vessel> vessels)
@@ -126,7 +156,7 @@ public sealed class IngestPipeline
                 return;
             }
 
-            _store.InsertQuarantine(rejects);
+            _store.InsertQuarantine(runId, rejects);
             rejects.Clear();
         }
 

@@ -35,7 +35,7 @@ public sealed class IdempotencyTests : IDisposable
         using var store = new SqliteAisStore(_database);
         var pipeline = new IngestPipeline(
             store, RuleRegistry.Default(), new IngestOptions { ShipType = shipType });
-        return pipeline.Run(new DmaCsvSource(FixturePath()), DateTime.UtcNow);
+        return pipeline.Run(new DmaCsvSource(FixturePath()));
     }
 
     private long Count(string table)
@@ -165,6 +165,52 @@ public sealed class IdempotencyTests : IDisposable
             $"stored {scoped.Counters.RowsInserted + scoped.Counters.RowsDuplicateInFile} rows for " +
             $"in-scope vessels but only {literallyLabelled} rows carry the Tanker label; " +
             "the scope guard appears to be filtering per row");
+    }
+
+    [Fact]
+    public void EveryQuarantinedRowResolvesToTheRunThatRefusedIt()
+    {
+        // CLAUDE.md rule 1 says every stored record traces to an ingest run, and a refusal is a
+        // stored record. Without the run id, two runs over the same filename leave every
+        // quarantine row reachable from either -- permanently, because INSERT OR IGNORE makes
+        // the second write a silent no-op.
+        Ingest();
+        Ingest();
+
+        using var connection = new SqliteConnection($"Data Source={_database}");
+        connection.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT COUNT(*) FROM quarantine q
+            LEFT JOIN ingest_run r ON r.id = q.ingest_run_id
+            WHERE r.id IS NULL;
+            """;
+
+        Assert.Equal(0L, (long)command.ExecuteScalar()!);
+    }
+
+    [Fact]
+    public void AReRefusedRowStaysAttributedToTheFirstRunThatRefusedIt()
+    {
+        // Matches how position_report keeps its original ingest_run_id: first ingest owns the
+        // row. The point is that the attribution is unambiguous, not which run wins.
+        Ingest();
+
+        using var connection = new SqliteConnection($"Data Source={_database}");
+        connection.Open();
+        using var before = connection.CreateCommand();
+        before.CommandText = "SELECT DISTINCT ingest_run_id FROM quarantine";
+        var firstRun = (long)before.ExecuteScalar()!;
+
+        Ingest();
+
+        using var after = connection.CreateCommand();
+        after.CommandText = "SELECT COUNT(DISTINCT ingest_run_id) FROM quarantine";
+        Assert.Equal(1L, (long)after.ExecuteScalar()!);
+
+        using var which = connection.CreateCommand();
+        which.CommandText = "SELECT DISTINCT ingest_run_id FROM quarantine";
+        Assert.Equal(firstRun, (long)which.ExecuteScalar()!);
     }
 
     public void Dispose()
