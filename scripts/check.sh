@@ -5,6 +5,9 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+echo "==> ADR citations resolve"
+./scripts/check-adr-citations.sh
+
 echo "==> format"
 dotnet format --verify-no-changes
 
