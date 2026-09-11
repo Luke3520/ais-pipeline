@@ -31,14 +31,38 @@ public sealed record StoredStop
     public DateTime StartedUtc { get; init; }
     public DateTime EndedUtc { get; init; }
 
-    /// <summary>Meaningful only when <see cref="IsComplete"/> (ADR-0011).</summary>
-    public double DurationHours { get; init; }
+    /// <summary>
+    /// The observed span between the first and last fix of the stop. Always present, always a
+    /// lower bound: when the stop touches a coverage gap or the edge of the window, the vessel was
+    /// stationary for at least this long and possibly much longer.
+    /// </summary>
+    public double ObservedDurationHours { get; init; }
+
+    /// <summary>
+    /// The stop's duration, or null when its true extent is unknown (ADR-0011).
+    ///
+    /// Null rather than a number the caller must remember to qualify. The same convention rule R5
+    /// applies to unavailable speed: unknown is not a value, and a consumer summing these cannot
+    /// silently treat a censored stop as a measured one. <see cref="ObservedDurationHours"/> keeps
+    /// the lower bound available for anyone who wants it deliberately.
+    /// </summary>
+    public double? DurationHours => IsComplete ? ObservedDurationHours : null;
 
     public double CentroidLatitude { get; init; }
     public double CentroidLongitude { get; init; }
 
-    /// <summary>Meaningful only when <see cref="GeometryTrustworthy"/> (ADR-0025).</summary>
-    public double MaxDriftNm { get; init; }
+    /// <summary>The measured drift, always present, meaningful only alongside the flag below.</summary>
+    public double ObservedMaxDriftNm { get; init; }
+
+    /// <summary>
+    /// How far the vessel wandered, or null when too few fixes survived exclusion for the figure
+    /// to mean anything (ADR-0025).
+    ///
+    /// With one reliable fix the centroid IS that fix, so the drift computes to exactly 0.0 -- the
+    /// most confident possible berth reading, on the stops most likely to have been a drifting
+    /// vessel. Null makes that unrepresentable as a number.
+    /// </summary>
+    public double? MaxDriftNm => GeometryTrustworthy ? ObservedMaxDriftNm : null;
 
     public int FixCount { get; init; }
     public int ReliableFixCount { get; init; }

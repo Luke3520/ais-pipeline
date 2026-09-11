@@ -60,6 +60,20 @@ Both suites carry it. The unit suite was exempt while `AisPipeline.Core` had no 
 unit tests was the correct state; that exemption ended when M1 added the first quality rules, and
 the flag went on in the same change.
 
+## A figure that depends on a qualifier is nullable
+
+`duration_hours` means nothing unless `is_complete`; `max_drift_nm` means nothing unless
+`geometry_trustworthy`. Adjacent fields are a convention a consumer can ignore — in GraphQL,
+selecting the figure without the flag is one keystroke.
+
+So the qualified form is **nullable**, and null when the qualifier says the figure is meaningless.
+The raw observation stays available under an `Observed*` name for anyone who wants the lower bound
+deliberately.
+
+This is not a new convention: rule R5 stores unavailable speed as null rather than zero, precisely
+so detection cannot read "not reported" as "stationary". Apply the same shape to any future figure
+whose validity depends on another field.
+
 ## Replacing a test file
 
 When a test file is replaced rather than edited — split, renamed, converted to run against more

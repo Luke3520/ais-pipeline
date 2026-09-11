@@ -271,9 +271,9 @@ public sealed class SqlAisQueries : IAisQueries
 
     private static string StopSelectList(string alias) => $"""
         {alias}.id AS Id, {alias}.mmsi AS Mmsi, {alias}.started_utc AS StartedUtc,
-        {alias}.ended_utc AS EndedUtc, {alias}.duration_hours AS DurationHours,
+        {alias}.ended_utc AS EndedUtc, {alias}.duration_hours AS ObservedDurationHours,
         {alias}.centroid_lat AS CentroidLatitude, {alias}.centroid_lon AS CentroidLongitude,
-        {alias}.max_drift_nm AS MaxDriftNm, {alias}.fix_count AS FixCount,
+        {alias}.max_drift_nm AS ObservedMaxDriftNm, {alias}.fix_count AS FixCount,
         {alias}.reliable_fix_count AS ReliableFixCount,
         {alias}.geometry_trustworthy AS GeometryTrustworthy,
         {alias}.reported_status AS ReportedStatus, {alias}.status_agrees AS StatusAgrees,
