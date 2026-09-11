@@ -1,3 +1,4 @@
+using AisPipeline.Core.Annotate;
 using AisPipeline.Core.Domain;
 using AisPipeline.Core.Ingest;
 using AisPipeline.Core.Quality;
@@ -47,4 +48,25 @@ public interface IAisStore : IDisposable
 
     /// <summary>Upsert vessel identities accumulated during pass 1.</summary>
     void UpsertVessels(IReadOnlyList<Vessel> vessels);
+
+    /// <summary>
+    /// Every stored fix, ordered by (mmsi, ts_utc). Streams: the annotate and detection passes
+    /// walk millions of rows and must not hold them all.
+    ///
+    /// This ordering is the contract. Both passes depend on one vessel's fixes arriving
+    /// contiguously in time order -- that is what makes the sequence rules correct across day
+    /// boundaries, and what lets detection group by vessel without buffering the table.
+    /// </summary>
+    IEnumerable<PositionFix> ReadFixesOrdered();
+
+    /// <summary>Rewrite quality_flags for fixes the annotate pass changed.</summary>
+    void UpdateQualityFlags(IReadOnlyList<FlagUpdate> updates);
+
+    /// <summary>
+    /// Replace every stop event and port call with the ones given, in one transaction.
+    ///
+    /// A full replace rather than a merge: these are projections over position_report, so
+    /// re-running detection must land on exactly the same result as running it once (ADR-0009).
+    /// </summary>
+    void ReplaceDetections(IReadOnlyList<PortCall> portCalls);
 }
