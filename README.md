@@ -6,8 +6,8 @@ when each tanker stopped, for how long, and whether it was waiting at anchor or 
 
 That last distinction is the raw material of a laytime calculation.
 
-> **Status:** in progress. M6 (laytime) complete — see [Milestones](#milestones).
-> Seven days of AIS in, a demurrage figure out.
+> **Status:** in progress. M7 (reconciliation) complete — see [Milestones](#milestones).
+> Seven days of AIS in; a Statement of Facts compared against it, and the difference priced.
 
 ## Why
 
@@ -132,6 +132,39 @@ its place — compression, or time-range queries — not because the image offer
 ([ADR-0026](docs/adr/0026-postgres-adapter-and-no-hypertable.md))
 
 ## What it is for
+
+```
+$ ais reconcile --sof statement-of-facts.json --allowed 48
+STINGRAY (mmsi 636025106)
+  AIS call : 359  2026-09-03 15:38 -> 2026-09-06 21:18
+
+  Anchored                   SoF 2026-09-03 15:38   AIS 2026-09-03 15:38      0 min   Agrees
+  AnchorAweigh               SoF 2026-09-04 22:02   AIS 2026-09-04 22:02      0 min   Agrees
+  AllFast                    SoF 2026-09-04 23:29   AIS 2026-09-04 22:47     -3 min   Agrees
+  LeftBerth                  SoF 2026-09-06 21:18   AIS 2026-09-06 21:18      0 min   Agrees
+  NoticeOfReadinessTendered  SoF 2026-09-03 15:44   AIS —                             AisCannotObserve
+  CargoCommenced             SoF 2026-09-05 00:41   AIS —                             AisCannotObserve
+  CargoCompleted             SoF 2026-09-06 19:48   AIS —                             AisCannotObserve
+
+  demurrage on the document's timeline : 23,983.43 USD
+  demurrage on the AIS timeline        : 27,483.43 USD
+  difference                           : -3,500.00 USD
+```
+
+A Statement of Facts is what the parties agreed happened. AIS is what the ship's transponder says
+happened. **Comparing them is the point**, and the difference here is exactly three hours of shore
+stop the document claims and AIS is structurally unable to see — 3h × 28,000/day = 3,500 USD.
+
+Note the `AllFast` line. The document says 23:29; AIS saw the vessel stop at 22:47. That **42-minute
+gap is not a discrepancy** — a vessel stops moving well before it is made fast, and two real
+Statements of Facts put that lag at 30 and 61 minutes. Comparing the two naively and expecting zero
+would flag every honest document ever written.
+
+And the price is **the difference between two laytime calculations, not the delta times the rate**.
+The same disagreement about berthing is worth real money when laytime starts on berthing and worth
+*exactly nothing* when turn time expires first. ([ADR-0031](docs/adr/0031-reconciling-a-statement-of-facts.md))
+
+## The laytime engine
 
 ```
 $ ais laytime --mmsi 245313000
@@ -305,8 +338,8 @@ the same failure mode as having no check at all.
 | **M3** | Postgres behind the same ports, Docker Compose | ✅ complete |
 | **M4** | REST + OpenAPI, GraphQL with DataLoader | ✅ complete |
 | **M6** | Laytime engine — terms in, line-item statement out | ✅ complete |
+| **M7** | Statement of Facts reconciliation, priced | ✅ complete |
 | M5 | OpenTelemetry → Prometheus + Grafana, k6 | deferred — infrastructure, and nothing queries this yet |
-| M7 | Statement of Facts ingestion and discrepancy report | next |
 
 ## Where this is going
 
@@ -333,7 +366,7 @@ AIS provides is an independently verifiable timeline to check the Statement of F
 
 ## Architecture decisions
 
-Twenty-six decisions are recorded in [`docs/adr/`](docs/adr/), including the ones where the answer was
+Twenty-eight decisions are recorded in [`docs/adr/`](docs/adr/), including the ones where the answer was
 *no*: why not microservices, why not MongoDB, why not event sourcing, and why the redundant index was
 deleted rather than justified.
 

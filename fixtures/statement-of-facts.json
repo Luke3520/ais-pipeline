@@ -1,0 +1,68 @@
+{
+  "_comment": [
+    "CONSTRUCTED, not a real Statement of Facts. Built against a genuine port call detected",
+    "from AIS so the reconcile verb can run end to end, using the event vocabulary of the",
+    "Immingham 2023 document. 'All fast' sits 42 minutes after AIS sees the vessel stop --",
+    "inside the 30-60 minute band the real documents exhibit (ADR-0031). The shore stop is",
+    "the kind of delay AIS is structurally unable to see."
+  ],
+  "mmsi": 636025106,
+  "vesselName": "STINGRAY",
+  "port": "Danish waters (from AIS)",
+  "preparedBy": "constructed fixture",
+  "events": [
+    {
+      "timestampUtc": "2026-09-03T15:14:43Z",
+      "label": "End of sea passage (EOSP)"
+    },
+    {
+      "timestampUtc": "2026-09-03T15:38:43Z",
+      "label": "Dropped anchor"
+    },
+    {
+      "timestampUtc": "2026-09-03T15:44:43Z",
+      "label": "NOR Tendered"
+    },
+    {
+      "timestampUtc": "2026-09-04T22:02:09Z",
+      "label": "Anchor aweigh"
+    },
+    {
+      "timestampUtc": "2026-09-04T22:59:10Z",
+      "label": "First line ashore"
+    },
+    {
+      "timestampUtc": "2026-09-04T23:29:10Z",
+      "label": "All fast"
+    },
+    {
+      "timestampUtc": "2026-09-04T23:53:10Z",
+      "label": "Cargo arm connected"
+    },
+    {
+      "timestampUtc": "2026-09-05T00:41:10Z",
+      "label": "Commenced discharging"
+    },
+    {
+      "timestampUtc": "2026-09-05T12:47:10Z",
+      "label": "Suspended discharging",
+      "remark": "Shore's stop, line clear"
+    },
+    {
+      "timestampUtc": "2026-09-05T15:47:10Z",
+      "label": "Resumed discharging"
+    },
+    {
+      "timestampUtc": "2026-09-06T19:48:09Z",
+      "label": "Completed discharging"
+    },
+    {
+      "timestampUtc": "2026-09-06T20:48:09Z",
+      "label": "Cargo arm disconnected"
+    },
+    {
+      "timestampUtc": "2026-09-06T21:18:09Z",
+      "label": "Left berth (last line)"
+    }
+  ]
+}
