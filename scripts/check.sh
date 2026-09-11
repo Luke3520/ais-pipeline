@@ -14,7 +14,16 @@ dotnet build --configuration Release --nologo
 echo "==> unit tests (Core only: no database, no filesystem -- ADR-0003)"
 dotnet test tests/AisPipeline.Tests --configuration Release --no-build --nologo -- RunConfiguration.TreatNoTestsAsError=true
 
-echo "==> integration tests (fixture into a temp database; never needs data/)"
+# Postgres is included when AIS_POSTGRES is set. compose.yaml provides it:
+#   docker compose up -d
+#   export AIS_POSTGRES="Host=localhost;Port=55432;Database=ais;Username=ais;Password=ais"
+# Without it the suite still runs, against SQLite only -- and AdapterCoverageTests fails in CI
+# if that ever happens there.
+if [ -n "${AIS_POSTGRES:-}" ]; then
+  echo "==> integration tests (SQLite and Postgres)"
+else
+  echo "==> integration tests (SQLite only; set AIS_POSTGRES to include Postgres)"
+fi
 dotnet test tests/AisPipeline.IntegrationTests --configuration Release --no-build --nologo -- RunConfiguration.TreatNoTestsAsError=true
 
 echo "==> check passed"

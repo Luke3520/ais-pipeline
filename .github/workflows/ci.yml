@@ -9,6 +9,28 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+
+    services:
+      # Adapter parity is only a claim until both engines run the same suite (ADR-0026).
+      # TimescaleDB rather than plain postgres to match compose.yaml, so CI and a developer's
+      # machine are running the same image.
+      postgres:
+        image: timescale/timescaledb:2.17.2-pg17
+        env:
+          POSTGRES_DB: ais
+          POSTGRES_USER: ais
+          POSTGRES_PASSWORD: ais
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ais -d ais"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    env:
+      AIS_POSTGRES: "Host=localhost;Port=5432;Database=ais;Username=ais;Password=ais"
+
     steps:
       - uses: actions/checkout@v4
 
