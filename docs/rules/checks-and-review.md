@@ -61,6 +61,19 @@ unit tests is therefore the correct state. It gains the flag with Core's first q
 This exception is recorded here rather than as a comment nobody reads; if you are adding to Core
 and this paragraph is still present, add the flag in the same change.
 
+## Enabling the hook
+
+The hook lives in `.githooks/pre-push` and is version controlled, but git does not read it until
+the clone is pointed at that directory:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+This is local config and a clone does not inherit it. Until it is run, the pre-push check silently
+does not fire -- indistinguishable from a check that passed. The README says the same thing in its
+setup section.
+
 ## Skipping the hook
 
 `git push --no-verify` is fine for work-in-progress branches that will not be merged as they are.

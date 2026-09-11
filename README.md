@@ -143,6 +143,17 @@ ais stops --min-hours 6 --complete-only
 ais portcalls --min-waiting-hours 6
 ```
 
+## Working on it
+
+```bash
+git config core.hooksPath .githooks   # once per clone: enables the pre-push check
+./scripts/check.sh                    # format, build, test -- same script CI runs
+```
+
+The hook path is local git config rather than something a clone inherits, so that first command is
+the one step a fresh checkout needs. Without it the pre-push check silently does not run, which is
+the same failure mode as having no check at all.
+
 ## Milestones
 
 | | | |
