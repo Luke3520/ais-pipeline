@@ -1,3 +1,4 @@
+using AisPipeline.Core.Annotate;
 using AisPipeline.Core.Domain;
 using AisPipeline.Core.Ingest;
 using AisPipeline.Core.Ports;
@@ -60,6 +61,35 @@ internal sealed class FakeAisStore : IAisStore
     }
 
     public void UpsertVessels(IReadOnlyList<Vessel> vessels) => Vessels.AddRange(vessels);
+
+    /// <summary>Fixes handed back to the annotate and detection passes, in store order.</summary>
+    public List<PositionFix> Fixes { get; } = [];
+
+    public List<PortCall> Detections { get; } = [];
+
+    public int ReplaceDetectionsCalls { get; private set; }
+
+    public IEnumerable<PositionFix> ReadFixesOrdered() =>
+        Fixes.OrderBy(f => f.Mmsi).ThenBy(f => f.TimestampUtc).ThenBy(f => f.Id);
+
+    public void UpdateQualityFlags(IReadOnlyList<FlagUpdate> updates)
+    {
+        foreach (var update in updates)
+        {
+            var index = Fixes.FindIndex(f => f.Id == update.PositionId);
+            if (index >= 0)
+            {
+                Fixes[index] = Fixes[index] with { QualityFlags = update.QualityFlags };
+            }
+        }
+    }
+
+    public void ReplaceDetections(IReadOnlyList<PortCall> portCalls)
+    {
+        ReplaceDetectionsCalls++;
+        Detections.Clear();
+        Detections.AddRange(portCalls);
+    }
 
     public void Dispose()
     {
