@@ -20,10 +20,17 @@ public sealed class StoreOptions
         ? () => new NpgsqlConnection(connectionString)
         : () => new SqliteConnection($"Data Source={SqlitePath};Mode=ReadOnly");
 
-    public static StoreOptions FromConfiguration(IConfiguration configuration) => new()
+    public static StoreOptions FromConfiguration(IConfiguration configuration)
     {
-        // AIS_POSTGRES is the same variable the test suite and compose.yaml use.
-        Postgres = configuration["AIS_POSTGRES"] ?? configuration.GetConnectionString("Postgres"),
-        SqlitePath = configuration["AIS_SQLITE"] ?? IoPath.Combine("data", "ais.db"),
-    };
+        var postgres = configuration["AIS_POSTGRES"] ?? configuration.GetConnectionString("Postgres");
+
+        return new StoreOptions
+        {
+            // Empty is not the same as absent. A caller setting AIS_POSTGRES="" is explicitly
+            // asking for SQLite, which is how a test pins itself to the database it built rather
+            // than inheriting whatever the ambient environment happens to point at.
+            Postgres = string.IsNullOrWhiteSpace(postgres) ? null : postgres,
+            SqlitePath = configuration["AIS_SQLITE"] ?? IoPath.Combine("data", "ais.db"),
+        };
+    }
 }

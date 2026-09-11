@@ -122,6 +122,20 @@ public class RestContractTests : IClassFixture<ApiFixture>
     }
 
     [Fact]
+    public async Task TheApiServesTheDatabaseThisFixtureBuiltAndNoOther()
+    {
+        // The fixture ingests exactly once, so exactly one run must be visible. Any other count
+        // means the host resolved a different database -- which is what happened before
+        // ADR-0028's fix: an ambient AIS_POSTGRES took precedence and these tests asserted
+        // against a populated Postgres they never wrote to, passing locally and failing in CI
+        // only because CI's Postgres was empty.
+        var runs = await GetJson("/runs");
+
+        Assert.Equal(1, runs.GetArrayLength());
+        Assert.EndsWith("sample.csv", runs[0].GetProperty("sourceFile").GetString(), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task RunsExposeBothDuplicateCountersSeparately()
     {
         // They are separate deliberately: 38% of a file is duplicate on first ingest, so one

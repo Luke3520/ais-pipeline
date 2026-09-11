@@ -50,8 +50,20 @@ public sealed class ApiFixture : WebApplicationFactory<Program>
 
     }
 
-    protected override void ConfigureWebHost(Microsoft.AspNetCore.Hosting.IWebHostBuilder builder) =>
+    protected override void ConfigureWebHost(Microsoft.AspNetCore.Hosting.IWebHostBuilder builder)
+    {
         builder.UseSetting("AIS_SQLITE", _database);
+
+        // Pin the host to the database this fixture built. ASP.NET Core reads environment
+        // variables into configuration, so an ambient AIS_POSTGRES -- which check.sh exports, and
+        // CI sets for the adapter-parity suite -- would otherwise take precedence and the API
+        // would serve a completely different database.
+        //
+        // That is not hypothetical: these tests passed locally against a populated Postgres they
+        // never wrote to, and only failed in CI because its Postgres was empty. A test that reads
+        // a database it did not create is asserting on someone else's data.
+        builder.UseSetting("AIS_POSTGRES", string.Empty);
+    }
 
     protected override void Dispose(bool disposing)
     {
