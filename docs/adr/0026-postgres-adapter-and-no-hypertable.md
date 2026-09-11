@@ -61,6 +61,26 @@ The image is used anyway so the extension is present the moment it earns its pla
 time-range queries, native compression against the 1,255 MB this table now occupies, or retention
 policies. None of those is a current requirement.
 
+## Amendments from review
+
+Two things the three-lane review surfaced, both fixed before this record settled.
+
+**Generated ids now follow source order.** The move from staging had no `ORDER BY`, leaving id
+assignment unspecified — while `id` is the tiebreak in `ReadFixesOrdered`, so the roughly 3,700
+fixes a day sharing a vessel-second could be read back in a different order on each engine. No
+published figure depended on that tie, because the stop aggregates are order-independent, and
+parity held empirically. But "the adapters agree" should be a guarantee rather than a coincidence
+that has held so far, so the staging table carries an ordinal and the move is ordered by it.
+
+**The batch boundary was never crossed by any test.** The default batch is 5,000 rows and the
+fixture is 684, so every test called `InsertPositions` exactly once and flushed flag updates only
+after the read loop finished. The staging table was therefore never recreated across transactions,
+and — more seriously — the annotate pass never wrote while a read was still streaming, which is the
+entire reason this adapter opens a second connection for `UpdateQualityFlags`. On a seven-day run
+that path executes constantly; the suite would have stayed green while `ais detect --postgres`
+failed on the only data large enough to matter. `BatchBoundaryTests` forces a 25-row batch and
+exercises both.
+
 ## Consequences
 
 - Parity is proven, not claimed. Ingesting the same seven days into both engines produces identical

@@ -88,18 +88,19 @@ public sealed class PostgresAisStore : IAisStore
             CREATE TEMP TABLE IF NOT EXISTS staging_position (
               mmsi BIGINT, ts_utc TIMESTAMPTZ, lat DOUBLE PRECISION, lon DOUBLE PRECISION,
               sog_kn DOUBLE PRECISION, cog DOUBLE PRECISION, heading DOUBLE PRECISION,
-              nav_status TEXT, quality_flags TEXT, source_line BIGINT
+              nav_status TEXT, quality_flags TEXT, source_line BIGINT, ord BIGINT
             ) ON COMMIT DROP;
             """, transaction);
 
         using (var writer = _connection.BeginBinaryImport("""
             COPY staging_position (mmsi, ts_utc, lat, lon, sog_kn, cog, heading,
-                                   nav_status, quality_flags, source_line)
+                                   nav_status, quality_flags, source_line, ord)
             FROM STDIN (FORMAT BINARY);
             """))
         {
-            foreach (var accepted in batch)
+            for (var i = 0; i < batch.Count; i++)
             {
+                var accepted = batch[i];
                 var r = accepted.Record;
                 writer.StartRow();
                 writer.Write(r.Mmsi, NpgsqlDbType.Bigint);
@@ -112,6 +113,7 @@ public sealed class PostgresAisStore : IAisStore
                 writer.Write(r.NavigationalStatus, NpgsqlDbType.Text);
                 writer.Write(accepted.QualityFlags, NpgsqlDbType.Text);
                 writer.Write(r.SourceLine, NpgsqlDbType.Bigint);
+                writer.Write((long)i, NpgsqlDbType.Bigint);
             }
 
             writer.Complete();
@@ -125,6 +127,7 @@ public sealed class PostgresAisStore : IAisStore
             SELECT mmsi, ts_utc, lat, lon, sog_kn, cog, heading, nav_status, quality_flags,
                    $1, source_line
             FROM staging_position
+            ORDER BY ord
             ON CONFLICT (mmsi, ts_utc, lat, lon) DO NOTHING;
             """;
         move.Parameters.AddWithValue(runId);
