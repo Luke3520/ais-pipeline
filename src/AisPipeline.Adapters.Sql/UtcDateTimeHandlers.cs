@@ -27,8 +27,16 @@ public sealed class UtcDateTimeHandler : SqlMapper.TypeHandler<DateTime>
     public override DateTime Parse(object value) => ToUtc(value);
 
     public override void SetValue(IDbDataParameter parameter, DateTime value) =>
-        parameter.Value = value.ToUniversalTime();
+        parameter.Value = ToUtc(value);
 
+    /// <summary>
+    /// Writing has the same trap as reading, and it was missed here first: plain
+    /// <c>ToUniversalTime()</c> on a <see cref="DateTimeKind.Unspecified"/> value assumes the
+    /// value is local and converts from there. A caller passing <c>new DateTime(2026, 1, 1)</c> --
+    /// which is Unspecified -- would have sent a range shifted by the host's offset, silently
+    /// including or excluding fixes at the boundary. Both directions now go through the same
+    /// conversion.
+    /// </summary>
     internal static DateTime ToUtc(object value) => value switch
     {
         DateTime { Kind: DateTimeKind.Utc } utc => utc,
@@ -69,5 +77,5 @@ public sealed class NullableUtcDateTimeHandler : SqlMapper.TypeHandler<DateTime?
         value is null or DBNull ? null : UtcDateTimeHandler.ToUtc(value);
 
     public override void SetValue(IDbDataParameter parameter, DateTime? value) =>
-        parameter.Value = value?.ToUniversalTime() ?? (object)DBNull.Value;
+        parameter.Value = value is { } v ? UtcDateTimeHandler.ToUtc(v) : DBNull.Value;
 }
