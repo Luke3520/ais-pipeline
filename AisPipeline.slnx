@@ -4,10 +4,12 @@
     <Project Path="src/AisPipeline.Adapters.Postgres/AisPipeline.Adapters.Postgres.csproj" />
     <Project Path="src/AisPipeline.Adapters.Sql/AisPipeline.Adapters.Sql.csproj" />
     <Project Path="src/AisPipeline.Adapters.Sqlite/AisPipeline.Adapters.Sqlite.csproj" />
+    <Project Path="src/AisPipeline.Api/AisPipeline.Api.csproj" />
     <Project Path="src/AisPipeline.Cli/AisPipeline.Cli.csproj" />
     <Project Path="src/AisPipeline.Core/AisPipeline.Core.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/AisPipeline.ApiTests/AisPipeline.ApiTests.csproj" />
     <Project Path="tests/AisPipeline.IntegrationTests/AisPipeline.IntegrationTests.csproj" />
     <Project Path="tests/AisPipeline.Tests/AisPipeline.Tests.csproj" />
   </Folder>
