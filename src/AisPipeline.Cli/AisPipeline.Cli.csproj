@@ -6,6 +6,7 @@
     <ProjectReference Include="..\AisPipeline.Adapters.Sqlite\AisPipeline.Adapters.Sqlite.csproj" />
     <ProjectReference Include="..\AisPipeline.Adapters.Postgres\AisPipeline.Adapters.Postgres.csproj" />
     <ProjectReference Include="..\AisPipeline.Adapters.Sql\AisPipeline.Adapters.Sql.csproj" />
+    <ProjectReference Include="..\AisPipeline.Adapters.Sof\AisPipeline.Adapters.Sof.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

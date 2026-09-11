@@ -1,11 +1,14 @@
 using System.Globalization;
 using AisPipeline.Adapters.Csv;
 using AisPipeline.Adapters.Postgres;
+using AisPipeline.Adapters.Sof;
 using AisPipeline.Adapters.Sqlite;
 using AisPipeline.Adapters.Sql;
 using AisPipeline.Core.Annotate;
 using AisPipeline.Core.Domain;
 using AisPipeline.Core.Laytime;
+using AisPipeline.Core.Reconciliation;
+using AisPipeline.Core.Sof;
 using AisPipeline.Core.Query;
 using AisPipeline.Core.Ports;
 using AisPipeline.Core.Detection;
@@ -24,6 +27,7 @@ return args[0] switch
     "ingest" => Ingest(args[1..]),
     "detect" => Detect(args[1..]),
     "laytime" => Laytime(args[1..]),
+    "reconcile" => Reconcile(args[1..]),
     _ => Unknown(args[0]),
 };
 
@@ -40,6 +44,7 @@ static void Usage() => Console.WriteLine("""
       ais ingest <file.csv|file.zip> [--db <path> | --postgres <conn>] [--ship-type <type>] [--limit <n>]
       ais detect [--db <path> | --postgres <conn>]
       ais laytime --mmsi <n> [--allowed <h>] [--rate <perDay>] [--nor <iso>] [--turn <h>]
+      ais reconcile --sof <file.json> [--allowed <h>] [--rate <perDay>] [--turn <h>]
 
     Options:
       --db          SQLite file to read/write (default: data/ais.db)
@@ -50,6 +55,9 @@ static void Usage() => Console.WriteLine("""
 
     detect annotates the sequence rules and rebuilds stops and port calls. It is a full
     recompute: running it twice lands on exactly the same result.
+
+    reconcile compares a Statement of Facts against what AIS observed for the same call, and
+    prices the difference by running the laytime calculation on each timeline.
 
     laytime computes a statement for a vessel's most recent complete port call. AIS supplies
     berthing and completion; Notice of Readiness comes from the charter party and defaults to
@@ -281,6 +289,125 @@ static int Laytime(string[] args)
     Console.WriteLine(statement);
     return 0;
 }
+
+static int Reconcile(string[] args)
+{
+    if (ValueOf(args, "--sof") is not { } sofPath)
+    {
+        Console.Error.WriteLine("reconcile needs --sof <file.json>");
+        return 2;
+    }
+
+    if (!File.Exists(sofPath))
+    {
+        Console.Error.WriteLine($"no statement of facts at {sofPath}");
+        return 2;
+    }
+
+    StatementOfFacts sof;
+    try
+    {
+        sof = SofJsonReader.ReadFile(sofPath);
+    }
+    catch (InvalidDataException e)
+    {
+        // A malformed document is user error, not a crash. The message names the line.
+        Console.Error.WriteLine(e.Message);
+        return 2;
+    }
+
+    var connection = ReadConnection.Resolve(ValueOf(args, "--postgres"), ValueOf(args, "--db"));
+
+    if (connection.Dialect == SqlDialect.Sqlite && !File.Exists(connection.SqlitePath))
+    {
+        Console.Error.WriteLine($"no database at {connection.SqlitePath}; run ingest and detect first");
+        return 2;
+    }
+
+    using var queries = connection.OpenQueries();
+
+    if (queries.MostRecentCompletePortCall(sof.Mmsi) is not { } call)
+    {
+        Console.Error.WriteLine(
+            $"no complete port call for mmsi {sof.Mmsi}; this document cannot be matched to AIS");
+        return 2;
+    }
+
+    var portCall = RebuildPortCall(call, queries.GetPhasesForPortCalls([call.Id]));
+
+    var terms = new CharterPartyTerms
+    {
+        LaytimeAllowedHours = Number(args, "--allowed", 72.0),
+        DemurrageRatePerDay = Money.FromMajor((decimal)Number(args, "--rate", 28_000.0), "USD"),
+        // The document supplies the notice, so nothing is assumed here -- unlike `laytime`,
+        // which has to substitute arrival when no charter party is to hand.
+        NoticeOfReadinessUtc = sof.First(SofEventKind.NoticeOfReadinessTendered)?.TimestampUtc
+            ?? call.ArrivedUtc,
+        NoticeOfReadinessIsAssumed = sof.First(SofEventKind.NoticeOfReadinessTendered) is null,
+        TurnTimeHours = Number(args, "--turn", 6.0),
+    };
+
+    Reconciliation result;
+    try
+    {
+        result = new TimelineReconciler().Reconcile(sof, portCall, terms);
+    }
+    catch (ArgumentException e)
+    {
+        Console.Error.WriteLine($"cannot reconcile: {e.Message}");
+        return 2;
+    }
+
+    Console.WriteLine($"{sof.VesselName} (mmsi {sof.Mmsi})  {sof.Port}");
+    Console.WriteLine($"  statement : {Path.GetFileName(sofPath)}  ({sof.Events.Count} events)");
+    Console.WriteLine($"  AIS call  : {call.Id}  {call.ArrivedUtc:yyyy-MM-dd HH:mm} -> {call.DepartedUtc:yyyy-MM-dd HH:mm}");
+    Console.WriteLine();
+    Console.WriteLine(result);
+
+    var unrecognised = sof.Events.Count(e => e.Kind == SofEventKind.Other);
+    if (unrecognised > 0)
+    {
+        // Kept, not dropped -- and said out loud, because a line nobody classified is a line
+        // nobody compared.
+        Console.WriteLine();
+        Console.WriteLine($"  {unrecognised} event(s) kept but not classified, so not compared:");
+        foreach (var e in sof.Events.Where(e => e.Kind == SofEventKind.Other))
+        {
+            Console.WriteLine($"    {e.TimestampUtc:yyyy-MM-dd HH:mm}  {e.Label}");
+        }
+    }
+
+    return 0;
+}
+
+/// <summary>Rebuilds the domain shape from stored rows, so detection logic is not duplicated here.</summary>
+static PortCall RebuildPortCall(
+    AisPipeline.Core.Query.StoredPortCall call,
+    IReadOnlyList<(AisPipeline.Core.Query.StoredPhase Phase, AisPipeline.Core.Query.StoredStop Stop)> phases) => new()
+    {
+        Mmsi = call.Mmsi,
+        Phases = [.. phases
+        .OrderBy(p => p.Phase.Sequence)
+        .Select(p => new PortCallPhase(
+            p.Phase.Sequence,
+            Enum.Parse<StopPhase>(p.Phase.Phase),
+            new StopEvent
+            {
+                Mmsi = p.Stop.Mmsi,
+                StartedUtc = p.Stop.StartedUtc,
+                EndedUtc = p.Stop.EndedUtc,
+                CentroidLatitude = p.Stop.CentroidLatitude,
+                CentroidLongitude = p.Stop.CentroidLongitude,
+                MaxDriftNm = p.Stop.ObservedMaxDriftNm,
+                FixCount = p.Stop.FixCount,
+                ReliableFixCount = p.Stop.ReliableFixCount,
+                ReportedStatus = p.Stop.ReportedStatus,
+                StatusAgrees = p.Stop.StatusAgrees,
+                IsComplete = p.Stop.IsComplete,
+                FirstPositionId = p.Stop.FirstPositionId,
+                LastPositionId = p.Stop.LastPositionId,
+            }))],
+    };
 
 static double Number(string[] args, string name, double fallback) =>
     ValueOf(args, name) is { } raw
