@@ -24,3 +24,7 @@ TestResults/
 
 # Planning notes kept local: they reference context that does not belong in a public repo
 ais-pipeline-plan_1.md
+
+# Reference documents that are not ours to redistribute. This repo is public; BIMCO's forms are
+# BIMCO's. docs/reference/sof/README.md carries the citation instead.
+docs/reference/**/*.pdf
