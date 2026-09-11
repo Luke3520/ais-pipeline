@@ -181,9 +181,18 @@ AIS provides is an independently verifiable timeline to check the Statement of F
 
 ## Architecture decisions
 
-Fifteen decisions are recorded in [`docs/adr/`](docs/adr/), including the ones where the answer was
+Sixteen decisions are recorded in [`docs/adr/`](docs/adr/), including the ones where the answer was
 *no*: why not microservices, why not MongoDB, why not event sourcing, and why the redundant index was
 deleted rather than justified.
+
+## Reviewing changes
+
+Most of this code is written by an AI agent, which then judges its own work. `/review-pass` splits
+that judgement across three independent read-only lanes -- correctness, data integrity, and craft --
+each owning specific blocking classes and each told what is *not* its lane. Only four kinds of
+finding block a change; everything else is recorded in
+[`docs/review-followups.md`](docs/review-followups.md) and never holds it up.
+([ADR-0022](docs/adr/0022-three-lane-review-harness.md))
 
 ## Licence
 

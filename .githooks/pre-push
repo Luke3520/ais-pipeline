@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# Runs the same script CI runs. Skip with --no-verify on work-in-progress branches,
+# never on main -- see docs/rules/checks-and-review.md.
+set -euo pipefail
+exec "$(git rev-parse --show-toplevel)/scripts/check.sh"

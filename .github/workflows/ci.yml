@@ -17,18 +17,7 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
-      - name: Restore
-        run: dotnet restore
-
-      - name: Build
-        run: dotnet build --no-restore --configuration Release
-
-      # Unit tests reference only AisPipeline.Core and touch no database or filesystem
-      # (ADR-0003). They must stay fast enough to run on every push.
-      - name: Unit tests
-        run: dotnet test tests/AisPipeline.Tests --no-build --configuration Release --verbosity normal
-
-      # Integration tests run the pipeline against fixtures/sample.csv into a temporary
-      # SQLite database. They never require the large DMA files, which are gitignored.
-      - name: Integration tests
-        run: dotnet test tests/AisPipeline.IntegrationTests --no-build --configuration Release --verbosity normal
+      # One script for CI and the pre-push hook, so the two cannot drift.
+      # docs/rules/checks-and-review.md governs what may become blocking.
+      - name: Check (format, build, test)
+        run: ./scripts/check.sh

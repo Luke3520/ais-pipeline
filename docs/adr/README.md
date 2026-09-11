@@ -39,3 +39,4 @@ the design.
 | 0014–0019 | *Reserved: API surface, auth, observability, Postgres — recorded when those milestones land* | — |
 | [0020](0020-berth-drift-threshold.md) | Berth/anchorage drift threshold, calibrated | Accepted |
 | [0021](0021-sog-consistency-and-rule-ordering.md) | SOG consistency rule and annotate-before-detect ordering | Accepted |
+| [0022](0022-three-lane-review-harness.md) | Three-lane review harness | Accepted |
