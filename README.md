@@ -6,9 +6,9 @@ when each tanker stopped, for how long, and whether it was waiting at anchor or 
 
 That last distinction is the raw material of a laytime calculation.
 
-> **Status:** in progress. M2 (detection) complete — see [Milestones](#milestones).
-> Seven days ingested, 809 stops and 362 port calls detected, waiting-versus-working time
-> measured without a port dataset.
+> **Status:** in progress. M3 (Postgres) complete — see [Milestones](#milestones).
+> Seven days ingested, 809 stops and 362 port calls detected, and both storage adapters produce
+> byte-identical results.
 
 ## Why
 
@@ -106,6 +106,31 @@ Running `detect` twice produces a byte-identical result. These tables are projec
 Thirty complete port calls carry both. No port boundary dataset was used: the split comes from
 drift geometry and timestamps alone. Waiting at anchor and working alongside are the two quantities
 a laytime calculation is built from.
+
+## Two engines, one answer
+
+SQLite and Postgres sit behind the same ports, and the integration suite runs every assertion
+against both. Ingesting the same seven days into each produces identical counters, and detection
+over them produces a **byte-identical fingerprint across all 809 stops** — waiting and working
+totals matching to the cent.
+
+```bash
+docker compose up -d
+dotnet run --project src/AisPipeline.Cli -- detect \
+  --postgres "Host=localhost;Port=55432;Database=ais;Username=ais;Password=ais"
+```
+
+| | SQLite | Postgres |
+|---|---|---|
+| detect over 5.37M fixes | 35 s | **18.5 s** |
+| storage | **822 MB** | 1,255 MB |
+
+The container runs the TimescaleDB image, and there is deliberately **no hypertable**. A hypertable
+partitions by time; this pipeline's dominant read is per-*vessel* and ordered, already served as an
+index scan with a presorted key in 27 kB of sort memory. Partitioning by time would scatter each
+vessel's fixes across chunks and make the hot path slower. The extension is there for when it earns
+its place — compression, or time-range queries — not because the image offers it.
+([ADR-0026](docs/adr/0026-postgres-adapter-and-no-hypertable.md))
 
 ## Design
 
@@ -225,8 +250,8 @@ the same failure mode as having no check at all.
 | **M0** | Foundations — solution, CI, ADRs, fixture | ✅ complete |
 | **M1** | Ingest — parser, rules R1–R6, schema, idempotency | ✅ complete |
 | **M2** | Detection — annotate pass, stops, port calls, seven days | ✅ complete |
-| M3 | Postgres behind the same ports, Docker Compose | next |
-| M4 | REST + OpenAPI, GraphQL with DataLoader | |
+| **M3** | Postgres behind the same ports, Docker Compose | ✅ complete |
+| M4 | REST + OpenAPI, GraphQL with DataLoader | next |
 | M5 | OpenTelemetry → Prometheus + Grafana, k6 | |
 | M6 | Laytime engine | |
 | M7 | Statement of Facts ingestion and discrepancy report | |
@@ -256,7 +281,7 @@ AIS provides is an independently verifiable timeline to check the Statement of F
 
 ## Architecture decisions
 
-Sixteen decisions are recorded in [`docs/adr/`](docs/adr/), including the ones where the answer was
+Twenty-one decisions are recorded in [`docs/adr/`](docs/adr/), including the ones where the answer was
 *no*: why not microservices, why not MongoDB, why not event sourcing, and why the redundant index was
 deleted rather than justified.
 

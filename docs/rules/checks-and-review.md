@@ -60,6 +60,21 @@ Both suites carry it. The unit suite was exempt while `AisPipeline.Core` had no 
 unit tests was the correct state; that exemption ended when M1 added the first quality rules, and
 the flag went on in the same change.
 
+## Running against both adapters
+
+`./scripts/check.sh` runs the integration suite against SQLite always, and against Postgres when
+`AIS_POSTGRES` is set:
+
+```bash
+docker compose up -d
+export AIS_POSTGRES="Host=localhost;Port=55432;Database=ais;Username=ais;Password=ais"
+```
+
+Skipping Postgres locally is a deliberate convenience for anyone without Docker. It is also how
+adapter parity quietly stops being tested, so `AdapterCoverageTests` **fails in CI** when the
+variable is unset there. If that test fires, fix the workflow's service container rather than the
+assertion (ADR-0026).
+
 ## Enabling the hook
 
 The hook lives in `.githooks/pre-push` and is version controlled, but git does not read it until

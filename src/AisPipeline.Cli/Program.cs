@@ -1,7 +1,9 @@
 using System.Globalization;
 using AisPipeline.Adapters.Csv;
+using AisPipeline.Adapters.Postgres;
 using AisPipeline.Adapters.Sqlite;
 using AisPipeline.Core.Annotate;
+using AisPipeline.Core.Ports;
 using AisPipeline.Core.Detection;
 using AisPipeline.Core.Ingest;
 using AisPipeline.Core.Quality;
@@ -30,11 +32,13 @@ static int Unknown(string verb)
 static void Usage() => Console.WriteLine("""
     ais - AIS ingestion and analysis
 
-      ais ingest <file.csv|file.zip> [--db <path>] [--ship-type <type>] [--limit <n>]
-      ais detect [--db <path>]
+      ais ingest <file.csv|file.zip> [--db <path> | --postgres <conn>] [--ship-type <type>] [--limit <n>]
+      ais detect [--db <path> | --postgres <conn>]
 
     Options:
       --db          SQLite file to read/write (default: data/ais.db)
+      --postgres    Postgres connection string instead of SQLite. compose.yaml provides one:
+                    Host=localhost;Port=55432;Database=ais;Username=ais;Password=ais
       --ship-type   keep only vessels whose resolved type matches, e.g. Tanker
       --limit       stop after N source lines; for the development loop only
 
@@ -57,7 +61,6 @@ static int Ingest(string[] args)
         return 2;
     }
 
-    var database = ValueOf(args, "--db") ?? Path.Combine("data", "ais.db");
     var shipType = ValueOf(args, "--ship-type");
     long? limit = null;
     if (ValueOf(args, "--limit") is { } raw)
@@ -74,9 +77,7 @@ static int Ingest(string[] args)
         limit = parsed;
     }
 
-    Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(database))!);
-
-    using var store = new SqliteAisStore(database);
+    using var store = OpenStore(args);
     var pipeline = new IngestPipeline(
         store,
         RuleRegistry.Default(),
@@ -114,14 +115,17 @@ static int Ingest(string[] args)
 
 static int Detect(string[] args)
 {
-    var database = ValueOf(args, "--db") ?? Path.Combine("data", "ais.db");
-    if (!File.Exists(database))
+    if (ValueOf(args, "--postgres") is null)
     {
-        Console.Error.WriteLine($"no database at {database}; run ingest first");
-        return 2;
+        var database = ValueOf(args, "--db") ?? Path.Combine("data", "ais.db");
+        if (!File.Exists(database))
+        {
+            Console.Error.WriteLine($"no database at {database}; run ingest first");
+            return 2;
+        }
     }
 
-    using var store = new SqliteAisStore(database);
+    using var store = OpenStore(args);
     store.EnsureSchema();
 
     // The annotate pass must finish before detection: detection excludes flagged fixes from
@@ -154,6 +158,23 @@ static int Detect(string[] args)
     }
 
     return 0;
+}
+
+/// <summary>
+/// Pick the adapter. The pipeline does not know or care which one it got -- that is the whole
+/// point of the ports, and the integration suite runs the same assertions against both
+/// (ADR-0026).
+/// </summary>
+static IAisStore OpenStore(string[] args)
+{
+    if (ValueOf(args, "--postgres") is { } connectionString)
+    {
+        return new PostgresAisStore(connectionString);
+    }
+
+    var database = ValueOf(args, "--db") ?? Path.Combine("data", "ais.db");
+    Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(database))!);
+    return new SqliteAisStore(database);
 }
 
 static string? ValueOf(string[] args, string name)
