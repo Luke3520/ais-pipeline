@@ -13,7 +13,7 @@ namespace AisPipeline.ApiTests;
 /// This is the only honest way to assert it. A GraphQL response looks identical whether it took
 /// one round trip or a hundred, and wall-clock timing over a small fixture does not separate them
 /// reliably — a hundred queries against a warm local SQLite file is still milliseconds. Having
-/// DataLoader wired up is not evidence that it is being used; the count is (ADR-0015).
+/// DataLoader wired up is not evidence that it is being used; the count is (ADR-0027).
 /// </summary>
 public class GraphQLNPlusOneTests : IClassFixture<ApiFixture>
 {
@@ -38,8 +38,7 @@ public class GraphQLNPlusOneTests : IClassFixture<ApiFixture>
             services.AddScoped<IAisQueries>(sp =>
             {
                 var options = sp.GetRequiredService<AisPipeline.Api.StoreOptions>();
-                return new CountingQueries(
-                    new SqlAisQueries(options.ConnectionFactory, options.Dialect), tally);
+                return tally.Track(new SqlAisQueries(options.ConnectionFactory, options.Dialect));
             });
         }));
 
@@ -121,6 +120,39 @@ public class GraphQLNPlusOneTests : IClassFixture<ApiFixture>
     }
 
     [Fact]
+    public async Task ACappedPortCallListIsDetectableRatherThanSilent()
+    {
+        // A truncation nobody can detect is a wrong number, not a limit. portCallCount is
+        // uncapped, so a client can always tell a vessel that made exactly the cap's worth of
+        // calls from one whose list was cut short (ADR-0028).
+        var (data, _) = await Execute(
+            "{ vessels(limit: 20) { mmsi portCallCount portCalls { id arrivedUtc } } }");
+
+        var vessels = data.GetProperty("vessels");
+        Assert.NotEqual(0, vessels.GetArrayLength());
+
+        foreach (var vessel in vessels.EnumerateArray())
+        {
+            var returned = vessel.GetProperty("portCalls").GetArrayLength();
+            var total = vessel.GetProperty("portCallCount").GetInt64();
+
+            Assert.True(total >= returned,
+                $"mmsi {vessel.GetProperty("mmsi").GetInt64()}: count {total} below the {returned} returned");
+        }
+    }
+
+    [Fact]
+    public async Task TheUncappedCountCostsNoExtraQueryPerVessel()
+    {
+        // The count is itself batched, so adding it does not reintroduce the N+1 it exists to
+        // make visible.
+        var (_, withoutCount) = await Execute("{ vessels(limit: 20) { portCalls { id } } }");
+        var (_, withCount) = await Execute("{ vessels(limit: 20) { portCallCount portCalls { id } } }");
+
+        Assert.Equal(withoutCount + 1, withCount);
+    }
+
+    [Fact]
     public async Task AnExcessivelyDeepQueryIsRefused()
     {
         // Each level multiplies the work, so unbounded depth is a denial of service. The limit is
@@ -157,60 +189,28 @@ public class GraphQLNPlusOneTests : IClassFixture<ApiFixture>
         }
     }
 
-    /// <summary>Queries issued across every scope of one execution.</summary>
+    /// <summary>
+    /// Queries issued across every scope of one execution.
+    ///
+    /// A tally over instances rather than a decorator: SqlAisQueries already implements
+    /// IAisQueries, so a wrapper would be eleven pass-through methods with one call site, and
+    /// every future port method would have to be hand-forwarded for no behavioural difference.
+    /// </summary>
     private sealed class QueryTally
     {
         private readonly List<SqlAisQueries> _instances = [];
 
-        public void Track(SqlAisQueries instance) => _instances.Add(instance);
-
-        public int Total => _instances.Sum(i => i.QueryCount);
-    }
-
-    /// <summary>Counts how many times the database was asked, delegating everything else.</summary>
-    private sealed class CountingQueries : IAisQueries
-    {
-        private readonly SqlAisQueries _inner;
-
-        public CountingQueries(SqlAisQueries inner, QueryTally tally)
+        public SqlAisQueries Track(SqlAisQueries instance)
         {
-            _inner = inner;
-            tally.Track(inner);
+            _instances.Add(instance);
+            return instance;
         }
 
-        public StoredVessel? GetVessel(long mmsi) => _inner.GetVessel(mmsi);
-
-        public IReadOnlyList<StoredVessel> GetVessels(IReadOnlyCollection<long> mmsis) =>
-            _inner.GetVessels(mmsis);
-
-        public IReadOnlyList<StoredVessel> ListVessels(string? shipType, int limit) =>
-            _inner.ListVessels(shipType, limit);
-
-        public IReadOnlyList<StoredStop> ListStops(StopFilter filter) => _inner.ListStops(filter);
-
-        public IReadOnlyList<StoredStop> GetStopsForVessels(
-            IReadOnlyCollection<long> mmsis, int limitPerVessel) =>
-            _inner.GetStopsForVessels(mmsis, limitPerVessel);
-
-        public IReadOnlyList<StoredPortCall> ListPortCalls(PortCallFilter filter) =>
-            _inner.ListPortCalls(filter);
-
-        public IReadOnlyList<StoredPortCall> GetPortCallsForVessels(
-            IReadOnlyCollection<long> mmsis, int limitPerVessel) =>
-            _inner.GetPortCallsForVessels(mmsis, limitPerVessel);
-
-        public IReadOnlyList<(StoredPhase Phase, StoredStop Stop)> GetPhasesForPortCalls(
-            IReadOnlyCollection<long> portCallIds) =>
-            _inner.GetPhasesForPortCalls(portCallIds);
-
-        public IReadOnlyList<AisPipeline.Core.Domain.PositionFix> ListFixes(
-            long mmsi, DateTime fromUtc, DateTime toUtc, int limit) =>
-            _inner.ListFixes(mmsi, fromUtc, toUtc, limit);
-
-        public IReadOnlyList<RuleHitCount> QualityReport() => _inner.QualityReport();
-
-        public IReadOnlyList<StoredRun> ListRuns() => _inner.ListRuns();
-
-        public void Dispose() => _inner.Dispose();
+        /// <summary>
+        /// Summed across scopes. HotChocolate resolves the query root and the DataLoaders from
+        /// different scopes, so counting one instance measures part of a request and reports a
+        /// smaller, plausible number.
+        /// </summary>
+        public int Total => _instances.Sum(i => i.QueryCount);
     }
 }
