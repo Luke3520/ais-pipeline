@@ -47,4 +47,5 @@ the design.
 | [0027](0027-api-surface-and-n-plus-one.md) | REST for operations, GraphQL for analysis; N+1 proved by counting | Accepted |
 | [0028](0028-capped-collections-must-be-detectable.md) | A capped collection must be detectable, and must keep the newest | Accepted |
 | [0029](0029-when-to-revisit-the-architecture.md) | When to revisit the architecture | Accepted |
+| [0030](0030-laytime-engine.md) | A laytime engine, and the boundary of what AIS can prove | Accepted |
 | [0022](0022-three-lane-review-harness.md) | Three-lane review harness | Accepted |

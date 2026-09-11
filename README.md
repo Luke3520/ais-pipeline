@@ -6,8 +6,8 @@ when each tanker stopped, for how long, and whether it was waiting at anchor or 
 
 That last distinction is the raw material of a laytime calculation.
 
-> **Status:** in progress. M4 (API) complete — see [Milestones](#milestones).
-> Seven days ingested, 809 stops and 362 port calls detected, served over REST and GraphQL.
+> **Status:** in progress. M6 (laytime) complete — see [Milestones](#milestones).
+> Seven days of AIS in, a demurrage figure out.
 
 ## Why
 
@@ -130,6 +130,33 @@ index scan with a presorted key in 27 kB of sort memory. Partitioning by time wo
 vessel's fixes across chunks and make the hot path slower. The extension is there for when it earns
 its place — compression, or time-range queries — not because the image offers it.
 ([ADR-0026](docs/adr/0026-postgres-adapter-and-no-hypertable.md))
+
+## What it is for
+
+```
+$ ais laytime --mmsi 245313000
+mmsi 245313000  port call 126  2026-09-01 05:50 -> 2026-09-06 12:20
+  from AIS:  waiting 0.0h   working 126.5h
+  NOR:       2026-09-01 05:50  (ASSUMED = arrival; AIS cannot observe a notice)
+
+Laytime commenced 2026-09-01 05:50 (berthed before turn time expired)
+  2026-09-01 05:50 -> 2026-09-04 05:50     72.00h  Counted       cargo operations
+  2026-09-04 05:50 -> 2026-09-06 12:20     54.51h  OnDemurrage   cargo operations
+  allowed      72.00h
+  used        126.51h
+  ON DEMURRAGE 54.51h at 28,000.00 USD/day = 63,598.56 USD
+```
+
+127.6M rows of raw AIS in, a dollar figure out. Every hour in the statement belongs to exactly one
+line and says why, and `IsBalanced` asserts the lines decompose back to the elapsed time — the same
+accounting identity ingest uses. A total nobody can decompose is a total nobody can dispute, and
+disputing it is the point.
+
+**AIS cannot compute demurrage, and the output says so.** Notice of Readiness is an email; hoses on
+and off happen hours after berthing; free pratique is a document. The CLI defaults NOR to arrival
+and labels that assumption rather than presenting it as observed. What AIS supplies is the half a
+Statement of Facts is least able to prove: where the vessel physically was, and when it stopped
+moving. ([ADR-0030](docs/adr/0030-laytime-engine.md))
 
 ## Querying it
 
@@ -273,9 +300,9 @@ the same failure mode as having no check at all.
 | **M2** | Detection — annotate pass, stops, port calls, seven days | ✅ complete |
 | **M3** | Postgres behind the same ports, Docker Compose | ✅ complete |
 | **M4** | REST + OpenAPI, GraphQL with DataLoader | ✅ complete |
-| M5 | OpenTelemetry → Prometheus + Grafana, k6 | next |
-| M6 | Laytime engine | |
-| M7 | Statement of Facts ingestion and discrepancy report | |
+| **M6** | Laytime engine — terms in, line-item statement out | ✅ complete |
+| M5 | OpenTelemetry → Prometheus + Grafana, k6 | deferred — infrastructure, and nothing queries this yet |
+| M7 | Statement of Facts ingestion and discrepancy report | next |
 
 ## Where this is going
 
@@ -302,7 +329,7 @@ AIS provides is an independently verifiable timeline to check the Statement of F
 
 ## Architecture decisions
 
-Twenty-three decisions are recorded in [`docs/adr/`](docs/adr/), including the ones where the answer was
+Twenty-six decisions are recorded in [`docs/adr/`](docs/adr/), including the ones where the answer was
 *no*: why not microservices, why not MongoDB, why not event sourcing, and why the redundant index was
 deleted rather than justified.
 

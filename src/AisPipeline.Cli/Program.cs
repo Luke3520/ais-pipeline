@@ -2,7 +2,11 @@ using System.Globalization;
 using AisPipeline.Adapters.Csv;
 using AisPipeline.Adapters.Postgres;
 using AisPipeline.Adapters.Sqlite;
+using AisPipeline.Adapters.Sql;
 using AisPipeline.Core.Annotate;
+using AisPipeline.Core.Domain;
+using AisPipeline.Core.Laytime;
+using AisPipeline.Core.Query;
 using AisPipeline.Core.Ports;
 using AisPipeline.Core.Detection;
 using AisPipeline.Core.Ingest;
@@ -19,6 +23,7 @@ return args[0] switch
 {
     "ingest" => Ingest(args[1..]),
     "detect" => Detect(args[1..]),
+    "laytime" => Laytime(args[1..]),
     _ => Unknown(args[0]),
 };
 
@@ -34,6 +39,7 @@ static void Usage() => Console.WriteLine("""
 
       ais ingest <file.csv|file.zip> [--db <path> | --postgres <conn>] [--ship-type <type>] [--limit <n>]
       ais detect [--db <path> | --postgres <conn>]
+      ais laytime --mmsi <n> [--allowed <h>] [--rate <perDay>] [--nor <iso>] [--turn <h>]
 
     Options:
       --db          SQLite file to read/write (default: data/ais.db)
@@ -44,6 +50,10 @@ static void Usage() => Console.WriteLine("""
 
     detect annotates the sequence rules and rebuilds stops and port calls. It is a full
     recompute: running it twice lands on exactly the same result.
+
+    laytime computes a statement for a vessel's most recent complete port call. AIS supplies
+    berthing and completion; Notice of Readiness comes from the charter party and defaults to
+    arrival at the anchorage, which is an assumption the output states.
     """);
 
 static int Ingest(string[] args)
@@ -158,6 +168,86 @@ static int Detect(string[] args)
     }
 
     return 0;
+}
+
+static int Laytime(string[] args)
+{
+    if (ValueOf(args, "--mmsi") is not { } rawMmsi
+        || !long.TryParse(rawMmsi, NumberStyles.None, CultureInfo.InvariantCulture, out var mmsi))
+    {
+        Console.Error.WriteLine("laytime needs --mmsi <9 digits>");
+        return 2;
+    }
+
+    var options = StoreConnection(args);
+    using var queries = new SqlAisQueries(options.Factory, options.Dialect);
+
+    var call = queries
+        .ListPortCalls(new PortCallFilter { Mmsi = mmsi, CompleteOnly = true, Limit = 50 })
+        .OrderByDescending(c => c.ArrivedUtc)
+        .FirstOrDefault();
+
+    if (call is null)
+    {
+        Console.Error.WriteLine($"no complete port call for mmsi {mmsi}; run detect first");
+        return 2;
+    }
+
+    var phases = queries.GetPhasesForPortCalls([call.Id]);
+    var berth = phases.Where(p => p.Phase.Phase == nameof(StopPhase.Berth)).ToList();
+
+    if (berth.Count == 0)
+    {
+        Console.Error.WriteLine(
+            $"port call {call.Id} has no berth phase, so there are no cargo operations to measure");
+        return 2;
+    }
+
+    var berthedUtc = berth.Min(p => p.Stop.StartedUtc);
+    var completedUtc = berth.Max(p => p.Stop.EndedUtc);
+
+    // NOR is a document, not a physical event -- no transponder emits one. Defaulting it to the
+    // moment the vessel arrived at the anchorage is an assumption, and the output says so rather
+    // than presenting it as observed.
+    var norAssumed = ValueOf(args, "--nor") is null;
+    var nor = norAssumed
+        ? call.ArrivedUtc
+        : DateTime.Parse(ValueOf(args, "--nor")!, CultureInfo.InvariantCulture,
+            DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal);
+
+    var terms = new CharterPartyTerms
+    {
+        LaytimeAllowedHours = Number(args, "--allowed", 72.0),
+        DemurrageRatePerDay = Money.FromMajor((decimal)Number(args, "--rate", 28_000.0), "USD"),
+        NoticeOfReadinessUtc = nor,
+        TurnTimeHours = Number(args, "--turn", 6.0),
+    };
+
+    var statement = new LaytimeCalculator().Calculate(terms, berthedUtc, completedUtc);
+
+    Console.WriteLine($"mmsi {mmsi}  port call {call.Id}  {call.ArrivedUtc:yyyy-MM-dd HH:mm} -> {call.DepartedUtc:yyyy-MM-dd HH:mm}");
+    Console.WriteLine($"  from AIS:  waiting {call.WaitingHours:F1}h   working {call.WorkingHours:F1}h");
+    Console.WriteLine($"  NOR:       {nor:yyyy-MM-dd HH:mm}{(norAssumed ? "  (ASSUMED = arrival; AIS cannot observe a notice)" : "  (given)")}");
+    Console.WriteLine();
+    Console.WriteLine(statement);
+    return 0;
+}
+
+static double Number(string[] args, string name, double fallback) =>
+    ValueOf(args, name) is { } raw
+     && double.TryParse(raw, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed)
+        ? parsed
+        : fallback;
+
+static (Func<System.Data.Common.DbConnection> Factory, SqlDialect Dialect) StoreConnection(string[] args)
+{
+    if (ValueOf(args, "--postgres") is { } connectionString)
+    {
+        return (() => new Npgsql.NpgsqlConnection(connectionString), SqlDialect.Postgres);
+    }
+
+    var database = ValueOf(args, "--db") ?? System.IO.Path.Combine("data", "ais.db");
+    return (() => new Microsoft.Data.Sqlite.SqliteConnection($"Data Source={database}"), SqlDialect.Sqlite);
 }
 
 /// <summary>
