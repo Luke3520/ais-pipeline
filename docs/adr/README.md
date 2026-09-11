@@ -36,11 +36,12 @@ the design.
 | [0011](0011-coverage-gaps-break-stops.md) | Coverage gaps break stops | Accepted |
 | [0012](0012-split-duplicate-counters.md) | Split duplicate counters | Accepted |
 | [0013](0013-drop-redundant-index.md) | Drop the redundant vessel-time index | Accepted |
-| 0014–0019 | *Reserved: API surface, auth, observability, Postgres — recorded when those milestones land* | — |
+| 0014–0019 | *Reserved: superseded in practice by 0026 and 0027, which record the API and Postgres decisions as they were actually made* | — |
 | [0020](0020-berth-drift-threshold.md) | Berth/anchorage drift threshold, calibrated | Superseded by 0024 |
 | [0021](0021-sog-consistency-and-rule-ordering.md) | SOG consistency rule and annotate-before-detect ordering | Accepted |
 | [0023](0023-teleport-needs-a-distance-gate.md) | Teleport rule needs a distance gate | Accepted |
 | [0024](0024-berth-threshold-scales-with-duration.md) | Berth threshold scales with stop duration | Accepted |
 | [0025](0025-r11-distance-gate-and-geometry-trust.md) | R11 distance gate; a stop refuses to classify untrustworthy geometry | Accepted |
 | [0026](0026-postgres-adapter-and-no-hypertable.md) | Postgres adapter behind the same ports; no hypertable | Accepted |
+| [0027](0027-api-surface-and-n-plus-one.md) | REST for operations, GraphQL for analysis; N+1 proved by counting | Accepted |
 | [0022](0022-three-lane-review-harness.md) | Three-lane review harness | Accepted |

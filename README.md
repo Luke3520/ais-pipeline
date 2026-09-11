@@ -6,9 +6,8 @@ when each tanker stopped, for how long, and whether it was waiting at anchor or 
 
 That last distinction is the raw material of a laytime calculation.
 
-> **Status:** in progress. M3 (Postgres) complete — see [Milestones](#milestones).
-> Seven days ingested, 809 stops and 362 port calls detected, and both storage adapters produce
-> byte-identical results.
+> **Status:** in progress. M4 (API) complete — see [Milestones](#milestones).
+> Seven days ingested, 809 stops and 362 port calls detected, served over REST and GraphQL.
 
 ## Why
 
@@ -132,6 +131,28 @@ vessel's fixes across chunks and make the hot path slower. The extension is ther
 its place — compression, or time-range queries — not because the image offers it.
 ([ADR-0026](docs/adr/0026-postgres-adapter-and-no-hypertable.md))
 
+## Querying it
+
+REST is the operational surface — `/vessels`, `/stops`, `/portcalls`, `/quality`, `/runs`, with a
+generated OpenAPI document. GraphQL is the analytical one. They do not duplicate each other.
+
+```graphql
+{ vessels(shipType: "Tanker", limit: 50) {
+    mmsi name
+    portCalls { waitingHours workingHours
+      phases { phase { sequence phase } stop { durationHours maxDriftNm statusAgrees } } } } }
+```
+
+That returns 50 vessels, 60 port calls and 161 phases from the seven-day database in **3 queries**.
+Unbatched it would be `1 + 50 + 60 = 111` round trips. Warm latency ~10 ms.
+
+The tests assert the **query count**, not the timing. A GraphQL response looks identical whether it
+took one round trip or a hundred, and a hundred queries against a warm local database is still
+milliseconds — so timing cannot tell them apart, and having DataLoader wired up is not evidence it
+is used. They also assert the property that actually distinguishes batched from unbatched: query
+count does not grow with page size.
+([ADR-0027](docs/adr/0027-api-surface-and-n-plus-one.md))
+
 ## Design
 
 Four ideas, each with a decision record behind it:
@@ -251,8 +272,8 @@ the same failure mode as having no check at all.
 | **M1** | Ingest — parser, rules R1–R6, schema, idempotency | ✅ complete |
 | **M2** | Detection — annotate pass, stops, port calls, seven days | ✅ complete |
 | **M3** | Postgres behind the same ports, Docker Compose | ✅ complete |
-| M4 | REST + OpenAPI, GraphQL with DataLoader | next |
-| M5 | OpenTelemetry → Prometheus + Grafana, k6 | |
+| **M4** | REST + OpenAPI, GraphQL with DataLoader | ✅ complete |
+| M5 | OpenTelemetry → Prometheus + Grafana, k6 | next |
 | M6 | Laytime engine | |
 | M7 | Statement of Facts ingestion and discrepancy report | |
 
@@ -281,7 +302,7 @@ AIS provides is an independently verifiable timeline to check the Statement of F
 
 ## Architecture decisions
 
-Twenty-one decisions are recorded in [`docs/adr/`](docs/adr/), including the ones where the answer was
+Twenty-three decisions are recorded in [`docs/adr/`](docs/adr/), including the ones where the answer was
 *no*: why not microservices, why not MongoDB, why not event sourcing, and why the redundant index was
 deleted rather than justified.
 
