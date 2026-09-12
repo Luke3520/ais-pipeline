@@ -242,6 +242,33 @@ alongside, `open` for a port call whose true extent nobody knows. `ais laytime` 
 are **absent and say so**: neither has an HTTP endpoint, and reconciliation needs a document
 uploaded, which is a write surface and a separate trigger.
 
+## The site
+
+```bash
+ais export --out site/src/data     # refresh the data the site builds from
+cd site && npm install && npm run dev
+```
+
+A static site — [`site/`](site/) — on one finding: **an AIS message contradicts itself.** Position
+and speed are measured by the receiver; navigational status and the vessel's own name are typed in
+by a human. Check one against the other across seven days and 37% of stops turn out to have been
+broadcast as "under way".
+
+It is built from the committed export and nothing else, so it compiles from a fresh clone with no
+database present, and the pipeline never faces the internet
+([ADR-0039](docs/adr/0039-an-export-contract-for-a-static-site.md)). Astro, static output, no
+runtime JavaScript.
+
+The strongest number on it is not the 37%. Of the vessels that stopped at least three times,
+**6 got it wrong on every single stop and 32 got it right on every single one** — far fewer in
+between than chance would put there. That is not a crew occasionally forgetting; it looks like a
+setting configured once at installation and never touched.
+
+Every page reports what a transponder *broadcast* and none accuses anyone. Three things could
+produce these numbers — a crew that never touched the dial, an installation left as delivered, or a
+decode fault — and a radio signal cannot separate them. The vessel names are themselves hand-typed
+static data from the same equipment, which the site says out loud rather than quietly relying on.
+
 ## Design
 
 Four ideas, each with a decision record behind it:
@@ -444,6 +471,7 @@ the same failure mode as having no check at all.
 | **M7** | Statement of Facts reconciliation, priced | ✅ complete |
 | **M8** | Port resolution — World Port Index gazetteer, named with a distance | ✅ complete |
 | **M9** | Read-only browser UI over the derived layer | ✅ complete |
+| **M10** | R12, the export contract, and the static site | ✅ complete |
 | M5 | OpenTelemetry → Prometheus + Grafana, k6 | deferred — infrastructure, and the read side is still small enough to reason about without it |
 
 ## Where this is going
