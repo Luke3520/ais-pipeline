@@ -42,7 +42,7 @@ the design.
 | [0021](0021-sog-consistency-and-rule-ordering.md) | SOG consistency rule and annotate-before-detect ordering | Accepted |
 | [0023](0023-teleport-needs-a-distance-gate.md) | Teleport rule needs a distance gate | Accepted |
 | [0024](0024-berth-threshold-scales-with-duration.md) | Berth threshold scales with stop duration | Accepted |
-| [0025](0025-r11-distance-gate-and-geometry-trust.md) | R11 distance gate; a stop refuses to classify untrustworthy geometry | Accepted |
+| [0025](0025-r11-distance-gate-and-geometry-trust.md) | R11 distance gate; a stop refuses to classify untrustworthy geometry | Accepted † |
 | [0026](0026-postgres-adapter-and-no-hypertable.md) | Postgres adapter behind the same ports; no hypertable | Accepted |
 | [0027](0027-api-surface-and-n-plus-one.md) | REST for operations, GraphQL for analysis; N+1 proved by counting | Accepted |
 | [0028](0028-capped-collections-must-be-detectable.md) | A capped collection must be detectable, and must keep the newest | Accepted |
@@ -50,8 +50,24 @@ the design.
 | [0030](0030-laytime-engine.md) | A laytime engine, and the boundary of what AIS can prove | Accepted |
 | [0031](0031-reconciling-a-statement-of-facts.md) | Reconciling a Statement of Facts against AIS | Accepted |
 | [0022](0022-three-lane-review-harness.md) | Three-lane review harness | Accepted |
-| [0032](0032-the-quality-report-counts-both-halves.md) | The quality report counts both halves | Accepted |
+| [0032](0032-the-quality-report-counts-both-halves.md) | The quality report counts both halves | Accepted † |
 | [0033](0033-a-document-must-be-matched-to-the-call-it-describes.md) | A document must be matched to the call it describes | Accepted |
 | [0034](0034-ports-are-named-with-a-distance-not-a-boundary.md) | A port is named with a distance, never claimed as a boundary | Accepted |
 | [0035](0035-select-the-call-the-document-describes.md) | Select the call the document describes, do not validate a guess | Accepted |
 | [0036](0036-r10-is-reported-separately-because-it-counts-something-else.md) | R10 is reported separately, because it counts something else | Accepted |
+
+### † Measurement corrected, 2026-09-12
+
+Both records state in passing that **R6 has never fired**. Over the seven-day window it rejects 65
+rows and flags 22. The claim was true of the 1.7M-row sample it was measured on, was repeated as
+though it held generally, and could not be checked until `ais quality` existed to print the counter
+(ADR-0032 itself).
+
+Neither decision is affected — ADR-0025's distance gate and ADR-0032's two-column report both stand,
+and neither rests on R6 being dormant. So neither is superseded, and **neither has been edited**:
+what was believed, and when, is the artifact. This note is the correction, and it sits here because
+the index is the one path every reader of these records passes through.
+
+The rule that would have caught it is now in
+[`docs/rules/quality-rules.md`](../rules/quality-rules.md): a dormancy claim has to name the window
+it was measured on.

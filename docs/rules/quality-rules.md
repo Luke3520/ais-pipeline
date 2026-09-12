@@ -29,6 +29,11 @@ counter is a silent loss — blocking class 1.
 4. Register it in the rule registry so `ais quality` reports it without a code change.
 5. State its expected hit rate, measured on real data, in the rule table in the README. A rule that
    has never fired on real data is worth keeping only as a stated guard — say which it is.
+   **A dormancy claim must name the window it was measured on.** "R6 has never fired" was true of
+   the 1.7M-row sample it came from and false of the seven-day window, where it rejects 65 rows and
+   flags 22 — and it had spread to the rule's own docstring and two ADRs before `ais quality`
+   existed to print the counter. Write "has not fired in the seven days to 2026-09-07", which ages
+   into a checkable statement instead of a wrong one.
 6. If it changes what a stored row looks like, it needs an ADR.
 
 ## Measure before you write
