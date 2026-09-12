@@ -41,6 +41,17 @@ var app = builder.Build();
 app.MapOpenApi();
 app.MapScalarApiReference();
 
+// The showcase page, served from this application's own wwwroot.
+//
+// Same-origin deliberately: ADR-0029 listed CORS among the costs of a browser UI, and that is a cost
+// of a SEPARATELY hosted client. Serving the files from here removes the requirement rather than
+// configuring it, and a cross-origin dev server is the thing that would bring it back.
+//
+// Read-only, and over the derived layer only -- no positions reach a browser, which is what keeps
+// the read path unchanged (ADR-0037).
+app.UseDefaultFiles();
+app.UseStaticFiles();
+
 // --- REST: the operational surface. Resource-shaped, stable, cheap to cache. -----------------
 // Anything exploratory and deeply nested belongs in GraphQL instead; the two are not duplicated
 // over the same shapes (ADR-0027).

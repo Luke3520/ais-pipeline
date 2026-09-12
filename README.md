@@ -217,6 +217,31 @@ is used. They also assert the property that actually distinguishes batched from 
 count does not grow with page size.
 ([ADR-0027](docs/adr/0027-api-surface-and-n-plus-one.md))
 
+## Seeing it
+
+```bash
+cd src/AisPipeline.Api && AIS_SQLITE=../../data/ais.db dotnet run
+# then open http://localhost:5000
+```
+
+A read-only page served from the API's own `wwwroot`: ingest runs, the quality report, port calls
+with their attributed ports, and stops. No build step, no framework, no npm — `dotnet` stays the only
+toolchain a contributor needs.
+
+It shows the **derived layer only**. That is the whole design: `position_report` holds 5.4M rows,
+while every stop and port call for seven days is 494 KB of JSON, so the page needs no clustering, no
+tiling and no new read path — it consumes `/runs`, `/quality`, `/stops` and `/portcalls` exactly as
+they already exist. [ADR-0029](docs/adr/0029-when-to-revisit-the-architecture.md) named a browser UI
+as an architecture trigger and required the conversation before any code;
+[ADR-0037](docs/adr/0037-a-read-only-browser-ui-over-the-derived-layer.md) is that conversation, and
+it keeps the expensive half of the trigger uncrossed by scope rather than by engineering.
+
+The page renders the refusals rather than hiding them — `≥42.2` for a duration whose extent is
+unknown, `?` for a drift computed from too few surviving fixes, `~Goteborg 7.7 nm` for near-but-not-
+alongside, `open` for a port call whose true extent nobody knows. `ais laytime` and `ais reconcile`
+are **absent and say so**: neither has an HTTP endpoint, and reconciliation needs a document
+uploaded, which is a write surface and a separate trigger.
+
 ## Design
 
 Four ideas, each with a decision record behind it:
@@ -418,6 +443,7 @@ the same failure mode as having no check at all.
 | **M6** | Laytime engine — terms in, line-item statement out | ✅ complete |
 | **M7** | Statement of Facts reconciliation, priced | ✅ complete |
 | **M8** | Port resolution — World Port Index gazetteer, named with a distance | ✅ complete |
+| **M9** | Read-only browser UI over the derived layer | ✅ complete |
 | M5 | OpenTelemetry → Prometheus + Grafana, k6 | deferred — infrastructure, and the read side is still small enough to reason about without it |
 
 ## Where this is going

@@ -55,6 +55,7 @@ the design.
 | [0034](0034-ports-are-named-with-a-distance-not-a-boundary.md) | A port is named with a distance, never claimed as a boundary | Accepted |
 | [0035](0035-select-the-call-the-document-describes.md) | Select the call the document describes, do not validate a guess | Accepted |
 | [0036](0036-r10-is-reported-separately-because-it-counts-something-else.md) | R10 is reported separately, because it counts something else | Accepted |
+| [0037](0037-a-read-only-browser-ui-over-the-derived-layer.md) | A read-only browser UI, over the derived layer only | Accepted |
 
 ### † Measurement corrected, 2026-09-12
 

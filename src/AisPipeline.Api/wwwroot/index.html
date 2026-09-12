@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ais-pipeline — what the data supports</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<main>
+  <h1>ais-pipeline</h1>
+  <p class="lede">
+    Danish Maritime Authority AIS, turned into per-vessel time series, stops and port calls. This page
+    reads the same REST endpoints the CLI does. It shows the derived layer only — no raw positions,
+    which is what keeps it a few hundred kilobytes rather than 5.4 million rows
+    (<a href="docs/adr">ADR-0037</a>).
+  </p>
+
+  <h2>Ingest runs</h2>
+  <section><div class="scroll"><table id="runs">
+    <thead><tr>
+      <th>run</th><th>source</th>
+      <th class="n">read</th><th class="n">inserted</th>
+      <th class="n">duplicates</th><th class="n">quarantined</th>
+    </tr></thead>
+    <tbody><tr><td colspan="6">loading…</td></tr></tbody>
+  </table></div></section>
+
+  <h2>Quality rules</h2>
+  <section>
+    <div class="scroll"><table id="quality">
+      <thead><tr>
+        <th>rule</th><th class="n">rejected</th><th class="n">flagged</th><th>what it catches</th>
+      </tr></thead>
+      <tbody><tr><td colspan="4">loading…</td></tr></tbody>
+    </table></div>
+    <p class="note">
+      A rule either <em>rejects</em> a row into quarantine or <em>keeps</em> it and flags the doubt —
+      there is no third option, so both columns are shown. A rule that ran and never fired prints
+      zero and is greyed: silence and absence are different claims. Counts are over what the store
+      holds, not over lines read.
+    </p>
+    <p class="note" id="r10">…</p>
+  </section>
+
+  <h2>Port calls</h2>
+  <section>
+    <ul class="tally" id="callTally"></ul>
+    <div class="scroll"><table id="portcalls">
+      <thead><tr>
+        <th class="n">id</th><th class="n">mmsi</th><th>arrived (UTC)</th>
+        <th class="n">waiting h</th><th class="n">working h</th><th class="n">unclassified h</th>
+        <th>extent</th><th>nearest port</th>
+      </tr></thead>
+      <tbody><tr><td colspan="8">loading…</td></tr></tbody>
+    </table></div>
+    <p class="note">
+      Ordered by total duration, not chronologically. A port marked <span class="nearest">like
+      this</span> is the nearest one, not necessarily where the vessel was: a World Port Index record
+      is a single nominal point near the harbour entrance, so the distance is shown with every name
+      and never omitted. A call marked <span class="bound-label">open</span> has an unknown true
+      extent — it touches a coverage gap or the edge of the window — so its hours are the sum of what
+      was observed and a lower bound, shown as <span class="bound">42.2</span>. A zero is left
+      unmarked: "at least zero hours" says nothing, and the extent column already states it.
+    </p>
+  </section>
+
+  <h2>Stops</h2>
+  <section>
+    <div class="scroll"><table id="stops">
+      <thead><tr>
+        <th class="n">mmsi</th><th>started (UTC)</th><th class="n">hours</th>
+        <th class="n">drift nm</th><th>reported status</th>
+      </tr></thead>
+      <tbody><tr><td colspan="5">loading…</td></tr></tbody>
+    </table></div>
+    <p class="note">
+      <span class="bound">2.7</span> is a lower bound, not a measurement — the stop touches a coverage
+      gap or the edge of the ingested window, so its true extent is unknown.
+      <span class="unknown">?</span> is a drift computed from too few surviving fixes to mean
+      anything. Neither is shown as a plain number.
+    </p>
+  </section>
+
+  <h2>Not on this page</h2>
+  <section>
+    <p class="note">
+      <code>ais laytime</code> and <code>ais reconcile</code> — the laytime statement and the
+      comparison against a Statement of Facts — are CLI verbs with no HTTP endpoint. Reconciliation
+      needs a document uploaded, and a write surface would make authentication non-deferrable, so it
+      is deliberately absent rather than quietly missing (ADR-0037, ADR-0017).
+    </p>
+  </section>
+</main>
+<script src="app.js"></script>
+</body>
+</html>
