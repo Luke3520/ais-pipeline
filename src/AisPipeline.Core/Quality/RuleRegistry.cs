@@ -13,22 +13,38 @@ namespace AisPipeline.Core.Quality;
 /// </summary>
 public sealed class RuleRegistry
 {
-    public RuleRegistry(IReadOnlyList<ILineRule> lineRules, IReadOnlyList<IRecordRule> recordRules)
+    public RuleRegistry(
+        IReadOnlyList<ILineRule> lineRules,
+        IReadOnlyList<IRecordRule> recordRules,
+        IReadOnlyList<ISequenceRule> sequenceRules)
     {
         LineRules = lineRules;
         RecordRules = recordRules;
+        SequenceRules = sequenceRules;
     }
 
     public IReadOnlyList<ILineRule> LineRules { get; }
 
     public IReadOnlyList<IRecordRule> RecordRules { get; }
 
-    public IEnumerable<IQualityRule> All => LineRules.Cast<IQualityRule>().Concat(RecordRules);
+    /// <summary>
+    /// The rules the annotate pass runs. Held here rather than listed at the call site so that
+    /// the quality report and the pass that applies them cannot drift apart: a rule registered
+    /// but never run would report a truthful zero for a check nobody performed.
+    /// </summary>
+    public IReadOnlyList<ISequenceRule> SequenceRules { get; }
 
-    /// <summary>The rules that run during ingest. Sequence rules run later, in the annotate pass.</summary>
+    public IEnumerable<IQualityRule> All =>
+        LineRules.Cast<IQualityRule>().Concat(RecordRules).Concat(SequenceRules);
+
+    /// <summary>
+    /// Every rule the pipeline knows. <see cref="LineRules"/> and <see cref="RecordRules"/> run
+    /// during ingest; <see cref="SequenceRules"/> run later, in the annotate pass.
+    /// </summary>
     public static RuleRegistry Default() => new(
         [new R1UnparseableRow()],
-        [new R4PositionSentinel(), new R5SpeedUnavailable(), new R6ImplausibleSpeed()]);
+        [new R4PositionSentinel(), new R5SpeedUnavailable(), new R6ImplausibleSpeed()],
+        [new R7Teleport(), new R8CoverageGap(), new R11SpeedConsistency()]);
 
     /// <summary>
     /// Judgement for one row: every hit that fired, and whether any of them rejects it.

@@ -43,8 +43,7 @@ public sealed class ApiFixture : WebApplicationFactory<Program>
 
         using (var store = new SqliteAisStore(_database))
         {
-            new AnnotatePass(store,
-                [new R7Teleport(), new R8CoverageGap(), new R11SpeedConsistency()]).Run();
+            new AnnotatePass(store, RuleRegistry.Default().SequenceRules).Run();
             new DetectionPass(store).Run();
         }
 

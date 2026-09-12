@@ -43,8 +43,7 @@ public class QueryParityTests
         }
 
         using var detectStore = harness.Create();
-        new AnnotatePass(detectStore,
-            [new R7Teleport(), new R8CoverageGap(), new R11SpeedConsistency()]).Run();
+        new AnnotatePass(detectStore, RuleRegistry.Default().SequenceRules).Run();
         new DetectionPass(detectStore).Run();
     }
 
