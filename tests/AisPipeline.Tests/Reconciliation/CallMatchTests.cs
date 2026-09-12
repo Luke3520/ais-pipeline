@@ -1,4 +1,5 @@
 using AisPipeline.Core.Domain;
+using AisPipeline.Core.Geo;
 using AisPipeline.Core.Laytime;
 using AisPipeline.Core.Reconciliation;
 using AisPipeline.Core.Sof;
@@ -43,6 +44,21 @@ public class CallMatchTests
             new PortCallPhase(1, StopPhase.Berth, Stop(22, 48)),
         ],
     };
+
+    private static PortCall CallAt(string portName, double distanceNm)
+    {
+        var call = Call();
+        return call with
+        {
+            Attribution = new PortAttribution
+            {
+                WpiNumber = 25620,
+                Name = portName,
+                Country = "Denmark",
+                DistanceNm = distanceNm,
+            },
+        };
+    }
 
     private static StatementOfFacts Sof(double firstHour, double lastHour, string port = "Fredericia") => new()
     {
@@ -101,14 +117,54 @@ public class CallMatchTests
     }
 
     [Fact]
-    public void The_port_named_in_the_document_is_carried_but_not_checked()
+    public void With_no_attributed_port_the_check_is_reported_as_not_done()
     {
-        // Half the evidence a human would use, and unavailable: AIS stores a centroid, and nothing
-        // says which port a centroid sits in. Recorded so the gap is visible in the result.
+        // Either the stop was too far from anywhere to name, or the store predates the gazetteer.
+        // Both mean the same to a reader, and neither may read as agreement.
         var match = CallMatch.Evaluate(Sof(0, 70, port: "Immingham"), Call());
 
         Assert.Equal("Immingham", match.DocumentPort);
         Assert.False(match.PortWasChecked);
+        Assert.Null(match.PortNamesAgree);
+    }
+
+    [Fact]
+    public void The_document_port_and_the_attributed_port_are_compared_when_both_exist()
+    {
+        var match = CallMatch.Evaluate(Sof(0, 70, port: "Fredericia"), CallAt("Fredericia", 1.8));
+
+        Assert.True(match.PortWasChecked);
+        Assert.True(match.PortNamesAgree);
+        Assert.Equal(1.8, match.AisPortDistanceNm);
+    }
+
+    [Fact]
+    public void Accents_and_case_do_not_make_two_spellings_of_one_port_disagree()
+    {
+        // The World Port Index transliterates and documents do not: it writes "Arhus" where a
+        // Danish document writes "Århus". A false here would be a fabricated disagreement.
+        Assert.True(CallMatch.Evaluate(Sof(0, 70, port: "\u00C5rhus"), CallAt("Arhus", 0.1)).PortNamesAgree);
+        Assert.True(CallMatch.Evaluate(Sof(0, 70, port: "Aarhus"), CallAt("Arhus", 0.1)).PortNamesAgree);
+        Assert.True(CallMatch.Evaluate(Sof(0, 70, port: "\u00C5RHUS"), CallAt("Arhus", 0.1)).PortNamesAgree);
+    }
+
+    [Fact]
+    public void A_qualified_document_name_still_matches_the_port_inside_it()
+    {
+        // Documents qualify: "Port of Fredericia", "Fredericia Oil Terminal".
+        Assert.True(CallMatch.Evaluate(
+            Sof(0, 70, port: "Port of Fredericia"), CallAt("Fredericia", 1.8)).PortNamesAgree);
+    }
+
+    [Fact]
+    public void Two_genuinely_different_ports_disagree_but_nothing_refuses()
+    {
+        // Reported, not resolved -- and it cannot refuse, because an exonym looks exactly like
+        // this: "Gothenburg" and "Goteborg" are one port and compare as different.
+        var match = CallMatch.Evaluate(Sof(0, 70, port: "Immingham"), CallAt("Fredericia", 1.8));
+
+        Assert.False(match.PortNamesAgree);
+        Assert.True(match.TimesAreConsistent, "a port-name disagreement must not fail the time test");
     }
 
     [Fact]

@@ -1,3 +1,4 @@
+using System.Text;
 using AisPipeline.Core.Domain;
 using AisPipeline.Core.Sof;
 
@@ -28,24 +29,47 @@ public sealed record CallMatch
     /// <summary>Shared time. Zero or negative means the two windows do not meet at all.</summary>
     public TimeSpan Overlap { get; init; }
 
-    /// <summary>
-    /// The port the document names. Never compared, because AIS has no port identity: a stop is a
-    /// centroid, and nothing in the store says which port a centroid sits in.
-    ///
-    /// Carried so the gap is visible in the result rather than merely absent from it. Half of the
-    /// matching evidence a human would use -- "this document says Immingham" -- is unavailable,
-    /// and a caller deciding how much to trust a match should be told that, not left to infer it.
-    /// </summary>
+    /// <summary>The port the document names.</summary>
     public required string DocumentPort { get; init; }
 
-    /// <summary>False until stops resolve to ports. Then this becomes a real check.</summary>
-    public bool PortWasChecked => false;
+    /// <summary>
+    /// The port AIS attributed to the call, or null when the gazetteer named none.
+    ///
+    /// Null for a stop too far from any port to name, and for a store built before the gazetteer
+    /// existed. Both mean the same thing to a reader -- AIS is not telling you which port this was.
+    /// </summary>
+    public string? AisPort { get; init; }
+
+    /// <summary>How far the call sat from that port. Null with <see cref="AisPort"/>.</summary>
+    public double? AisPortDistanceNm { get; init; }
+
+    /// <summary>True when AIS had a port to compare at all (ADR-0034 made this reachable).</summary>
+    public bool PortWasChecked => AisPort is not null;
+
+    /// <summary>
+    /// Whether the two names agree, or null when there is nothing to compare.
+    ///
+    /// Compared after stripping case, accents and punctuation, so "Arhus" matches "Århus" -- the
+    /// World Port Index transliterates, and documents do not. It still cannot match an exonym:
+    /// "Goteborg" and "Gothenburg" are the same port and compare as different, and no amount of
+    /// normalising fixes that without a synonym table.
+    ///
+    /// So a false here is a QUESTION, not a finding, and nothing refuses on it. Both names are
+    /// reported and a human decides -- the same position rule 4 takes when a vessel's status
+    /// contradicts its speed.
+    /// </summary>
+    public bool? PortNamesAgree => AisPort is null || DocumentPort.Length == 0
+        ? null
+        : Comparable(DocumentPort) == Comparable(AisPort)
+            || Comparable(DocumentPort).Contains(Comparable(AisPort), StringComparison.Ordinal)
+            || Comparable(AisPort).Contains(Comparable(DocumentPort), StringComparison.Ordinal);
 
     public bool TimesOverlap => Overlap > TimeSpan.Zero;
 
     /// <summary>
     /// The verdict, on the evidence available. Times only, which is why it is named for what it
-    /// tested rather than asserting the two are the same call.
+    /// tested rather than asserting the two are the same call -- a port-name disagreement is
+    /// reported but never fails this, because an exonym is indistinguishable from a wrong port.
     /// </summary>
     public bool TimesAreConsistent => TimesOverlap;
 
@@ -77,6 +101,8 @@ public sealed record CallMatch
             AisToUtc = portCall.DepartedUtc,
             Overlap = overlapEnd - overlapStart,
             DocumentPort = sof.Port,
+            AisPort = portCall.Attribution?.Name,
+            AisPortDistanceNm = portCall.Attribution?.DistanceNm,
         };
     }
 
@@ -89,4 +115,65 @@ public sealed record CallMatch
             : $"document covers {DocumentFromUtc:yyyy-MM-dd HH:mm} to {DocumentToUtc:yyyy-MM-dd HH:mm}, " +
               $"the AIS call covers {AisFromUtc:yyyy-MM-dd HH:mm} to {AisToUtc:yyyy-MM-dd HH:mm}; " +
               $"they do not overlap, and are {Gap.TotalHours:F1}h apart";
+
+    /// <summary>
+    /// Lowercase, unaccented, letters and digits only.
+    ///
+    /// The folding is an explicit table rather than <c>string.Normalize(FormD)</c> plus a
+    /// combining-mark filter, which is the usual way to do this and does nothing here: this
+    /// solution sets <c>InvariantGlobalization</c>, under which Normalize returns the string
+    /// unchanged. It fails silently -- "Arhus" and "Århus" simply compared as different ports --
+    /// so the table is not a preference, it is the only thing that works. Do not replace it with
+    /// Normalize.
+    ///
+    /// Covers the languages the committed gazetteer actually spans: Danish, Norwegian, Swedish,
+    /// German and Polish. A character outside the table keeps its own identity, so an unlisted
+    /// accent makes two names compare as different -- which reports a question rather than
+    /// inventing an agreement.
+    /// </summary>
+    private static string Comparable(string name)
+    {
+        var builder = new StringBuilder(name.Length);
+
+        foreach (var c in name)
+        {
+            builder.Append(Fold(char.ToLowerInvariant(c)));
+        }
+
+        return builder.ToString();
+    }
+
+    /// <summary>
+    /// One lowercase character, folded to the ASCII letters it stands for. Empty for anything that
+    /// is not a letter or digit, which drops the punctuation and spacing documents vary freely.
+    /// </summary>
+    private static string Fold(char c) => c switch
+    {
+        // Danish and Norwegian. "aa" rather than "a" for å: Danish writes both Århus and Aarhus
+        // for one city, and the World Port Index writes Arhus -- folding to "aa" lets the
+        // containment test below reconcile all three.
+        'å' => "aa",
+        'æ' => "ae",
+        'ø' => "o",
+
+        // Swedish and German.
+        'ä' => "a",
+        'ö' => "o",
+        'ü' => "u",
+        'ß' => "ss",
+
+        // Polish.
+        'ą' => "a",
+        'ć' => "c",
+        'ę' => "e",
+        'ł' => "l",
+        'ń' => "n",
+        'ó' => "o",
+        'ś' => "s",
+        'ź' => "z",
+        'ż' => "z",
+
+        _ => char.IsLetterOrDigit(c) ? c.ToString() : "",
+    };
+
 }

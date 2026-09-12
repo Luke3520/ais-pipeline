@@ -98,6 +98,32 @@ public sealed record StoredPortCall
     public double CentroidLatitude { get; init; }
     public double CentroidLongitude { get; init; }
     public bool IsComplete { get; init; }
+
+    /// <summary>NGA World Port Index number of the nearest port, or null when none was named.</summary>
+    public int? PortWpiNumber { get; init; }
+
+    public string? PortName { get; init; }
+
+    public string? PortCountry { get; init; }
+
+    /// <summary>
+    /// How far the call's centroid sat from that port's reference point.
+    ///
+    /// Returned with the name, always. A World Port Index record is one nominal point near the
+    /// harbour entrance, so this runs from 0.11 nm for a berth at Arhus to 3.60 nm for one at
+    /// Rostock -- and an offshore anchorage 14 nm out gets a name too. Without the distance, a
+    /// client cannot tell those apart, so the name on its own would claim more than the data
+    /// supports (ADR-0034).
+    /// </summary>
+    public double? PortDistanceNm { get; init; }
+
+    /// <summary>
+    /// Whether the vessel was plausibly at that port rather than merely nearest to it. Null when
+    /// no port was named. A heuristic -- see <see cref="Geo.PortAttributionThresholds"/>.
+    /// </summary>
+    public bool? PlausiblyAtPort => PortDistanceNm is { } nm
+        ? nm <= Geo.PortAttributionThresholds.PlausiblyAtPortNm
+        : null;
 }
 
 public sealed record StoredRun

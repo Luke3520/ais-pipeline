@@ -314,8 +314,36 @@ ais quality                              # what each rule did: rejected, and fla
 ais laytime --mmsi 219018271             # a statement for the most recent complete port call
 ais reconcile --sof statement.json       # that statement against what AIS observed
 ais stops --min-hours 6 --complete-only  # detected stops, longest first
-ais portcalls --min-waiting-hours 6      # waiting and working hours per call
+ais portcalls --min-waiting-hours 6      # waiting and working hours per call, with the port
 ```
+
+`detect` names each port call against a committed extract of the **World Port Index**
+([`reference/ports/`](reference/ports/README.md)) — 145 ports over the five countries the feed
+actually reaches, because its three busiest stop clusters are Goteborg, Kiel and Rostock and none of
+them are Danish. On the seven-day window it names a port for 357 of 362 calls.
+
+What it does **not** do is claim the vessel was *in* that port. A World Port Index record is one
+nominal point near the harbour entrance, and measured against those 362 calls the distance to it is
+continuous with no gap — vessels plainly alongside sit at 0.11 nm (Arhus) and 3.60 nm (Rostock),
+while a mid-Kattegat anchorage sits 14.35 nm off Kalundborg. No radius separates those, so the port
+is stored **with its distance** and `ais portcalls` prints both, marking with a `~` the ones too far
+out to call the port's own:
+
+```
+  id     mmsi       arrived (UTC)      waiting  working  unclassified  nearest port
+  126    245313000  2026-09-01 05:50        0.0    126.5           0.0   Marstal 3.1 nm
+  350    636016302  2026-09-02 12:47       83.6      0.0           0.0  ~Lysekil 9.2 nm
+  359    636025106  2026-09-03 15:38       30.4     46.5           0.0   Fredericia 1.8 nm
+```
+
+The `~` rows are the ones with no working hours, which is the point: drift geometry decided
+berth-versus-anchorage without knowing about distance, and the two agree — calls within 5 nm are
+three and a half times more likely to have berthed (59.7% against 16.8%). The 5 nm figure is a
+heuristic and [ADR-0034](docs/adr/0034-ports-are-named-with-a-distance-not-a-boundary.md) says so,
+along with why more AIS data will never refine it.
+
+This is also what lets `reconcile` check the port a Statement of Facts names, rather than matching a
+document to a call on timestamps alone.
 
 `ais quality` reports **both** things a rule can do, because a rule does exactly one of two things
 and there is no third (ADR-0006): it *rejects* a row into `quarantine`, or it *keeps* the row and

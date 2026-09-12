@@ -65,3 +65,24 @@ to answer it.
 
 So the pipeline stores the nearest port **with its distance** and does not claim membership. See
 `docs/adr/0034-*` for what follows from that.
+
+## What corroborates the 5 nm heuristic
+
+Measured after ADR-0034 was written, from a signal the threshold knows nothing about. Whether a
+stop is a berth or an anchorage is decided by drift geometry alone (ADR-0020), so berth hours are an
+independent test of whether the distance band separates anything real:
+
+| distance band | calls | with berth time | share |
+|---|---|---|---|
+| within 5 nm | 238 | 142 | 59.7% |
+| beyond 5 nm | 119 | 20 | 16.8% |
+| no port named | 5 | 2 | 40.0% |
+
+A call within 5 nm of its port is **three and a half times** more likely to have involved time
+alongside. Two unrelated methods agree, which is the strongest thing available here short of a
+dataset with real port extents.
+
+It is not a clean split and is not claimed as one. 16.8% of calls beyond 5 nm did berth — large
+ports whose quays lie further from the reference point than the threshold allows — and 40% of calls
+within 5 nm never berthed, which is what an anchorage just outside a harbour looks like. The
+heuristic separates; it does not decide.

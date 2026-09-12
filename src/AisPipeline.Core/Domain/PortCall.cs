@@ -1,3 +1,5 @@
+using AisPipeline.Core.Geo;
+
 namespace AisPipeline.Core.Domain;
 
 /// <summary>Whether a stop looks like lying alongside or lying at anchor.</summary>
@@ -33,6 +35,16 @@ public sealed record PortCall
 {
     public required long Mmsi { get; init; }
     public required IReadOnlyList<PortCallPhase> Phases { get; init; }
+
+    /// <summary>
+    /// The nearest port to this call's centroid, with the distance to it, or null when nothing was
+    /// close enough to name -- or when no gazetteer was loaded.
+    ///
+    /// Null carries two meanings and that is deliberate: both say "this pipeline is not telling you
+    /// which port this was", which is the only claim either state supports. Distinguishing them
+    /// would invite a caller to treat "no gazetteer" as "at sea".
+    /// </summary>
+    public PortAttribution? Attribution { get; init; }
 
     public DateTime ArrivedUtc => Phases[0].Stop.StartedUtc;
 

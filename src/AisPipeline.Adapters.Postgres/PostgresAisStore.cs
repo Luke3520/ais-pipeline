@@ -31,7 +31,17 @@ public sealed class PostgresAisStore : IAisStore
         _connection = _source.OpenConnection();
     }
 
-    public void EnsureSchema() => Execute(PostgresSchema.Ddl);
+    public void EnsureSchema()
+    {
+        Execute(PostgresSchema.Ddl);
+
+        // The port columns on a port_call built before ADR-0034. Postgres has ADD COLUMN IF NOT
+        // EXISTS, so no guard query is needed -- unlike SQLite, which is why the two adapters do
+        // this differently. Harmless to re-run, and ALTER rather than a rebuild keeps the
+        // detections already there (they read null until the next detect, which is what null
+        // means here).
+        Execute(PostgresSchema.ProjectionUpgrades);
+    }
 
     public long BeginRun(string sourceFile, DateTime startedUtc)
     {
@@ -296,6 +306,8 @@ public sealed class PostgresAisStore : IAisStore
 
         // Phases first: they reference both tables below. Delete then rebuild inside one
         // transaction -- a partial replace would leave a mixture of two computations (ADR-0009).
+        // Emptied, not dropped: keeping a projection's SHAPE current is EnsureSchema's job and
+        // happens once, not on every run (ADR-0034).
         foreach (var table in new[] { "port_call_phase", "port_call", "stop_event" })
         {
             using var delete = connection.CreateCommand();
@@ -334,8 +346,9 @@ public sealed class PostgresAisStore : IAisStore
         command.Transaction = t;
         command.CommandText = """
             INSERT INTO port_call (mmsi, arrived_utc, departed_utc, waiting_hours, working_hours,
-                                   unclassified_hours, centroid_lat, centroid_lon, is_complete)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id;
+                                   unclassified_hours, centroid_lat, centroid_lon, is_complete,
+                                   port_wpi_number, port_name, port_country, port_distance_nm)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING id;
             """;
         command.Parameters.AddWithValue(call.Mmsi);
         command.Parameters.AddWithValue(Utc(call.ArrivedUtc));
@@ -346,6 +359,10 @@ public sealed class PostgresAisStore : IAisStore
         command.Parameters.AddWithValue(call.CentroidLatitude);
         command.Parameters.AddWithValue(call.CentroidLongitude);
         command.Parameters.AddWithValue(call.IsComplete);
+        command.Parameters.AddWithValue((object?)call.Attribution?.WpiNumber ?? DBNull.Value);
+        command.Parameters.AddWithValue((object?)call.Attribution?.Name ?? DBNull.Value);
+        command.Parameters.AddWithValue((object?)call.Attribution?.Country ?? DBNull.Value);
+        command.Parameters.AddWithValue((object?)call.Attribution?.DistanceNm ?? DBNull.Value);
         return (long)command.ExecuteScalar()!;
     }
 

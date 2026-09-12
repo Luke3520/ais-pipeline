@@ -112,6 +112,13 @@ internal static class SqliteSchema
           centroid_lat REAL NOT NULL,
           centroid_lon REAL NOT NULL,
           is_complete INTEGER NOT NULL,
+          -- Nearest port, nullable together: either all four are present or none are. The
+          -- distance is stored beside the name because the name alone claims more than a point
+          -- gazetteer can support (ADR-0034).
+          port_wpi_number INTEGER,
+          port_name TEXT,
+          port_country TEXT,
+          port_distance_nm REAL,
           UNIQUE (mmsi, arrived_utc)
         );
 

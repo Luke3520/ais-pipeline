@@ -342,7 +342,9 @@ public sealed class SqlAisQueries : IAisQueries
         SELECT id AS Id, mmsi AS Mmsi, arrived_utc AS ArrivedUtc, departed_utc AS DepartedUtc,
                waiting_hours AS WaitingHours, working_hours AS WorkingHours,
                unclassified_hours AS UnclassifiedHours, centroid_lat AS CentroidLatitude,
-               centroid_lon AS CentroidLongitude, is_complete AS IsComplete
+               centroid_lon AS CentroidLongitude, is_complete AS IsComplete,
+               port_wpi_number AS PortWpiNumber, port_name AS PortName,
+               port_country AS PortCountry, port_distance_nm AS PortDistanceNm
         FROM port_call
         """;
 }

@@ -32,7 +32,12 @@ public sealed record GazetteerPort
 /// </summary>
 public sealed record PortAttribution
 {
-    public required GazetteerPort Port { get; init; }
+    /// <summary>NGA's World Port Index number, the stable identity of the port.</summary>
+    public required int WpiNumber { get; init; }
+
+    public required string Name { get; init; }
+
+    public required string Country { get; init; }
 
     public required double DistanceNm { get; init; }
 
@@ -110,8 +115,17 @@ public sealed class NearestPortIndex
             }
         }
 
+        // The port's own coordinates are deliberately not carried forward. Nothing downstream
+        // reads them -- what matters is which port and how far -- and a record holding a position
+        // nobody uses invites someone to persist it and then wonder which position it was.
         return best is null || bestNm > PortAttributionThresholds.TooFarToNameNm
             ? null
-            : new PortAttribution { Port = best, DistanceNm = bestNm };
+            : new PortAttribution
+            {
+                WpiNumber = best.WpiNumber,
+                Name = best.Name,
+                Country = best.Country,
+                DistanceNm = bestNm,
+            };
     }
 }

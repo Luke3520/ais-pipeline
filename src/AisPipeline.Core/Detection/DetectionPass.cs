@@ -1,4 +1,5 @@
 using AisPipeline.Core.Domain;
+using AisPipeline.Core.Geo;
 using AisPipeline.Core.Ports;
 
 namespace AisPipeline.Core.Detection;
@@ -9,7 +10,9 @@ public sealed record DetectionResult(
     int StopsDetected,
     int CompleteStops,
     int PortCalls,
-    int StopsWhereStatusDisagrees);
+    int StopsWhereStatusDisagrees,
+    int PortCallsNamed,
+    int PortCallsPlausiblyAtPort);
 
 /// <summary>
 /// Rebuilds stop events and port calls from stored positions.
@@ -26,12 +29,18 @@ public sealed class DetectionPass
     private readonly StopDetector _detector;
     private readonly PortCallChainer _chainer;
 
-    public DetectionPass(IAisStore store, DetectionThresholds? thresholds = null)
+    private readonly NearestPortIndex? _ports;
+
+    public DetectionPass(
+        IAisStore store,
+        DetectionThresholds? thresholds = null,
+        NearestPortIndex? ports = null)
     {
         _store = store;
         var resolved = thresholds ?? DetectionThresholds.Default;
         _detector = new StopDetector(resolved);
         _chainer = new PortCallChainer(resolved);
+        _ports = ports;
     }
 
     public DetectionResult Run()
@@ -52,7 +61,11 @@ public sealed class DetectionPass
             }
 
             stops += detected.Count;
-            calls.AddRange(_chainer.Chain(detected));
+
+            // Attributed after chaining, from the call's centroid rather than any one stop's. The
+            // chainer stays unaware of ports: which port a call sat in has no bearing on whether
+            // consecutive stops belong to the same visit.
+            calls.AddRange(_chainer.Chain(detected).Select(Attribute));
         }
 
         _store.ReplaceDetections(calls);
@@ -63,8 +76,15 @@ public sealed class DetectionPass
             stops,
             allStops.Count(s => s.IsComplete),
             calls.Count,
-            allStops.Count(s => !s.StatusAgrees));
+            allStops.Count(s => !s.StatusAgrees),
+            calls.Count(c => c.Attribution is not null),
+            calls.Count(c => c.Attribution?.PlausiblyAtPort == true));
     }
+
+    private PortCall Attribute(PortCall call) =>
+        _ports is null
+            ? call
+            : call with { Attribution = _ports.Nearest(call.CentroidLatitude, call.CentroidLongitude) };
 
     private static IEnumerable<(long Mmsi, List<PositionFix> Fixes)> GroupByVessel(
         IEnumerable<PositionFix> ordered)

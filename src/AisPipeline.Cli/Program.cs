@@ -12,6 +12,7 @@ using AisPipeline.Core.Sof;
 using AisPipeline.Core.Query;
 using AisPipeline.Core.Ports;
 using AisPipeline.Core.Detection;
+using AisPipeline.Core.Geo;
 using AisPipeline.Core.Ingest;
 using AisPipeline.Core.Quality;
 using AisPipeline.Core.Quality.Rules;
@@ -45,7 +46,7 @@ static void Usage() => Console.WriteLine("""
     ais - AIS ingestion and analysis
 
       ais ingest <file.csv|file.zip> [--db <path> | --postgres <conn>] [--ship-type <type>] [--limit <n>]
-      ais detect [--db <path> | --postgres <conn>]
+      ais detect [--db <path> | --postgres <conn>] [--ports <gazetteer.csv>]
       ais laytime --mmsi <n> [--allowed <h>] [--rate <perDay>] [--nor <iso>] [--turn <h>]
       ais reconcile --sof <file.json> [--allowed <h>] [--rate <perDay>] [--turn <h>]
       ais quality [--db <path> | --postgres <conn>]
@@ -58,6 +59,8 @@ static void Usage() => Console.WriteLine("""
                     Host=localhost;Port=55432;Database=ais;Username=ais;Password=ais
       --ship-type   keep only vessels whose resolved type matches, e.g. Tanker
       --limit       stop after N source lines; for the development loop only
+      --ports       port gazetteer to name stops against
+                    (default: reference/ports/wpi-baltic-north-sea.csv)
 
     detect annotates the sequence rules and rebuilds stops and port calls. It is a full
     recompute: running it twice lands on exactly the same result.
@@ -174,12 +177,39 @@ static int Detect(string[] args)
         Console.WriteLine($"    {ruleId,-4} {count,12:N0}");
     }
 
-    var detected = new DetectionPass(store).Run();
+    var gazetteerPath = ValueOf(args, "--ports") ?? WpiCsvGazetteer.DefaultPath;
+    NearestPortIndex? ports = null;
+
+    if (File.Exists(gazetteerPath))
+    {
+        ports = new NearestPortIndex(WpiCsvGazetteer.Load(gazetteerPath));
+        Console.WriteLine($"gazetteer: {ports.Count} ports from {gazetteerPath}");
+    }
+    else
+    {
+        // Said, not skipped. Without this line a reader would see port columns full of nulls and
+        // conclude the vessels were all at sea.
+        Console.Error.WriteLine(
+            $"no gazetteer at {gazetteerPath}; port calls will carry no port name. " +
+            "Pass --ports <file> or restore reference/ports/.");
+    }
+
+    var detected = new DetectionPass(store, ports: ports).Run();
     var elapsed = DateTime.UtcNow - startedUtc;
 
     Console.WriteLine($"detected across {detected.VesselsExamined:N0} vessels ({elapsed.TotalSeconds:F1}s)");
     Console.WriteLine($"  stops {detected.StopsDetected:N0}  " +
         $"(complete {detected.CompleteStops:N0})  port calls {detected.PortCalls:N0}");
+
+    if (detected.PortCalls > 0 && ports is not null)
+    {
+        var named = 100.0 * detected.PortCallsNamed / detected.PortCalls;
+        var atPort = 100.0 * detected.PortCallsPlausiblyAtPort / detected.PortCalls;
+        Console.WriteLine(
+            $"  named a port for {detected.PortCallsNamed:N0} of them ({named:F0}%), " +
+            $"of which {detected.PortCallsPlausiblyAtPort:N0} ({atPort:F0}%) sit within " +
+            $"{PortAttributionThresholds.PlausiblyAtPortNm:F0} nm of it -- a heuristic (ADR-0034)");
+    }
 
     if (detected.StopsDetected > 0)
     {
@@ -399,13 +429,31 @@ static int Reconcile(string[] args)
     }
     Console.WriteLine($"  AIS call  : {call.Id}  {call.ArrivedUtc:yyyy-MM-dd HH:mm} -> {call.DepartedUtc:yyyy-MM-dd HH:mm}");
     Console.WriteLine($"  matched   : {match.Explain()}");
+
     if (!match.PortWasChecked)
     {
-        // Said out loud because it is half the evidence a human would use. AIS has no port
-        // identity yet, so "Immingham" on the document is matched against nothing.
+        // Half the evidence a human would use, and unavailable: either the stop was too far from
+        // any port to name, or this store was built before the gazetteer existed.
         Console.WriteLine(
-            $"              the document names {match.DocumentPort}; AIS has no port identity, " +
-            "so the port was NOT checked -- only the times were.");
+            $"              the document names {match.DocumentPort}; AIS named no port for this " +
+            "call, so the port was NOT checked -- only the times were.");
+    }
+    else
+    {
+        Console.WriteLine(
+            $"  port      : document says {match.DocumentPort}; AIS nearest is {match.AisPort} " +
+            $"({match.AisPortDistanceNm!.Value.ToString("F1", CultureInfo.InvariantCulture)} nm)");
+
+        if (match.PortNamesAgree == false)
+        {
+            // A question, not a finding, and nothing refuses on it. The World Port Index
+            // transliterates and documents use exonyms, so "Goteborg" and "Gothenburg" are the
+            // same port and compare as different. Reported for a human to settle -- the position
+            // rule 4 takes when two sources disagree.
+            Console.WriteLine(
+                "              the two names do NOT agree. That may be an exonym or a local " +
+                "spelling rather than a different port; the times overlap, so nothing is refused.");
+        }
     }
     Console.WriteLine();
     Console.WriteLine(result);
@@ -514,6 +562,19 @@ static string Hours(double? figure, double observed) =>
         ? known.ToString("F1", CultureInfo.InvariantCulture).PadLeft(8)
         : (">=" + observed.ToString("F1", CultureInfo.InvariantCulture)).PadLeft(8);
 
+/// <summary>
+/// The nearest port, always with its distance.
+///
+/// A bare name would read as "the vessel was here". The distance is what separates a berth at
+/// Arhus, 0.11 nm from its reference point, from an anchorage 14 nm off Kalundborg -- and a
+/// tilde marks the ones too far out to call the port's own (ADR-0034).
+/// </summary>
+static string Port(StoredPortCall call) =>
+    call.PortName is null
+        ? "(none named)"
+        : $"{(call.PlausiblyAtPort == true ? " " : "~")}{call.PortName} " +
+          $"{call.PortDistanceNm!.Value.ToString("F1", CultureInfo.InvariantCulture)} nm";
+
 /// <summary>Drift, or ? when too few fixes survived exclusion for it to mean anything (ADR-0025).</summary>
 static string Drift(double? nm) =>
     nm is { } known ? known.ToString("F3", CultureInfo.InvariantCulture).PadLeft(7) : "?".PadLeft(7);
@@ -614,14 +675,15 @@ static int PortCalls(string[] args)
 
     Console.WriteLine($"{calls.Count} port call(s), longest first:");
     Console.WriteLine();
-    Console.WriteLine("  id     mmsi       arrived (UTC)      waiting  working  unclassified");
+    Console.WriteLine(
+        "  id     mmsi       arrived (UTC)      waiting  working  unclassified  nearest port");
 
     foreach (var call in calls)
     {
         Console.WriteLine(
             $"  {call.Id,-6} {call.Mmsi,-10} {call.ArrivedUtc:yyyy-MM-dd HH:mm}  " +
             $"{call.WaitingHours,9:F1}{call.WorkingHours,9:F1}" +
-            $"{call.UnclassifiedHours,14:F1}{(call.IsComplete ? "" : "  (open)")}");
+            $"{call.UnclassifiedHours,14:F1}  {Port(call)}{(call.IsComplete ? "" : "  (open)")}");
     }
 
     var unclassified = calls.Sum(c => c.UnclassifiedHours);
@@ -693,6 +755,19 @@ static PortCall RebuildPortCall(
     IReadOnlyList<(AisPipeline.Core.Query.StoredPhase Phase, AisPipeline.Core.Query.StoredStop Stop)> phases) => new()
     {
         Mmsi = call.Mmsi,
+
+        // Carried across, not recomputed. Omitting it here is not a missing feature that shows up
+        // as an error -- reconcile simply reported "AIS named no port for this call" for a call
+        // whose port was sitting in the row it was handed.
+        Attribution = call.PortName is null || call.PortDistanceNm is null
+            ? null
+            : new PortAttribution
+            {
+                WpiNumber = call.PortWpiNumber ?? 0,
+                Name = call.PortName,
+                Country = call.PortCountry ?? "",
+                DistanceNm = call.PortDistanceNm.Value,
+            },
         Phases = [.. phases
         .OrderBy(p => p.Phase.Sequence)
         .Select(p => new PortCallPhase(

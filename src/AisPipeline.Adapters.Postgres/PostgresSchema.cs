@@ -66,7 +66,20 @@ internal static class PostgresSchema
         );
 
         CREATE INDEX IF NOT EXISTS ix_quarantine_rule ON quarantine (rule_id);
+        """;
 
+    /// <summary>
+    /// Column additions for databases created before a projection grew a column.
+    ///
+    /// Not part of <see cref="Ddl"/>: CREATE TABLE IF NOT EXISTS silently does nothing when the
+    /// table is already there, so a new column has to be added explicitly or older databases fail
+    /// on insert with "column does not exist".
+    /// </summary>
+    public const string ProjectionUpgrades = """
+        ALTER TABLE port_call ADD COLUMN IF NOT EXISTS port_wpi_number INTEGER;
+        ALTER TABLE port_call ADD COLUMN IF NOT EXISTS port_name TEXT;
+        ALTER TABLE port_call ADD COLUMN IF NOT EXISTS port_country TEXT;
+        ALTER TABLE port_call ADD COLUMN IF NOT EXISTS port_distance_nm DOUBLE PRECISION;
         CREATE TABLE IF NOT EXISTS stop_event (
           id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
           mmsi BIGINT NOT NULL,
@@ -100,6 +113,13 @@ internal static class PostgresSchema
           centroid_lat DOUBLE PRECISION NOT NULL,
           centroid_lon DOUBLE PRECISION NOT NULL,
           is_complete BOOLEAN NOT NULL,
+          -- Nearest port, nullable together: either all four are present or none are. The
+          -- distance is stored beside the name because the name alone claims more than a point
+          -- gazetteer can support (ADR-0034).
+          port_wpi_number INTEGER,
+          port_name TEXT,
+          port_country TEXT,
+          port_distance_nm DOUBLE PRECISION,
           UNIQUE (mmsi, arrived_utc)
         );
 

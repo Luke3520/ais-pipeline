@@ -30,7 +30,7 @@ public class NearestPortIndexTests
         var attribution = Index().Nearest(56.15, 10.22);
 
         Assert.NotNull(attribution);
-        Assert.Equal("Arhus", attribution!.Port.Name);
+        Assert.Equal("Arhus", attribution!.Name);
         Assert.True(attribution.DistanceNm < 0.2, $"expected a berth-scale distance, got {attribution.DistanceNm}");
         Assert.True(attribution.PlausiblyAtPort);
     }
@@ -43,7 +43,7 @@ public class NearestPortIndexTests
         var attribution = Index().Nearest(54.16, 12.13);
 
         Assert.NotNull(attribution);
-        Assert.Equal("Rostock", attribution!.Port.Name);
+        Assert.Equal("Rostock", attribution!.Name);
         Assert.True(attribution.DistanceNm > 3.0);
         Assert.True(attribution.PlausiblyAtPort);
     }
@@ -56,7 +56,7 @@ public class NearestPortIndexTests
         var attribution = Index().Nearest(55.81, 10.74);
 
         Assert.NotNull(attribution);
-        Assert.Equal("Kalundborg", attribution!.Port.Name);
+        Assert.Equal("Kalundborg", attribution!.Name);
         Assert.False(attribution.PlausiblyAtPort);
         Assert.True(attribution.DistanceNm > PortAttributionThresholds.PlausiblyAtPortNm);
     }
@@ -80,7 +80,9 @@ public class NearestPortIndexTests
     {
         var atThreshold = new PortAttribution
         {
-            Port = Arhus,
+            WpiNumber = Arhus.WpiNumber,
+            Name = Arhus.Name,
+            Country = Arhus.Country,
             DistanceNm = PortAttributionThresholds.PlausiblyAtPortNm,
         };
 

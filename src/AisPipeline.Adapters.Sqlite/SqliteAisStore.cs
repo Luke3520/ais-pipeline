@@ -39,7 +39,45 @@ public sealed class SqliteAisStore : IAisStore
     internal static string Format(DateTime utc) =>
         utc.ToUniversalTime().ToString(TimestampFormat, CultureInfo.InvariantCulture);
 
-    public void EnsureSchema() => Execute(SqliteSchema.Ddl);
+    public void EnsureSchema()
+    {
+        Execute(SqliteSchema.Ddl);
+        RebuildProjectionsIfStale();
+    }
+
+    /// <summary>
+    /// Adds the port columns to a port_call built before ADR-0034.
+    ///
+    /// CREATE TABLE IF NOT EXISTS cannot add a column to a table that already exists, so without
+    /// this every insert into an older database fails on "no such column". ALTER rather than drop
+    /// and recreate: port_call is a projection and could legitimately be rebuilt, but adding a
+    /// column keeps the detections already there, and they are correct in every other respect.
+    /// The new columns read null until the next `detect` fills them, which is exactly what null
+    /// means here -- no port was named.
+    ///
+    /// Guarded on the column being absent, so it runs once in a database's life. Doing schema work
+    /// unconditionally on every open is what made the test suite flaky: a schema change invalidates
+    /// statements cached on pooled connections, measured at roughly one failed run in forty.
+    /// </summary>
+    private void RebuildProjectionsIfStale()
+    {
+        using var check = _connection.CreateCommand();
+        check.CommandText = "SELECT COUNT(*) FROM pragma_table_info('port_call') WHERE name = 'port_name';";
+
+        if ((long)check.ExecuteScalar()! > 0)
+        {
+            return;
+        }
+
+        // SQLite has no ADD COLUMN IF NOT EXISTS, which is why the guard above is a query rather
+        // than a clause.
+        Execute("""
+            ALTER TABLE port_call ADD COLUMN port_wpi_number INTEGER;
+            ALTER TABLE port_call ADD COLUMN port_name TEXT;
+            ALTER TABLE port_call ADD COLUMN port_country TEXT;
+            ALTER TABLE port_call ADD COLUMN port_distance_nm REAL;
+            """);
+    }
 
     public long BeginRun(string sourceFile, DateTime startedUtc)
     {
@@ -292,6 +330,12 @@ public sealed class SqliteAisStore : IAisStore
         // Delete before insert, inside the same transaction. These are projections over
         // position_report, so a partial replace would leave a mixture of two computations --
         // and re-running detection has to land on exactly the previous result (ADR-0009).
+        //
+        // Emptied, not dropped. Dropping and recreating here would also fix a stale SHAPE, but it
+        // churns the schema on every run: measured, it turned a suite that passed 40 times out of
+        // 40 into one that failed roughly one run in forty, because a schema change invalidates
+        // statements cached on pooled connections. Shape is EnsureSchema's job, once.
+        //
         // Phases first: they reference both of the tables below.
         foreach (var table in new[] { "port_call_phase", "port_call", "stop_event" })
         {
@@ -321,9 +365,10 @@ public sealed class SqliteAisStore : IAisStore
         command.Transaction = transaction;
         command.CommandText = """
             INSERT INTO port_call (mmsi, arrived_utc, departed_utc, waiting_hours, working_hours,
-                                   unclassified_hours, centroid_lat, centroid_lon, is_complete)
+                                   unclassified_hours, centroid_lat, centroid_lon, is_complete,
+                                   port_wpi_number, port_name, port_country, port_distance_nm)
             VALUES ($mmsi, $arrived, $departed, $waiting, $working, $unclassified,
-                    $lat, $lon, $complete);
+                    $lat, $lon, $complete, $portWpi, $portName, $portCountry, $portNm);
             SELECT last_insert_rowid();
             """;
         command.Parameters.AddWithValue("$mmsi", call.Mmsi);
@@ -335,6 +380,10 @@ public sealed class SqliteAisStore : IAisStore
         command.Parameters.AddWithValue("$lat", call.CentroidLatitude);
         command.Parameters.AddWithValue("$lon", call.CentroidLongitude);
         command.Parameters.AddWithValue("$complete", call.IsComplete ? 1 : 0);
+        command.Parameters.AddWithValue("$portWpi", (object?)call.Attribution?.WpiNumber ?? DBNull.Value);
+        command.Parameters.AddWithValue("$portName", (object?)call.Attribution?.Name ?? DBNull.Value);
+        command.Parameters.AddWithValue("$portCountry", (object?)call.Attribution?.Country ?? DBNull.Value);
+        command.Parameters.AddWithValue("$portNm", (object?)call.Attribution?.DistanceNm ?? DBNull.Value);
         return (long)command.ExecuteScalar()!;
     }
 
