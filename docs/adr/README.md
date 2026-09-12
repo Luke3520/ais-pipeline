@@ -50,3 +50,8 @@ the design.
 | [0030](0030-laytime-engine.md) | A laytime engine, and the boundary of what AIS can prove | Accepted |
 | [0031](0031-reconciling-a-statement-of-facts.md) | Reconciling a Statement of Facts against AIS | Accepted |
 | [0022](0022-three-lane-review-harness.md) | Three-lane review harness | Accepted |
+| [0032](0032-the-quality-report-counts-both-halves.md) | The quality report counts both halves | Accepted |
+| [0033](0033-a-document-must-be-matched-to-the-call-it-describes.md) | A document must be matched to the call it describes | Accepted |
+| [0034](0034-ports-are-named-with-a-distance-not-a-boundary.md) | A port is named with a distance, never claimed as a boundary | Accepted |
+| [0035](0035-select-the-call-the-document-describes.md) | Select the call the document describes, do not validate a guess | Accepted |
+| [0036](0036-r10-is-reported-separately-because-it-counts-something-else.md) | R10 is reported separately, because it counts something else | Accepted |
