@@ -345,6 +345,13 @@ along with why more AIS data will never refine it.
 This is also what lets `reconcile` check the port a Statement of Facts names, rather than matching a
 document to a call on timestamps alone.
 
+`reconcile` picks the AIS call **by the document's own window** — the call sharing the most time with
+it — rather than asking for the vessel's latest and validating that guess
+([ADR-0035](docs/adr/0035-select-the-call-the-document-describes.md)). Statements of Facts arrive
+weeks after the event, so selecting by recency refused most real documents. An exact tie is refused
+rather than broken: two calls sharing the same amount of time cannot be told apart from timestamps,
+and picking one would silently decide which timeline a demurrage figure is measured against.
+
 `ais quality` reports **both** things a rule can do, because a rule does exactly one of two things
 and there is no third (ADR-0006): it *rejects* a row into `quarantine`, or it *keeps* the row and
 flags the doubt. Reporting only the first hides every rule that flags — R7, R8, R11 — and an

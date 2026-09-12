@@ -230,7 +230,23 @@ public sealed class SqlAisQueries : IAisQueries
             WHERE mmsi = @mmsi AND ts_utc >= @fromUtc AND ts_utc <= @toUtc
             ORDER BY ts_utc, id
             LIMIT @limit
-            """, new { mmsi, fromUtc, toUtc, limit = Clamp(limit) })];
+            """, new
+        {
+            mmsi,
+            fromUtc = _dialect.Timestamp(fromUtc),
+            toUtc = _dialect.Timestamp(toUtc),
+            limit = Clamp(limit),
+        })];
+    }
+
+    public IReadOnlyList<StoredPortCall> PortCallsOverlapping(long mmsi, DateTime fromUtc, DateTime toUtc)
+    {
+        using var c = Open();
+        return [.. c.Query<StoredPortCall>($"""
+            {PortCallColumns}
+            WHERE mmsi = @mmsi AND arrived_utc < @to AND departed_utc > @from
+            ORDER BY arrived_utc DESC
+            """, new { mmsi, from = _dialect.Timestamp(fromUtc), to = _dialect.Timestamp(toUtc) })];
     }
 
     public IReadOnlyList<RuleHitCount> QualityReport()

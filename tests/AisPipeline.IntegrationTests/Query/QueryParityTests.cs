@@ -72,6 +72,75 @@ public class QueryParityTests
 
     [Theory]
     [ClassData(typeof(StoreHarnesses))]
+    public void ABoundedFixWindowIsHonouredAndNotSkewedByTheParameterFormat(Func<IStoreHarness> make)
+    {
+        // Every other ListFixes call in this suite passes DateTime.UnixEpoch as the lower bound,
+        // so the comparison itself was never exercised. It was wrong under SQLite: the column
+        // holds "2026-09-05T00:00:00Z" and a DateTime parameter binds as "2026-09-05 00:00:00",
+        // so a text comparison is decided by ' ' sorting below 'T' rather than by the instant.
+        using var harness = make();
+        Populate(harness);
+        using var queries = QueriesOver(harness);
+
+        var stops = queries.ListStops(new StopFilter { Limit = 1 });
+        Assert.NotEmpty(stops);
+        var stop = stops[0];
+
+        var whole = queries.ListFixes(stop.Mmsi, stop.StartedUtc, stop.EndedUtc, 5_000);
+        Assert.NotEmpty(whole);
+        Assert.All(whole, f => Assert.InRange(f.TimestampUtc, stop.StartedUtc, stop.EndedUtc));
+
+        // A window ending halfway cannot return more than the whole, and must exclude what is
+        // after it. Under the skewed comparison this came back empty.
+        var midpoint = stop.StartedUtc.AddSeconds((stop.EndedUtc - stop.StartedUtc).TotalSeconds / 2);
+        var firstHalf = queries.ListFixes(stop.Mmsi, stop.StartedUtc, midpoint, 5_000);
+
+        Assert.NotEmpty(firstHalf);
+        Assert.True(firstHalf.Count <= whole.Count);
+        Assert.All(firstHalf, f => Assert.True(f.TimestampUtc <= midpoint));
+    }
+
+    [Theory]
+    [ClassData(typeof(StoreHarnesses))]
+    public void PortCallsOverlappingReturnsOnlyCallsThatShareTimeWithTheWindow(Func<IStoreHarness> make)
+    {
+        // The query reconcile selects on (ADR-0035). Overlap is strict on both sides, and the
+        // predicate has to mean the same thing under both engines -- SQLite compares timestamps as
+        // sortable text, Postgres as instants.
+        using var harness = make();
+        Populate(harness);
+        using var queries = QueriesOver(harness);
+
+        var all = queries.ListPortCalls(new PortCallFilter { Limit = 500 });
+        Assert.NotEmpty(all);
+
+        var subject = all[0];
+
+        // A window strictly inside the call shares time with it.
+        var inside = queries.PortCallsOverlapping(
+            subject.Mmsi,
+            subject.ArrivedUtc.AddMinutes(1),
+            subject.DepartedUtc.AddMinutes(-1));
+        Assert.Contains(inside, c => c.Id == subject.Id);
+
+        // A window ending exactly when the call starts shares none: touching is not overlapping.
+        var touching = queries.PortCallsOverlapping(
+            subject.Mmsi,
+            subject.ArrivedUtc.AddHours(-5),
+            subject.ArrivedUtc);
+        Assert.DoesNotContain(touching, c => c.Id == subject.Id);
+
+        // A window a year away shares none either, and every row returned is the right vessel's.
+        var elsewhere = queries.PortCallsOverlapping(
+            subject.Mmsi,
+            subject.ArrivedUtc.AddDays(-365),
+            subject.ArrivedUtc.AddDays(-364));
+        Assert.Empty(elsewhere);
+        Assert.All(inside, c => Assert.Equal(subject.Mmsi, c.Mmsi));
+    }
+
+    [Theory]
+    [ClassData(typeof(StoreHarnesses))]
     public void BooleanColumnsSurviveTheRoundTrip(Func<IStoreHarness> make)
     {
         // SQLite stores 0/1, Postgres true/false. A mapping that read every row as `true` would

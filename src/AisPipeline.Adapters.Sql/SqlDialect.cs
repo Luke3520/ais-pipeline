@@ -1,3 +1,5 @@
+using System.Globalization;
+
 namespace AisPipeline.Adapters.Sql;
 
 /// <summary>
@@ -27,6 +29,31 @@ internal static class DialectExtensions
     /// <summary>Predicate that is true when the column is false.</summary>
     public static string IsFalse(this SqlDialect dialect, string column) =>
         dialect == SqlDialect.Postgres ? $"NOT {column}" : $"{column} = 0";
+
+    /// <summary>
+    /// A timestamp as a comparable parameter for this engine.
+    ///
+    /// SQLite has no date type: the column holds the ISO string this project writes, and comparing
+    /// it is a TEXT comparison. A DateTime parameter binds as "2026-09-05 00:00:00" where the
+    /// column reads "2026-09-05T00:00:00Z", so the comparison is decided by ' ' sorting below 'T'
+    /// rather than by the instant -- and a bounded window silently returned nothing. It did not
+    /// throw, and every existing test passed a window of UnixEpoch to MaxValue, which is the one
+    /// shape the skew cannot affect.
+    ///
+    /// Postgres keeps an instant in TIMESTAMPTZ and must get the DateTime itself; formatting it
+    /// would be the same mistake pointed the other way.
+    ///
+    /// The format matches what the SQLite store writes. Keep the two in step -- see
+    /// SqliteAisStore.TimestampFormat.
+    /// </summary>
+    public static object Timestamp(this SqlDialect dialect, DateTime value)
+    {
+        var utc = UtcDateTimeHandler.ToUtc(value);
+
+        return dialect == SqlDialect.Postgres
+            ? utc
+            : utc.ToString("yyyy-MM-dd'T'HH:mm:ss'Z'", CultureInfo.InvariantCulture);
+    }
 
     /// <summary>
     /// Predicate matching a column against a collection of values.

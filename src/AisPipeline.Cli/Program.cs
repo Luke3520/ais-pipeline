@@ -370,27 +370,88 @@ static int Reconcile(string[] args)
 
     using var queries = connection.OpenQueries();
 
-    if (queries.MostRecentCompletePortCall(sof.Mmsi) is not { } call)
+    if (sof.Events.Count == 0)
     {
-        Console.Error.WriteLine(
-            $"no complete port call for mmsi {sof.Mmsi}; this document cannot be matched to AIS");
+        Console.Error.WriteLine($"{Path.GetFileName(sofPath)} has no events, so it describes no call");
         return 2;
     }
 
+    // The document's own span selects the call. Asking for the vessel's most recent complete call
+    // and then validating that guess refused every historical document, which is most of them
+    // (ADR-0035).
+    var documentFrom = sof.Events.Min(e => e.TimestampUtc);
+    var documentTo = sof.Events.Max(e => e.TimestampUtc);
+
+    var overlapping = queries.PortCallsOverlapping(sof.Mmsi, documentFrom, documentTo);
+
+    var selection = CallSelection.Select(
+        documentFrom,
+        documentTo,
+        [.. overlapping.Select(c => new CallCandidate(c.Id, c.ArrivedUtc, c.DepartedUtc))]);
+
+    if (selection.NothingOverlaps)
+    {
+        Console.Error.WriteLine(
+            $"no AIS port call for mmsi {sof.Mmsi} shares any time with " +
+            $"{documentFrom:yyyy-MM-dd HH:mm} to {documentTo:yyyy-MM-dd HH:mm}.");
+
+        // What the store DOES hold for this vessel, so the reader can tell "wrong window" from
+        // "vessel never detected" without running a second verb.
+        var held = queries.ListPortCalls(new PortCallFilter { Mmsi = sof.Mmsi, Limit = 3 });
+        if (held.Count == 0)
+        {
+            Console.Error.WriteLine(
+                "  This vessel has no detected port calls at all. Ingest the window the document " +
+                "covers, then run detect.");
+        }
+        else
+        {
+            Console.Error.WriteLine($"  It does have {held.Count} other call(s), for example:");
+            foreach (var other in held)
+            {
+                Console.Error.WriteLine(
+                    $"    call {other.Id}  {other.ArrivedUtc:yyyy-MM-dd HH:mm} -> " +
+                    $"{other.DepartedUtc:yyyy-MM-dd HH:mm}");
+            }
+        }
+
+        return 2;
+    }
+
+    if (selection.IsAmbiguous)
+    {
+        // Two calls sharing exactly as much time with the document. Breaking the tie by recency or
+        // id would silently decide which timeline the money is measured against (ADR-0035).
+        Console.Error.WriteLine(
+            $"{selection.Ranked.Count} AIS port calls share the same amount of time with this " +
+            "document, so which one it describes cannot be decided from timestamps:");
+        foreach (var (candidate, overlap) in selection.Ranked)
+        {
+            Console.Error.WriteLine(
+                $"    call {candidate.Id}  {candidate.ArrivedUtc:yyyy-MM-dd HH:mm} -> " +
+                $"{candidate.DepartedUtc:yyyy-MM-dd HH:mm}  overlap {overlap.TotalHours:F1}h");
+        }
+
+        Console.Error.WriteLine("  Nothing is reconciled.");
+        return 2;
+    }
+
+    // Taken from the rows the overlap query already returned, not re-fetched through
+    // ListPortCalls: that one ranks by total duration before applying its limit, so the chosen
+    // call can be absent from the page entirely (ADR-0028).
+    var call = overlapping.Single(c => c.Id == selection.Chosen!.Id);
+
     var portCall = RebuildPortCall(call, queries.GetPhasesForPortCalls([call.Id]));
 
-    // Checked here as well as inside the reconciler, so the refusal is a message rather than a
-    // caught exception, and so it names what to do next. The call was picked by mmsi and "most
-    // recent complete" -- nothing in that query knows which visit the document describes.
+    // Still evaluated, and still the reconciler's own precondition. The selector picked on overlap
+    // so this cannot fail today -- it is the invariant that keeps the two agreeing if either
+    // changes.
     var match = CallMatch.Evaluate(sof, portCall);
     if (!match.TimesAreConsistent)
     {
         Console.Error.WriteLine(
             $"the statement and AIS port call {call.Id} do not describe the same visit:");
         Console.Error.WriteLine($"  {match.Explain()}");
-        Console.Error.WriteLine(
-            "  Nothing is reconciled. This vessel's most recent complete call is not the one the " +
-            "document is about -- ingest the window the document covers, then run detect.");
         return 2;
     }
 
@@ -429,6 +490,21 @@ static int Reconcile(string[] args)
     }
     Console.WriteLine($"  AIS call  : {call.Id}  {call.ArrivedUtc:yyyy-MM-dd HH:mm} -> {call.DepartedUtc:yyyy-MM-dd HH:mm}");
     Console.WriteLine($"  matched   : {match.Explain()}");
+
+    if (selection.AlsoOverlapping.Count > 0)
+    {
+        // The losing candidates, printed rather than dropped. Usually a neighbouring visit clipped
+        // at the edge of the document's span; occasionally a vessel that called twice in a week,
+        // which the reader can tell apart and the pipeline cannot (ADR-0035).
+        Console.WriteLine(
+            $"              chosen over {selection.AlsoOverlapping.Count} other overlapping call(s):");
+        foreach (var (other, overlap) in selection.AlsoOverlapping)
+        {
+            Console.WriteLine(
+                $"                call {other.Id}  {other.ArrivedUtc:yyyy-MM-dd HH:mm} -> " +
+                $"{other.DepartedUtc:yyyy-MM-dd HH:mm}  overlap {overlap.TotalHours:F1}h");
+        }
+    }
 
     if (!match.PortWasChecked)
     {
