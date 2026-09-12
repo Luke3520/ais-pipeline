@@ -69,10 +69,8 @@ static void Usage() => Console.WriteLine("""
     quarantine, and rows it kept but flagged. A rule that never fired prints zero rather than
     vanishing -- silence and absence are different claims (ADR-0032).
 
-    stops and portcalls list what detect derived, longest first -- not chronologically. A
-    duration the pipeline will not stand behind prints as a lower bound with a leading >=, and
-    a drift it will not stand behind prints as ?. Neither prints as a number (ADR-0011,
-    ADR-0025). Pass --complete-only to get only rows whose extent is known.
+    stops and portcalls list what detect derived, longest first -- not chronologically. A figure
+    the pipeline will not stand behind prints as a bound (>=2.7) or as ?, never as a number.
 
     laytime computes a statement for a vessel's most recent complete port call. AIS supplies
     berthing and completion; Notice of Readiness comes from the charter party and defaults to
@@ -448,8 +446,7 @@ static int Quality(string[] args)
     // line READ; this counts what the store HOLDS, and the fixture's 26 R5 hits become 10 flagged
     // rows once duplicates within the file collapse onto one natural key. Two honest numbers that
     // disagree is the project's recurring shape -- so name which one this is (rule 4).
-    Console.WriteLine("  Counts below are over what the store holds, not over lines read: a rule");
-    Console.WriteLine("  that fired on a duplicate leaves one record, not one per occurrence.");
+    Console.WriteLine("  Counts are over what the store holds, not over lines read.");
     Console.WriteLine();
     Console.WriteLine($"  {"rule",-5} {"rejected",12} {"flagged",12}  what it catches");
 
@@ -475,8 +472,6 @@ static int Quality(string[] args)
     Console.WriteLine(
         $"  totals: {report.Sum(l => l.Quarantined):N0} rejected into quarantine, " +
         $"{report.Sum(l => l.Flagged):N0} kept with a flag.");
-    Console.WriteLine(
-        "  Rejected rows are not in the time series; flagged rows are, carrying their doubt.");
 
     return 0;
 }
@@ -512,8 +507,7 @@ static void NoteIfCapped(int returned, int limit)
     {
         Console.WriteLine();
         Console.WriteLine(
-            $"  exactly {limit} row(s) returned, which is the limit -- there are probably more. " +
-            "Raise --limit or narrow the filters.");
+            $"  exactly {limit} row(s) returned, which is the limit -- there are probably more.");
     }
 }
 
@@ -562,9 +556,7 @@ static int Stops(string[] args)
     if (open > 0)
     {
         Console.WriteLine();
-        Console.WriteLine(
-            $"  {open} of these have an unknown true extent -- they touch a coverage gap or the " +
-            "edge of the ingested window, so their hours are lower bounds (ADR-0011).");
+        Console.WriteLine($"  {open} have an unknown true extent, so their hours are lower bounds.");
     }
 
     NoteIfCapped(stops.Count, limit);
@@ -615,8 +607,8 @@ static int PortCalls(string[] args)
         // charter over the other, so they are carried as their own column (ADR-0025).
         Console.WriteLine();
         Console.WriteLine(
-            $"  {unclassified:F1}h across these calls sit in phases whose geometry the pipeline " +
-            "does not stand behind: neither waiting nor working, and not billable as either.");
+            $"  {unclassified:F1}h sit in phases whose geometry the pipeline does not stand behind: " +
+            "neither waiting nor working, and not billable as either.");
     }
 
     var open = calls.Count(c => !c.IsComplete);
@@ -624,8 +616,8 @@ static int PortCalls(string[] args)
     {
         Console.WriteLine();
         Console.WriteLine(
-            $"  {open} marked (open): the call's true extent is unknown, so its hours are lower " +
-            "bounds. --complete-only excludes them.");
+            $"  {open} marked (open): true extent unknown, hours are lower bounds. " +
+            "--complete-only excludes them.");
     }
 
     NoteIfCapped(calls.Count, limit);

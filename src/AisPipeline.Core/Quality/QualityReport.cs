@@ -13,11 +13,7 @@ public sealed record QualityReportLine(
     public long Total => Quarantined + Flagged;
 
     /// <summary>
-    /// True when the rule is registered but has never fired on the data in the store.
-    ///
-    /// Distinct from absent. R6 has never fired on the seven-day window and neither has the
-    /// teleport gate on some slices; that is a fact about the feed worth printing, not a row to
-    /// omit. An omitted rule reads as a rule that does not exist.
+    /// Registered, ran, never fired. Distinct from absent, which reads as "no such rule".
     /// </summary>
     public bool Silent => Total == 0;
 }
@@ -26,11 +22,11 @@ public sealed record QualityReportLine(
 /// Builds the quality report from what the store counted and what the pipeline knows it runs.
 ///
 /// Pure, and in Core, because the interesting part is not the aggregation -- the adapter does
-/// that -- but the reconciliation of two lists that disagree. The store only knows the rules
-/// that left a mark; the registry knows every rule that ran. A rule in the registry and absent
-/// from the counts fired zero times and must say so. A rule in the counts and absent from the
-/// registry is the alarming case: rows in the store carry an id nothing currently runs, which
-/// means a retired or renamed rule, and hiding it would quietly orphan those rows (rule 2).
+/// that -- but the reconciliation of two lists that disagree. The store only knows the rules that
+/// left a mark; the registry knows every rule that ran. A registered rule absent from the counts
+/// fired zero times and says so. An id in the counts that no rule owns is carried through rather
+/// than dropped: nothing today can produce one, but a report that silently omits rows it does not
+/// recognise is the failure rule 2 exists to prevent.
 /// </summary>
 public static class QualityReport
 {
@@ -55,10 +51,7 @@ public static class QualityReport
         foreach (var orphan in counts.Where(c => !known.Contains(c.RuleId)))
         {
             lines.Add(new QualityReportLine(
-                orphan.RuleId,
-                "no rule with this id is registered -- retired, or renamed without a migration",
-                orphan.Quarantined,
-                orphan.Flagged));
+                orphan.RuleId, "no rule registered for this id", orphan.Quarantined, orphan.Flagged));
         }
 
         return [.. lines.OrderBy(l => Ordinal(l.RuleId)).ThenBy(l => l.RuleId, StringComparer.Ordinal)];

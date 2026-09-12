@@ -64,13 +64,13 @@ public class QualityReportTests
     [Fact]
     public void An_id_in_the_data_that_no_rule_owns_is_surfaced_not_hidden()
     {
-        // Rows carrying an id nothing currently runs means a rule was retired or renamed without
-        // migrating its rows. Dropping the line would orphan those rows silently -- rule 2.
+        // Unreachable today -- nothing writes R2 -- and kept anyway, because the alternative is a
+        // report that silently omits rows it does not recognise. Rule 2 forbids that shape.
         var report = QualityReport.Build(RuleRegistry.Default(), [Count("R2", quarantined: 77)]);
 
         var orphan = report.Single(l => l.RuleId == "R2");
         Assert.Equal(77, orphan.Quarantined);
-        Assert.Contains("no rule with this id is registered", orphan.Description);
+        Assert.Contains("no rule registered", orphan.Description);
     }
 
     [Fact]
