@@ -236,12 +236,56 @@ public sealed class SqlAisQueries : IAisQueries
     public IReadOnlyList<RuleHitCount> QualityReport()
     {
         using var c = Open();
-        return [.. c.Query<RuleHitCount>("""
-            SELECT rule_id AS RuleId, COUNT(*) AS Quarantined
+
+        var quarantined = c.Query<RuleCountRow>("""
+            SELECT rule_id AS RuleId, COUNT(*) AS Rows
             FROM quarantine
             GROUP BY rule_id
-            ORDER BY rule_id
-            """)];
+            """).ToDictionary(r => r.RuleId, r => r.Rows, StringComparer.Ordinal);
+
+        // The flagged half. quality_flags holds a comma-separated list of ids on the surviving
+        // row, so there is no rule_id column to group by. Grouping by the whole string and
+        // splitting it here costs one scan for all rules at once; the alternative -- a LIKE
+        // predicate per rule id -- is one scan per rule, and gets slower every time a rule is
+        // added. The group is tiny: distinct flag combinations are bounded by the number of
+        // rules, not by the number of rows (ADR-0032).
+        var flagged = new Dictionary<string, long>(StringComparer.Ordinal);
+        foreach (var group in c.Query<FlagCountRow>("""
+            SELECT quality_flags AS Flags, COUNT(*) AS Rows
+            FROM position_report
+            WHERE quality_flags <> ''
+            GROUP BY quality_flags
+            """))
+        {
+            foreach (var id in group.Flags.Split(',', StringSplitOptions.RemoveEmptyEntries))
+            {
+                flagged[id] = flagged.GetValueOrDefault(id) + group.Rows;
+            }
+        }
+
+        return [.. quarantined.Keys
+            .Concat(flagged.Keys)
+            .ToHashSet(StringComparer.Ordinal)
+            .Select(id => new RuleHitCount
+            {
+                RuleId = id,
+                Quarantined = quarantined.GetValueOrDefault(id),
+                Flagged = flagged.GetValueOrDefault(id),
+            })
+            .OrderBy(r => r.RuleId, StringComparer.Ordinal)];
+    }
+
+    /// <summary>Dapper binds by property, not by tuple position -- see <see cref="StoredVessel"/>.</summary>
+    private sealed record RuleCountRow
+    {
+        public string RuleId { get; init; } = "";
+        public long Rows { get; init; }
+    }
+
+    private sealed record FlagCountRow
+    {
+        public string Flags { get; init; } = "";
+        public long Rows { get; init; }
     }
 
     public IReadOnlyList<StoredRun> ListRuns()

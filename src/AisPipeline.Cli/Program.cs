@@ -28,6 +28,7 @@ return args[0] switch
     "detect" => Detect(args[1..]),
     "laytime" => Laytime(args[1..]),
     "reconcile" => Reconcile(args[1..]),
+    "quality" => Quality(args[1..]),
     _ => Unknown(args[0]),
 };
 
@@ -45,6 +46,7 @@ static void Usage() => Console.WriteLine("""
       ais detect [--db <path> | --postgres <conn>]
       ais laytime --mmsi <n> [--allowed <h>] [--rate <perDay>] [--nor <iso>] [--turn <h>]
       ais reconcile --sof <file.json> [--allowed <h>] [--rate <perDay>] [--turn <h>]
+      ais quality [--db <path> | --postgres <conn>]
 
     Options:
       --db          SQLite file to read/write (default: data/ais.db)
@@ -58,6 +60,10 @@ static void Usage() => Console.WriteLine("""
 
     reconcile compares a Statement of Facts against what AIS observed for the same call, and
     prices the difference by running the laytime calculation on each timeline.
+
+    quality reports every registered rule and what it did to the data: rows it rejected into
+    quarantine, and rows it kept but flagged. A rule that never fired prints zero rather than
+    vanishing -- silence and absence are different claims (ADR-0032).
 
     laytime computes a statement for a vessel's most recent complete port call. AIS supplies
     berthing and completion; Notice of Readiness comes from the charter party and defaults to
@@ -150,9 +156,10 @@ static int Detect(string[] args)
     // centroid and drift, so the other order would let a corrupt position into the geometry
     // (ADR-0021).
     var startedUtc = DateTime.UtcNow;
-    var annotated = new AnnotatePass(
-        store,
-        [new R7Teleport(), new R8CoverageGap(), new R11SpeedConsistency()]).Run();
+    // The registry's list, not a list written out here: the rules the report enumerates and the
+    // rules this pass applies have to be the same object, or the report tells the truth about a
+    // check nobody performed (ADR-0032).
+    var annotated = new AnnotatePass(store, RuleRegistry.Default().SequenceRules).Run();
 
     Console.WriteLine($"annotated {annotated.FixesExamined:N0} fixes");
     foreach (var (ruleId, count) in annotated.RuleHits.OrderBy(h => h.Key, StringComparer.Ordinal))
@@ -398,6 +405,69 @@ static int Reconcile(string[] args)
             Console.WriteLine($"    {e.TimestampUtc:yyyy-MM-dd HH:mm}  {e.Label}");
         }
     }
+
+    return 0;
+}
+
+static int Quality(string[] args)
+{
+    var connection = ReadConnection.Resolve(ValueOf(args, "--postgres"), ValueOf(args, "--db"));
+
+    if (connection.Dialect == SqlDialect.Sqlite && !File.Exists(connection.SqlitePath))
+    {
+        Console.Error.WriteLine($"no database at {connection.SqlitePath}; run ingest first");
+        return 2;
+    }
+
+    using var queries = connection.OpenQueries();
+
+    var report = QualityReport.Build(RuleRegistry.Default(), queries.QualityReport());
+    var runs = queries.ListRuns();
+
+    Console.WriteLine($"{runs.Count} ingest run(s):");
+    foreach (var run in runs)
+    {
+        Console.WriteLine(
+            $"  run {run.Id,-4} {Path.GetFileName(run.SourceFile),-32} " +
+            $"read {run.RowsRead,12:N0}  inserted {run.RowsInserted,12:N0}  " +
+            $"quarantined {run.RowsQuarantined,10:N0}");
+    }
+
+    Console.WriteLine();
+
+    // Said before the table, because the number above it is bigger. `ais ingest` counts hits per
+    // line READ; this counts what the store HOLDS, and the fixture's 26 R5 hits become 10 flagged
+    // rows once duplicates within the file collapse onto one natural key. Two honest numbers that
+    // disagree is the project's recurring shape -- so name which one this is (rule 4).
+    Console.WriteLine("  Counts below are over what the store holds, not over lines read: a rule");
+    Console.WriteLine("  that fired on a duplicate leaves one record, not one per occurrence.");
+    Console.WriteLine();
+    Console.WriteLine($"  {"rule",-5} {"rejected",12} {"flagged",12}  what it catches");
+
+    foreach (var line in report)
+    {
+        var rejected = line.Quarantined.ToString("N0", CultureInfo.InvariantCulture);
+        var flagged = line.Flagged.ToString("N0", CultureInfo.InvariantCulture);
+        Console.WriteLine($"  {line.RuleId,-5} {rejected,12} {flagged,12}  {line.Description}");
+    }
+
+    var silent = report.Where(l => l.Silent).Select(l => l.RuleId).ToList();
+    if (silent.Count > 0)
+    {
+        // Named rather than left as a row of zeroes to scan for. A rule that has never fired is
+        // either a check the feed does not need or a check that is broken, and the reader cannot
+        // tell which without being told the rule ran at all.
+        Console.WriteLine();
+        Console.WriteLine(
+            $"  {string.Join(", ", silent)} ran and never fired on this data.");
+    }
+
+    Console.WriteLine();
+    Console.WriteLine(
+        $"  totals: {report.Sum(l => l.Quarantined):N0} rejected into quarantine, " +
+        $"{report.Sum(l => l.Flagged):N0} kept with a flag.");
+    Console.WriteLine(
+        "  Rejected rows are not in the time series; flagged rows are, carrying their doubt.");
 
     return 0;
 }

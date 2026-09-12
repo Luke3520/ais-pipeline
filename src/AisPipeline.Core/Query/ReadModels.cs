@@ -114,11 +114,25 @@ public sealed record StoredRun
     public long RowsQuarantined { get; init; }
 }
 
-/// <summary>How often a rule refused something, for the quality report.</summary>
+/// <summary>
+/// How often a rule fired, split by what firing meant.
+///
+/// Both halves, because a rule either rejects a row or flags it and there is no third option
+/// (ADR-0006). A report carrying only <see cref="Quarantined"/> shows nothing at all for the
+/// rules that flag -- R7, R8 and R11 -- so the reader sees a clean feed where the pipeline
+/// actually recorded doubt on millions of rows (ADR-0032).
+/// </summary>
 public sealed record RuleHitCount
 {
     public string RuleId { get; init; } = "";
+
+    /// <summary>Rows this rule rejected: one <c>quarantine</c> row each, raw text kept.</summary>
     public long Quarantined { get; init; }
+
+    /// <summary>Rows this rule flagged: kept in <c>position_report</c>, id in quality_flags.</summary>
+    public long Flagged { get; init; }
+
+    public long Total => Quarantined + Flagged;
 }
 
 /// <summary>Filters for the collection endpoints. Null means unrestricted.</summary>

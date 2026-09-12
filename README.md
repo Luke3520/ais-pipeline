@@ -307,15 +307,33 @@ see [the fixture manifest](fixtures/MANIFEST.md).
 
 ## Running it
 
-*(CLI lands with M1.)*
-
 ```bash
 ais ingest data/aisdk-2026-09-05.zip     # two-pass, idempotent
 ais detect                               # stops + port calls, recomputed in place
-ais quality                              # rule hit counts, per rule, per file
-ais stops --min-hours 6 --complete-only
-ais portcalls --min-waiting-hours 6
+ais quality                              # what each rule did: rejected, and flagged
+ais laytime --mmsi 219018271             # a statement for the most recent complete port call
+ais reconcile --sof statement.json       # that statement against what AIS observed
 ```
+
+`ais quality` reports **both** things a rule can do, because a rule does exactly one of two things
+and there is no third (ADR-0006): it *rejects* a row into `quarantine`, or it *keeps* the row and
+flags the doubt. Reporting only the first hides every rule that flags — R7, R8, R11 — and an
+invisible doubt reads as no doubt at all (ADR-0032). A registered rule that never fired prints zero
+and is named as silent, because silence and absence are different claims:
+
+```
+  rule      rejected      flagged  what it catches
+  R1               0            0  Row could not be parsed: wrong field count or malformed value
+  R4               9            0  Position sentinel, null island, or coordinate out of range
+  R5               0           10  Speed over ground unavailable; stored as null and flagged
+  ...
+  R1, R6, R7, R8, R11 ran and never fired on this data.
+
+  totals: 9 rejected into quarantine, 10 kept with a flag.
+```
+
+The counts are over what the store holds, not over lines read — `ais ingest` reports the latter,
+and it is legitimately the larger number once duplicates in the file collapse onto one natural key.
 
 ## Working on it
 
