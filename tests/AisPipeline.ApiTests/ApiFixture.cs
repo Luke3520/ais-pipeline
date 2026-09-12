@@ -2,6 +2,7 @@ using AisPipeline.Adapters.Csv;
 using AisPipeline.Adapters.Sqlite;
 using AisPipeline.Core.Annotate;
 using AisPipeline.Core.Detection;
+using AisPipeline.Core.Geo;
 using AisPipeline.Core.Ingest;
 using AisPipeline.Core.Quality;
 using AisPipeline.Core.Quality.Rules;
@@ -44,10 +45,32 @@ public sealed class ApiFixture : WebApplicationFactory<Program>
         using (var store = new SqliteAisStore(_database))
         {
             new AnnotatePass(store, RuleRegistry.Default().SequenceRules).Run();
-            new DetectionPass(store).Run();
+            new DetectionPass(store, ports: Gazetteer()).Run();
         }
 
     }
+
+    /// <summary>
+    /// One port, near one of the fixture's port-call centroids.
+    ///
+    /// Deliberately not near the others: the fixture's calls are spread across Danish waters, so a
+    /// single port leaves some named and some too far from anywhere to name. That is what lets the
+    /// contract tests assert both that a port crosses the wire and that its absence serialises as
+    /// null rather than as zero (ADR-0034).
+    /// </summary>
+    public const string GazetteerPortName = "Fixture Havn";
+
+    private static NearestPortIndex Gazetteer() => new(
+    [
+        new GazetteerPort
+        {
+            WpiNumber = 99001,
+            Name = GazetteerPortName,
+            Country = "Denmark",
+            LatitudeDeg = 55.6800,
+            LongitudeDeg = 11.0300,
+        },
+    ]);
 
     protected override void ConfigureWebHost(Microsoft.AspNetCore.Hosting.IWebHostBuilder builder)
     {

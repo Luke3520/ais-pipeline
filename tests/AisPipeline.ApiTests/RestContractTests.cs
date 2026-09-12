@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using AisPipeline.Core.Quality;
+using AisPipeline.Core.Geo;
 
 namespace AisPipeline.ApiTests;
 
@@ -106,6 +107,73 @@ public class RestContractTests : IClassFixture<ApiFixture>
             Assert.True(c.GetProperty("waitingHours").GetDouble() >= 0);
             Assert.True(c.GetProperty("workingHours").GetDouble() >= 0);
             Assert.True(c.GetProperty("unclassifiedHours").GetDouble() >= 0);
+        }
+    }
+
+    [Fact]
+    public async Task PortCallsCarryTheNearestPortAndTheDistanceToIt()
+    {
+        // The name alone would claim the vessel was AT that port, which a point gazetteer cannot
+        // support -- so the distance has to cross the wire with it (ADR-0034).
+        var calls = await GetJson("/portcalls?limit=50");
+
+        var named = calls.EnumerateArray()
+            .Where(c => c.GetProperty("portName").ValueKind != JsonValueKind.Null)
+            .ToList();
+
+        Assert.NotEmpty(named);
+        foreach (var call in named)
+        {
+            Assert.Equal(ApiFixture.GazetteerPortName, call.GetProperty("portName").GetString());
+            Assert.Equal("Denmark", call.GetProperty("portCountry").GetString());
+            Assert.Equal(99001, call.GetProperty("portWpiNumber").GetInt32());
+
+            var distance = call.GetProperty("portDistanceNm").GetDouble();
+            Assert.True(distance > 0, $"expected a measured distance, got {distance}");
+            Assert.True(distance <= 25.0, "nothing beyond the naming limit should carry a name");
+        }
+    }
+
+    [Fact]
+    public async Task AnUnnamedPortSerialisesAsNullOnEveryFieldNotAsZero()
+    {
+        // The trap this guards: portDistanceNm coming back as 0.0 for a call with no port would
+        // read as a perfect match at the reference point -- the most confident possible wrong
+        // answer, and exactly the shape ADR-0025 refuses elsewhere.
+        var calls = await GetJson("/portcalls?limit=50");
+
+        var unnamed = calls.EnumerateArray()
+            .Where(c => c.GetProperty("portName").ValueKind == JsonValueKind.Null)
+            .ToList();
+
+        Assert.NotEmpty(unnamed);
+        foreach (var call in unnamed)
+        {
+            Assert.Equal(JsonValueKind.Null, call.GetProperty("portCountry").ValueKind);
+            Assert.Equal(JsonValueKind.Null, call.GetProperty("portWpiNumber").ValueKind);
+            Assert.Equal(JsonValueKind.Null, call.GetProperty("portDistanceNm").ValueKind);
+            Assert.Equal(JsonValueKind.Null, call.GetProperty("plausiblyAtPort").ValueKind);
+        }
+    }
+
+    [Fact]
+    public async Task PlausiblyAtPortAgreesWithTheDistanceItIsDerivedFrom()
+    {
+        // A heuristic crossing a public boundary. A client filtering on it must get the same answer
+        // it would get by applying the threshold to portDistanceNm itself.
+        var calls = await GetJson("/portcalls?limit=50");
+
+        foreach (var call in calls.EnumerateArray())
+        {
+            if (call.GetProperty("portDistanceNm").ValueKind == JsonValueKind.Null)
+            {
+                continue;
+            }
+
+            var distance = call.GetProperty("portDistanceNm").GetDouble();
+            Assert.Equal(
+                distance <= PortAttributionThresholds.PlausiblyAtPortNm,
+                call.GetProperty("plausiblyAtPort").GetBoolean());
         }
     }
 
