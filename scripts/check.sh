@@ -5,7 +5,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-echo "==> ADR citations resolve"
+echo "==> ADR integrity (citations resolve, every record indexed)"
 ./scripts/check-adr-citations.sh
 
 echo "==> format"

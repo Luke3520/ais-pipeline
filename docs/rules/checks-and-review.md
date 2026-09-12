@@ -34,8 +34,13 @@ renumbered in a superseding record. See ADR-0022.
 
 ## Adding a blocking check
 
-`./scripts/check.sh` runs format, build with warnings-as-errors, and tests. It runs pre-push and in
-CI on every push and pull request.
+`./scripts/check.sh` runs ADR integrity, format, build with warnings-as-errors, and tests. It runs
+pre-push and in CI on every push and pull request.
+
+ADR integrity is two checks in one script, each admitted after a real failure: a cited `ADR-NNNN`
+must resolve to a file, and every file must appear in the index. The second was added after five
+ADRs were written, cited from source, and left out of the index while the first check passed
+throughout — it verifies a cited record exists, which says nothing about whether anyone can find it.
 
 A new blocking check is admitted only for a defect that actually happened, or was caught by luck.
 Name the defect in a comment where the check is configured. This keeps the gate small and every
