@@ -2,6 +2,7 @@ using System.Net;
 
 using System.Net.Http.Json;
 using System.Text.Json;
+using AisPipeline.Core.Quality;
 
 namespace AisPipeline.ApiTests;
 
@@ -109,7 +110,7 @@ public class RestContractTests : IClassFixture<ApiFixture>
     }
 
     [Fact]
-    public async Task QualityReportsWhatThePipelineRefused()
+    public async Task QualityReportsWhatEachRuleRejectedAndWhatItFlagged()
     {
         var quality = await GetJson("/quality");
 
@@ -117,8 +118,40 @@ public class RestContractTests : IClassFixture<ApiFixture>
         foreach (var rule in quality.EnumerateArray())
         {
             Assert.StartsWith("R", rule.GetProperty("ruleId").GetString(), StringComparison.Ordinal);
-            Assert.True(rule.GetProperty("quarantined").GetInt64() > 0);
+            Assert.False(string.IsNullOrWhiteSpace(rule.GetProperty("description").GetString()));
+
+            // Both halves, and never negative. The previous version of this test asserted
+            // quarantined > 0 on every row, which is only satisfiable while the report omits the
+            // rules that flag rather than reject -- it encoded the defect ADR-0032 fixes.
+            var quarantined = rule.GetProperty("quarantined").GetInt64();
+            var flagged = rule.GetProperty("flagged").GetInt64();
+            Assert.True(quarantined >= 0);
+            Assert.True(flagged >= 0);
+            Assert.Equal(quarantined + flagged, rule.GetProperty("total").GetInt64());
+            Assert.Equal(quarantined + flagged == 0, rule.GetProperty("silent").GetBoolean());
         }
+    }
+
+    [Fact]
+    public async Task QualityNamesEveryRegisteredRuleIncludingTheOnesThatNeverFired()
+    {
+        // The point of reconciling against the registry. Served raw, the endpoint returns only the
+        // ids present in the data, and a client cannot distinguish a check that found nothing from
+        // a check nobody runs (ADR-0032).
+        var quality = await GetJson("/quality");
+
+        var reported = quality.EnumerateArray()
+            .Select(r => r.GetProperty("ruleId").GetString() ?? "")
+            .OrderBy(id => id, StringComparer.Ordinal)
+            .ToList();
+
+        var registered = RuleRegistry.Default().All
+            .Select(r => r.Id)
+            .OrderBy(id => id, StringComparer.Ordinal)
+            .ToList();
+
+        Assert.Equal(registered, reported);
+        Assert.Contains(quality.EnumerateArray(), r => r.GetProperty("silent").GetBoolean());
     }
 
     [Fact]

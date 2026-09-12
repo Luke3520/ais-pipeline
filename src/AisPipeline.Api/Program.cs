@@ -2,6 +2,7 @@ using AisPipeline.Adapters.Sql;
 using AisPipeline.Api;
 using AisPipeline.Api.GraphQL;
 using AisPipeline.Core.Ports;
+using AisPipeline.Core.Quality;
 using AisPipeline.Core.Query;
 using Scalar.AspNetCore;
 
@@ -88,8 +89,12 @@ app.MapGet("/portcalls", (IAisQueries q, long? mmsi, double? minWaitingHours,
         })))
    .WithSummary("Port calls with waiting and working hours");
 
-app.MapGet("/quality", (IAisQueries q) => Results.Ok(q.QualityReport()))
-   .WithSummary("Rule hit counts: what the pipeline refused, and under which rule");
+// Reconciled against the registry, not served raw. The store only knows the rules that left a
+// mark, so a raw count list omits every rule that never fired -- and a client cannot tell a check
+// that passed from a check that was never registered (ADR-0032).
+app.MapGet("/quality", (IAisQueries q) =>
+        Results.Ok(QualityReport.Build(RuleRegistry.Default(), q.QualityReport())))
+   .WithSummary("Every rule, what it rejected, and what it flagged");
 
 app.MapGet("/runs", (IAisQueries q) => Results.Ok(q.ListRuns()))
    .WithSummary("Ingest runs and their counters");

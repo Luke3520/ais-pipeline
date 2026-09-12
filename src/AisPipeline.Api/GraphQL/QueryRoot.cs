@@ -1,4 +1,5 @@
 using AisPipeline.Core.Ports;
+using AisPipeline.Core.Quality;
 using AisPipeline.Core.Query;
 
 namespace AisPipeline.Api.GraphQL;
@@ -53,8 +54,15 @@ public sealed class QueryRoot
             Limit = limit,
         });
 
-    /// <summary>What the pipeline refused, and under which rule.</summary>
-    public IReadOnlyList<RuleHitCount> Quality([Service] IAisQueries queries) => queries.QualityReport();
+    /// <summary>
+    /// Every registered rule, what it rejected, and what it flagged.
+    ///
+    /// Built against the registry rather than returned raw: the store knows only the rules that
+    /// left a mark, so a rule that never fired would be missing entirely, and missing reads as
+    /// "no such check" rather than "this check found nothing" (ADR-0032).
+    /// </summary>
+    public IReadOnlyList<QualityReportLine> Quality([Service] IAisQueries queries) =>
+        QualityReport.Build(RuleRegistry.Default(), queries.QualityReport());
 
     /// <summary>Ingest runs and their counters.</summary>
     public IReadOnlyList<StoredRun> Runs([Service] IAisQueries queries) => queries.ListRuns();
