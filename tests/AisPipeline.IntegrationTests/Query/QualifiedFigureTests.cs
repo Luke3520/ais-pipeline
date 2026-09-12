@@ -35,6 +35,7 @@ public class QualifiedFigureTests
     private static void Seed(IStoreHarness harness, bool complete, int reliableFixes)
     {
         long anchorId;
+        long mmsi;
 
         using (var store = harness.Create())
         {
@@ -45,9 +46,15 @@ public class QualifiedFigureTests
 
         using (var read = new SqlAisQueries(harness.ConnectionFactory, harness.Dialect))
         {
-            var vessel = read.ListVessels("Tanker", 1).Single();
-            anchorId = read.ListFixes(vessel.Mmsi, DateTime.UnixEpoch,
-                new DateTime(2100, 1, 1, 0, 0, 0, DateTimeKind.Utc), 1).Single().Id;
+            mmsi = read.ListVessels("Tanker", 1).Single().Mmsi;
+        }
+
+        // Any real position id, so the synthetic stop below points at a row that exists. Read
+        // straight from the table rather than through a query method: these tests need an id, not
+        // a window, and the read side should not carry a method whose only caller is a fixture.
+        anchorId = harness.Scalar($"SELECT MIN(id) FROM position_report WHERE mmsi = {mmsi}");
+
+        {
         }
 
         var started = new DateTime(2026, 9, 1, 0, 0, 0, DateTimeKind.Utc);

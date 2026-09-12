@@ -32,9 +32,6 @@ public interface IAisQueries : IDisposable
 
     IReadOnlyList<StoredStop> ListStops(StopFilter filter);
 
-    /// <summary>Stops for several vessels at once. The batched shape, again for DataLoader.</summary>
-    IReadOnlyList<StoredStop> GetStopsForVessels(IReadOnlyCollection<long> mmsis, int limitPerVessel);
-
     IReadOnlyList<StoredPortCall> ListPortCalls(PortCallFilter filter);
 
     /// <summary>
@@ -62,9 +59,6 @@ public interface IAisQueries : IDisposable
 
     /// <summary>Phases of several port calls at once, with their stops already joined.</summary>
     IReadOnlyList<(StoredPhase Phase, StoredStop Stop)> GetPhasesForPortCalls(IReadOnlyCollection<long> portCallIds);
-
-    /// <summary>A window of a vessel's raw fixes, for drilling into a stop.</summary>
-    IReadOnlyList<PositionFix> ListFixes(long mmsi, DateTime fromUtc, DateTime toUtc, int limit);
 
     IReadOnlyList<RuleHitCount> QualityReport();
 

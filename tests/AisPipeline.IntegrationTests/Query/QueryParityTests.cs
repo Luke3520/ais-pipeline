@@ -72,41 +72,17 @@ public class QueryParityTests
 
     [Theory]
     [ClassData(typeof(StoreHarnesses))]
-    public void ABoundedFixWindowIsHonouredAndNotSkewedByTheParameterFormat(Func<IStoreHarness> make)
-    {
-        // Every other ListFixes call in this suite passes DateTime.UnixEpoch as the lower bound,
-        // so the comparison itself was never exercised. It was wrong under SQLite: the column
-        // holds "2026-09-05T00:00:00Z" and a DateTime parameter binds as "2026-09-05 00:00:00",
-        // so a text comparison is decided by ' ' sorting below 'T' rather than by the instant.
-        using var harness = make();
-        Populate(harness);
-        using var queries = QueriesOver(harness);
-
-        var stops = queries.ListStops(new StopFilter { Limit = 1 });
-        Assert.NotEmpty(stops);
-        var stop = stops[0];
-
-        var whole = queries.ListFixes(stop.Mmsi, stop.StartedUtc, stop.EndedUtc, 5_000);
-        Assert.NotEmpty(whole);
-        Assert.All(whole, f => Assert.InRange(f.TimestampUtc, stop.StartedUtc, stop.EndedUtc));
-
-        // A window ending halfway cannot return more than the whole, and must exclude what is
-        // after it. Under the skewed comparison this came back empty.
-        var midpoint = stop.StartedUtc.AddSeconds((stop.EndedUtc - stop.StartedUtc).TotalSeconds / 2);
-        var firstHalf = queries.ListFixes(stop.Mmsi, stop.StartedUtc, midpoint, 5_000);
-
-        Assert.NotEmpty(firstHalf);
-        Assert.True(firstHalf.Count <= whole.Count);
-        Assert.All(firstHalf, f => Assert.True(f.TimestampUtc <= midpoint));
-    }
-
-    [Theory]
-    [ClassData(typeof(StoreHarnesses))]
     public void PortCallsOverlappingReturnsOnlyCallsThatShareTimeWithTheWindow(Func<IStoreHarness> make)
     {
         // The query reconcile selects on (ADR-0035). Overlap is strict on both sides, and the
         // predicate has to mean the same thing under both engines -- SQLite compares timestamps as
         // sortable text, Postgres as instants.
+        //
+        // This is also the only cover for the timestamp-parameter skew: a DateTime binds under
+        // SQLite as "2026-09-05 00:00:00" where the column holds "2026-09-05T00:00:00Z", so a text
+        // comparison turns on \' \' sorting below \'T\' and the "inside" case below returns nothing.
+        // Every other bounded-window query was deleted with ListFixes; if another is added, it
+        // needs SqlDialect.Timestamp and a case like this one.
         using var harness = make();
         Populate(harness);
         using var queries = QueriesOver(harness);

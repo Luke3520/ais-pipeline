@@ -101,29 +101,6 @@ public sealed class SqlAisQueries : IAisQueries
         })];
     }
 
-    public IReadOnlyList<StoredStop> GetStopsForVessels(IReadOnlyCollection<long> mmsis, int limitPerVessel)
-    {
-        if (mmsis.Count == 0)
-        {
-            return [];
-        }
-
-        using var c = Open();
-
-        // One query for every vessel asked for, rather than one per vessel. The per-vessel cap is
-        // applied client-side: a windowed LIMIT would need a lateral join or a window function,
-        // and the row counts here are small enough that the round trip dominates.
-        var all = c.Query<StoredStop>($"""
-            {StopColumns}
-            WHERE {_dialect.InList("mmsi", "@mmsis")}
-            ORDER BY mmsi, started_utc
-            """, new { mmsis = Ids(mmsis) });
-
-        return [.. all
-            .GroupBy(s => s.Mmsi)
-            .SelectMany(g => g.Take(Clamp(limitPerVessel)))];
-    }
-
     public IReadOnlyList<StoredPortCall> ListPortCalls(PortCallFilter filter)
     {
         using var c = Open();
@@ -217,26 +194,6 @@ public sealed class SqlAisQueries : IAisQueries
             """, (phase, stop) => (phase, stop), new { ids = Ids(portCallIds) }, splitOn: "Id");
 
         return [.. rows];
-    }
-
-    public IReadOnlyList<PositionFix> ListFixes(long mmsi, DateTime fromUtc, DateTime toUtc, int limit)
-    {
-        using var c = Open();
-        return [.. c.Query<PositionFix>("""
-            SELECT id AS Id, mmsi AS Mmsi, ts_utc AS TimestampUtc, lat AS Latitude,
-                   lon AS Longitude, sog_kn AS SpeedOverGroundKn, nav_status AS NavigationalStatus,
-                   quality_flags AS QualityFlags
-            FROM position_report
-            WHERE mmsi = @mmsi AND ts_utc >= @fromUtc AND ts_utc <= @toUtc
-            ORDER BY ts_utc, id
-            LIMIT @limit
-            """, new
-        {
-            mmsi,
-            fromUtc = _dialect.Timestamp(fromUtc),
-            toUtc = _dialect.Timestamp(toUtc),
-            limit = Clamp(limit),
-        })];
     }
 
     public IReadOnlyList<StoredPortCall> PortCallsOverlapping(long mmsi, DateTime fromUtc, DateTime toUtc)
