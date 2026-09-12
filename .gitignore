@@ -2,7 +2,12 @@
 # These are deliberately anchored rather than bare globs. A plain *.csv also matches the
 # DIRECTORY src/AisPipeline.Adapters.Csv, because git sets core.ignorecase=true on macOS --
 # which silently excluded that whole project until CI failed on a fresh clone.
-data/
+#
+# `data/` was left unanchored and the same thing happened again: it matches a directory named
+# data at ANY depth, so site/src/data -- the export the static site builds from -- was silently
+# ignored and would have been missing from a fresh clone. Anchored now; only the repository root
+# holds the DMA dumps.
+/data/
 /*.csv
 /*.zip
 

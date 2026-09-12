@@ -274,6 +274,50 @@ public sealed class SqlAisQueries : IAisQueries
             """);
     }
 
+    public IReadOnlyList<VesselStopStatus> StopStatusByVessel()
+    {
+        using var c = Open();
+
+        // No HAVING: a vessel with zero lapses is kept, because "never once wrong across twenty
+        // stops" is a finding and cannot be counted from a list that filters it out.
+        //
+        // ELSE 0.0, not ELSE 0. SQLite types values per row, so an integer literal makes the sum
+        // come back as INTEGER for every vessel that never lapsed and REAL for every one that did.
+        // Dapper compiles its deserializer from the first row and then fails on the first row of
+        // the other type -- which meant this query worked or threw depending on which vessel
+        // sorted first. The floating literal makes the column one type for every row.
+        return [.. c.Query<VesselStopStatus>($"""
+            SELECT mmsi AS Mmsi,
+                   SUM(CASE WHEN {_dialect.IsFalse("status_agrees")} THEN 1 ELSE 0 END) AS Lapses,
+                   COUNT(*) AS TotalStops,
+                   SUM(CASE WHEN {_dialect.IsFalse("status_agrees")} THEN duration_hours ELSE 0.0 END)
+                       AS HoursClaimingUnderWay
+            FROM stop_event
+            GROUP BY mmsi
+            ORDER BY mmsi
+            """)];
+    }
+
+    public IReadOnlyList<VesselFixStatus> FixStatusByVessel()
+    {
+        using var c = Open();
+
+        // Matched on the comma-delimited form rather than a bare LIKE '%R12%', so an id that
+        // contains another as a substring can never collide as more rules are added.
+        const string IsR12 = "(',' || quality_flags || ',') LIKE '%,R12,%'";
+
+        return [.. c.Query<VesselFixStatus>($"""
+            SELECT mmsi AS Mmsi,
+                   SUM(CASE WHEN {IsR12} THEN 1 ELSE 0 END) AS Lapses,
+                   COUNT(*) AS TotalFixes,
+                   COALESCE(MAX(CASE WHEN {IsR12} THEN sog_kn END), 0.0) AS FastestKn
+            FROM position_report
+            GROUP BY mmsi
+            HAVING SUM(CASE WHEN {IsR12} THEN 1 ELSE 0 END) > 0
+            ORDER BY mmsi
+            """)];
+    }
+
     public IReadOnlyList<StoredRun> ListRuns()
     {
         using var c = Open();

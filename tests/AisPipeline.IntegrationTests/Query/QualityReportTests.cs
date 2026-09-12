@@ -126,6 +126,42 @@ public class QualityReportTests
 
     [Theory]
     [ClassData(typeof(StoreHarnesses))]
+    public void PerVesselStatusCountsAgreeWithTheRowsTheyCameFrom(Func<IStoreHarness> make)
+    {
+        // The two export queries. Both aggregate with CASE expressions, and the stop one returns a
+        // sum that SQLite types per row -- INTEGER for a vessel that never lapsed, REAL for one
+        // that did -- so it threw or passed depending on which vessel sorted first until the
+        // literal was made floating (ADR-0039).
+        using var harness = make();
+        Populate(harness);
+
+        using var detectStore = harness.Create();
+        new AisPipeline.Core.Detection.DetectionPass(detectStore).Run();
+
+        using var queries = new SqlAisQueries(harness.ConnectionFactory, harness.Dialect);
+
+        var byVessel = queries.StopStatusByVessel();
+        Assert.NotEmpty(byVessel);
+
+        // Every vessel with a stop, not only the ones that lapsed.
+        Assert.Equal(harness.Count("stop_event"), byVessel.Sum(v => v.TotalStops));
+        Assert.Equal(queries.StatusDisagreement().Disagreeing, byVessel.Sum(v => v.Lapses));
+        Assert.All(byVessel, v => Assert.True(v.Lapses <= v.TotalStops));
+
+        // Hours only accrue where a lapse did.
+        Assert.All(byVessel.Where(v => v.Lapses == 0), v => Assert.Equal(0.0, v.HoursClaimingUnderWay));
+
+        var fixes = queries.FixStatusByVessel();
+        Assert.All(fixes, f =>
+        {
+            Assert.True(f.Lapses > 0, "a vessel with no R12 flag should not be listed");
+            Assert.True(f.Lapses <= f.TotalFixes);
+            Assert.True(f.FastestKn > 0);
+        });
+    }
+
+    [Theory]
+    [ClassData(typeof(StoreHarnesses))]
     public void TheReportNamesEveryRegisteredRuleWhateverTheDataContains(Func<IStoreHarness> make)
     {
         using var harness = make();

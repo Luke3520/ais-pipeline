@@ -71,5 +71,22 @@ public interface IAisQueries : IDisposable
     /// </summary>
     StopStatusDisagreement StatusDisagreement();
 
+    /// <summary>
+    /// Per vessel, how its status behaved at every stop: lapses, total stops, and hours.
+    ///
+    /// Every vessel with at least one stop, including those that never lapsed. Ranking by rate
+    /// needs the denominator, and counting the vessels that always got it right needs the rows a
+    /// lapses-only query would discard.
+    /// </summary>
+    IReadOnlyList<VesselStopStatus> StopStatusByVessel();
+
+    /// <summary>
+    /// Per vessel, fixes flagged R12 against total fixes. Only vessels that lapsed: unlike stops,
+    /// the no-lapse population here is every other vessel in the feed and says nothing.
+    ///
+    /// Scans <c>position_report</c>, so it is an export-time query rather than a request-time one.
+    /// </summary>
+    IReadOnlyList<VesselFixStatus> FixStatusByVessel();
+
     IReadOnlyList<StoredRun> ListRuns();
 }

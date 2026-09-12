@@ -57,6 +57,7 @@ the design.
 | [0036](0036-r10-is-reported-separately-because-it-counts-something-else.md) | R10 is reported separately, because it counts something else | Accepted |
 | [0037](0037-a-read-only-browser-ui-over-the-derived-layer.md) | A read-only browser UI, over the derived layer only | Accepted |
 | [0038](0038-r12-the-mirror-of-r10.md) | R12 — a stationary claim contradicted by the vessel's own speed | Accepted |
+| [0039](0039-an-export-contract-for-a-static-site.md) | An export contract, so the site never touches the database | Accepted |
 
 ### † Measurement corrected, 2026-09-12
 

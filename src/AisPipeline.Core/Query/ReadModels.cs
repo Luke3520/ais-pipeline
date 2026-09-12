@@ -180,6 +180,52 @@ public sealed record StopStatusDisagreement
     public double? Share => TotalStops == 0 ? null : 100.0 * Disagreeing / TotalStops;
 }
 
+/// <summary>
+/// How one vessel's self-reported status behaved across every stop it made.
+///
+/// Carries the denominator as well as the count. A raw count ranks busy vessels highest, which
+/// says more about how often a ship calls than about how often its crew forgets; twenty lapses in
+/// twenty stops and twenty in two hundred are different findings, and only the pair distinguishes
+/// them. Vessels with no lapses at all are returned as well, because "never once got it wrong over
+/// twenty stops" is the other half of the same distribution and cannot be counted from a list that
+/// filters them out (ADR-0039).
+/// </summary>
+public sealed record VesselStopStatus
+{
+    public long Mmsi { get; init; }
+
+    /// <summary>Stops where the status claimed under way. Zero is a finding too — see below.</summary>
+    public long Lapses { get; init; }
+
+    /// <summary>Every stop this vessel made, the denominator for a rate.</summary>
+    public long TotalStops { get; init; }
+
+    /// <summary>Hours spent stopped while claiming to be making way.</summary>
+    public double HoursClaimingUnderWay { get; init; }
+
+    public double SharePercent => TotalStops == 0 ? 0 : 100.0 * Lapses / TotalStops;
+}
+
+/// <summary>
+/// How one vessel's self-reported status behaved across every fix stored for it — the R12 side.
+/// Carries its denominator for the same reason as <see cref="VesselStopStatus"/>.
+/// </summary>
+public sealed record VesselFixStatus
+{
+    public long Mmsi { get; init; }
+
+    /// <summary>Fixes carrying an R12 flag.</summary>
+    public long Lapses { get; init; }
+
+    /// <summary>Every fix stored for this vessel.</summary>
+    public long TotalFixes { get; init; }
+
+    /// <summary>The fastest the vessel was moving while claiming to be stationary.</summary>
+    public double FastestKn { get; init; }
+
+    public double SharePercent => TotalFixes == 0 ? 0 : 100.0 * Lapses / TotalFixes;
+}
+
 /// <summary>Filters for the collection endpoints. Null means unrestricted.</summary>
 public sealed record PortCallFilter
 {

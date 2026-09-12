@@ -11,7 +11,9 @@ using AisPipeline.Core.Reconciliation;
 using AisPipeline.Core.Sof;
 using AisPipeline.Core.Query;
 using AisPipeline.Core.Ports;
+using System.Text.Json;
 using AisPipeline.Core.Detection;
+using AisPipeline.Core.Export;
 using AisPipeline.Core.Geo;
 using AisPipeline.Core.Ingest;
 using AisPipeline.Core.Quality;
@@ -32,6 +34,7 @@ return args[0] switch
     "quality" => Quality(args[1..]),
     "stops" => Stops(args[1..]),
     "portcalls" => PortCalls(args[1..]),
+    "export" => Export(args[1..]),
     _ => Unknown(args[0]),
 };
 
@@ -50,6 +53,7 @@ static void Usage() => Console.WriteLine("""
       ais laytime --mmsi <n> [--allowed <h>] [--rate <perDay>] [--nor <iso>] [--turn <h>]
       ais reconcile --sof <file.json> [--allowed <h>] [--rate <perDay>] [--turn <h>]
       ais quality [--db <path> | --postgres <conn>]
+      ais export --out <dir> [--db <path> | --postgres <conn>]
       ais stops [--mmsi <n>] [--min-hours <h>] [--complete-only] [--disagreements] [--limit <n>]
       ais portcalls [--mmsi <n>] [--min-waiting-hours <h>] [--complete-only] [--limit <n>]
 
@@ -71,6 +75,10 @@ static void Usage() => Console.WriteLine("""
     quality reports every registered rule and what it did to the data: rows it rejected into
     quarantine, and rows it kept but flagged. A rule that never fired prints zero rather than
     vanishing -- silence and absence are different claims (ADR-0032).
+
+    export writes the derived layer as JSON for a static site to build from. It carries its own
+    provenance -- which source files, which window, how many rows -- so a published figure can say
+    where it came from (ADR-0039).
 
     stops and portcalls list what detect derived, longest first -- not chronologically. A figure
     the pipeline will not stand behind prints as a bound (>=2.7) or as ?, never as a number.
@@ -665,6 +673,83 @@ static string Hours(double? figure, double observed) =>
     figure is { } known
         ? known.ToString("F1", CultureInfo.InvariantCulture).PadLeft(8)
         : (">=" + observed.ToString("F1", CultureInfo.InvariantCulture)).PadLeft(8);
+
+static int Export(string[] args)
+{
+    if (ValueOf(args, "--out") is not { } outDir)
+    {
+        Console.Error.WriteLine("export needs --out <dir>");
+        return 2;
+    }
+
+    var connection = ReadConnection.Resolve(ValueOf(args, "--postgres"), ValueOf(args, "--db"));
+
+    if (connection.Dialect == SqlDialect.Sqlite && !File.Exists(connection.SqlitePath))
+    {
+        Console.Error.WriteLine($"no database at {connection.SqlitePath}; run ingest and detect first");
+        return 2;
+    }
+
+    using var queries = connection.OpenQueries();
+
+    var runs = queries.ListRuns();
+    if (runs.Count == 0)
+    {
+        Console.Error.WriteLine("no ingest runs in this database; nothing to export");
+        return 2;
+    }
+
+    var stopStatus = queries.StopStatusByVessel();
+    var fixStatus = queries.FixStatusByVessel();
+    var stops = queries.ListStops(new StopFilter { Limit = 5_000 });
+    var portCalls = queries.ListPortCalls(new PortCallFilter { Limit = 5_000 });
+
+    // Names for the vessels that appear, not the whole register: the document is downloaded by a
+    // browser, and ten thousand unused names is most of the file.
+    var named = queries.GetVessels(
+        [.. stopStatus.Where(a => a.Lapses > 0).Select(a => a.Mmsi)
+            .Concat(fixStatus.Select(d => d.Mmsi)).Distinct()])
+        .ToDictionary(v => v.Mmsi);
+
+    var document = ExportBuilder.Build(
+        DateTime.UtcNow,
+        runs,
+        QualityReport.Build(RuleRegistry.Default(), queries.QualityReport()),
+        queries.StatusDisagreement(),
+        stopStatus,
+        fixStatus,
+        named,
+        portCalls.Count,
+        stops.Count > 0 ? stops.Min(s => s.StartedUtc) : DateTime.UnixEpoch,
+        stops.Count > 0 ? stops.Max(s => s.EndedUtc) : DateTime.UnixEpoch);
+
+    Directory.CreateDirectory(outDir);
+    var path = Path.Combine(outDir, "pipeline.json");
+
+    var options = new JsonSerializerOptions
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        WriteIndented = true,
+    };
+
+    File.WriteAllText(path, JsonSerializer.Serialize(document, options));
+
+    var bytes = new FileInfo(path).Length;
+    Console.WriteLine($"wrote {path}  ({bytes / 1024.0:F0} KB)");
+    Console.WriteLine(
+        $"  window    : {document.Manifest.FirstFixUtc:yyyy-MM-dd} to " +
+        $"{document.Manifest.LastFixUtc:yyyy-MM-dd}  ({document.Manifest.SourceFiles.Count} source file(s))");
+    Console.WriteLine(
+        $"  lapses    : {document.Summary.ArrivalLapses:N0} on arrival (R10), " +
+        $"{document.Summary.DepartureLapses:N0} on departure (R12)");
+    Console.WriteLine(
+        $"  habits    : {document.Summary.VesselsAlwaysWrong} vessels never updated the dial, " +
+        $"{document.Summary.VesselsAlwaysRight} never got it wrong " +
+        $"(at least {ExportSummary.HabitMinimumStops} stops each)");
+    Console.WriteLine($"  vessels   : {document.Vessels.Count} with at least one lapse");
+
+    return 0;
+}
 
 /// <summary>
 /// The nearest port, always with its distance.
