@@ -349,6 +349,21 @@ static int Reconcile(string[] args)
 
     var portCall = RebuildPortCall(call, queries.GetPhasesForPortCalls([call.Id]));
 
+    // Checked here as well as inside the reconciler, so the refusal is a message rather than a
+    // caught exception, and so it names what to do next. The call was picked by mmsi and "most
+    // recent complete" -- nothing in that query knows which visit the document describes.
+    var match = CallMatch.Evaluate(sof, portCall);
+    if (!match.TimesAreConsistent)
+    {
+        Console.Error.WriteLine(
+            $"the statement and AIS port call {call.Id} do not describe the same visit:");
+        Console.Error.WriteLine($"  {match.Explain()}");
+        Console.Error.WriteLine(
+            "  Nothing is reconciled. This vessel's most recent complete call is not the one the " +
+            "document is about -- ingest the window the document covers, then run detect.");
+        return 2;
+    }
+
     var terms = new CharterPartyTerms
     {
         LaytimeAllowedHours = Number(args, "--allowed", 72.0),
@@ -383,6 +398,15 @@ static int Reconcile(string[] args)
         Console.WriteLine($"  prepared  : {sof.PreparedBy}");
     }
     Console.WriteLine($"  AIS call  : {call.Id}  {call.ArrivedUtc:yyyy-MM-dd HH:mm} -> {call.DepartedUtc:yyyy-MM-dd HH:mm}");
+    Console.WriteLine($"  matched   : {match.Explain()}");
+    if (!match.PortWasChecked)
+    {
+        // Said out loud because it is half the evidence a human would use. AIS has no port
+        // identity yet, so "Immingham" on the document is matched against nothing.
+        Console.WriteLine(
+            $"              the document names {match.DocumentPort}; AIS has no port identity, " +
+            "so the port was NOT checked -- only the times were.");
+    }
     Console.WriteLine();
     Console.WriteLine(result);
 

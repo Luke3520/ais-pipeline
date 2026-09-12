@@ -7,6 +7,15 @@ namespace AisPipeline.Core.Reconciliation;
 /// <summary>What the two accounts disagree about, and what the disagreement is worth.</summary>
 public sealed record Reconciliation
 {
+    /// <summary>
+    /// Whether the document and the port call describe the same visit.
+    ///
+    /// On the result rather than checked only by the caller who happened to think of it. The
+    /// demurrage difference below is meaningless if these are two different calls, so the verdict
+    /// travels with the figure it qualifies.
+    /// </summary>
+    public required CallMatch Match { get; init; }
+
     public required IReadOnlyList<EventComparison> Comparisons { get; init; }
 
     /// <summary>The statement as the document tells it.</summary>
@@ -83,6 +92,17 @@ public sealed class TimelineReconciler
 
     public Reconciliation Reconcile(StatementOfFacts sof, PortCall portCall, CharterPartyTerms terms)
     {
+        // Before anything is computed. Reconciling a document against a call it does not describe
+        // produces a number that looks exactly like a real finding.
+        var match = CallMatch.Evaluate(sof, portCall);
+
+        if (!match.TimesAreConsistent)
+        {
+            throw new ArgumentException(
+                $"the document and the port call do not describe the same visit: {match.Explain()}",
+                nameof(portCall));
+        }
+
         var timeline = VoyageTimeline.FromPortCall(portCall)
             ?? throw new ArgumentException(
                 "the port call has no berth phase, so there are no cargo operations to reconcile",
@@ -152,6 +172,7 @@ public sealed class TimelineReconciler
 
         return new Reconciliation
         {
+            Match = match,
             Comparisons = comparisons,
             ClassifiedButNotCompared = notCompared,
             FromStatementOfFacts = StatementFrom(sof, terms),
