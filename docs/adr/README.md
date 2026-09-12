@@ -56,6 +56,7 @@ the design.
 | [0035](0035-select-the-call-the-document-describes.md) | Select the call the document describes, do not validate a guess | Accepted |
 | [0036](0036-r10-is-reported-separately-because-it-counts-something-else.md) | R10 is reported separately, because it counts something else | Accepted |
 | [0037](0037-a-read-only-browser-ui-over-the-derived-layer.md) | A read-only browser UI, over the derived layer only | Accepted |
+| [0038](0038-r12-the-mirror-of-r10.md) | R12 — a stationary claim contradicted by the vessel's own speed | Accepted |
 
 ### † Measurement corrected, 2026-09-12
 

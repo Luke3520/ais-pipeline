@@ -34,6 +34,16 @@ public static class RuleIds
     public const string SpeedConsistency = "R11";
 
     /// <summary>
+    /// The mirror of R10: the vessel claims to be stationary while its own speed says otherwise.
+    ///
+    /// R10 catches a status left on "under way" after the ship stops -- forgotten on arrival. This
+    /// catches one left on "moored" or "at anchor" after it leaves -- forgotten on departure. The
+    /// two are the same human failure pointed in opposite directions, and until R12 the pipeline
+    /// only saw one of them (ADR-0038).
+    /// </summary>
+    public const string StatusClaimsStationary = "R12";
+
+    /// <summary>
     /// Rules whose firing means a fix's POSITION cannot be trusted, so it must not contribute to
     /// a centroid or a drift maximum (ADR-0021).
     ///

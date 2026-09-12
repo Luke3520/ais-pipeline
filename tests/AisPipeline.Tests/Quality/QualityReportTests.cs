@@ -1,3 +1,4 @@
+using System.Globalization;
 using AisPipeline.Core.Quality;
 using AisPipeline.Core.Query;
 
@@ -77,10 +78,16 @@ public class QualityReportTests
     public void Rules_are_ordered_numerically_so_R11_does_not_sort_between_R1_and_R4()
     {
         var report = QualityReport.Build(RuleRegistry.Default(), []);
-
         var ids = report.Select(l => l.RuleId).ToList();
-        Assert.Equal(ids.IndexOf("R11"), ids.Count - 1);
-        Assert.True(ids.IndexOf("R4") < ids.IndexOf("R11"));
+
+        // The lexical trap, named explicitly: as text, "R11" sorts between "R1" and "R4".
+        Assert.True(ids.IndexOf("R4") < ids.IndexOf("R11"), string.Join(", ", ids));
+
+        // And the general property, rather than pinning which rule happens to be last -- that
+        // assertion broke the moment R12 was registered, which is the wrong reason for a test
+        // about ordering to fail.
+        var numbers = ids.Select(id => int.Parse(id[1..], CultureInfo.InvariantCulture)).ToList();
+        Assert.Equal(numbers.OrderBy(n => n).ToList(), numbers);
     }
 
     [Fact]
