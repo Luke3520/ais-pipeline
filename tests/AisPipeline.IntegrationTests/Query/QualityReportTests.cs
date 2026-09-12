@@ -87,6 +87,45 @@ public class QualityReportTests
 
     [Theory]
     [ClassData(typeof(StoreHarnesses))]
+    public void R10IsCountedOverStopsAndAgreesWithTheRowsItCameFrom(Func<IStoreHarness> make)
+    {
+        // R10 is recorded as stop_event.status_agrees, so it appears in neither table the report is
+        // built from and is reported in its own right (ADR-0036). The predicate is one of the few
+        // the two engines cannot spell identically -- SQLite has no boolean.
+        using var harness = make();
+        Populate(harness);
+
+        using var annotateStore = harness.Create();
+        new AisPipeline.Core.Detection.DetectionPass(annotateStore).Run();
+
+        using var queries = new SqlAisQueries(harness.ConnectionFactory, harness.Dialect);
+        var disagreement = queries.StatusDisagreement();
+
+        Assert.Equal(harness.Count("stop_event"), disagreement.TotalStops);
+        Assert.True(
+            disagreement.Disagreeing <= disagreement.TotalStops,
+            "more stops disagreed than exist");
+
+        // Derived from the same rows the read side lists, not from a separate tally that could
+        // drift from them.
+        var listed = queries.ListStops(new Core.Query.StopFilter
+        {
+            DisagreementsOnly = true,
+            Limit = 5_000,
+        });
+
+        Assert.Equal(listed.Count, disagreement.Disagreeing);
+        Assert.All(listed, stop => Assert.False(stop.StatusAgrees));
+
+        if (disagreement.TotalStops > 0)
+        {
+            Assert.NotNull(disagreement.Share);
+            Assert.InRange(disagreement.Share!.Value, 0.0, 100.0);
+        }
+    }
+
+    [Theory]
+    [ClassData(typeof(StoreHarnesses))]
     public void TheReportNamesEveryRegisteredRuleWhateverTheDataContains(Func<IStoreHarness> make)
     {
         using var harness = make();

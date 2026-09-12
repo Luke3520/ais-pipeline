@@ -68,5 +68,14 @@ public interface IAisQueries : IDisposable
 
     IReadOnlyList<RuleHitCount> QualityReport();
 
+    /// <summary>
+    /// How many stops carry a status that contradicts their own speed, and how many there are.
+    ///
+    /// Separate from <see cref="QualityReport"/> because R10 is recorded as a column on a derived
+    /// record, not as a quarantine row or a flag — so `ais quality` can report it without the
+    /// report pretending it counts the same thing as the others.
+    /// </summary>
+    StopStatusDisagreement StatusDisagreement();
+
     IReadOnlyList<StoredRun> ListRuns();
 }

@@ -327,6 +327,15 @@ static int Laytime(string[] args)
     var statement = new LaytimeCalculator().Calculate(terms, berthedUtc, completedUtc);
 
     Console.WriteLine($"mmsi {mmsi}  port call {call.Id}  {call.ArrivedUtc:yyyy-MM-dd HH:mm} -> {call.DepartedUtc:yyyy-MM-dd HH:mm}");
+
+    // The statement below carries a money figure, so it should say where the vessel was. With the
+    // distance, and marked when it is only the nearest port rather than plausibly the right one --
+    // a laytime statement for "somewhere within 14 nm of Kalundborg" should look like one.
+    Console.WriteLine(call.PortName is null
+        ? "  port:      no port named for this call (none within range, or detect ran without a gazetteer)"
+        : $"  port:      {call.PortName}, {call.PortCountry} " +
+          $"({call.PortDistanceNm!.Value.ToString("F1", CultureInfo.InvariantCulture)} nm" +
+          $"{(call.PlausiblyAtPort == true ? "" : "; NEAREST only, too far to call the vessel alongside it")})");
     Console.WriteLine($"  from AIS:  waiting {call.WaitingHours:F1}h   working {call.WorkingHours:F1}h");
     Console.WriteLine($"  NOR:       {nor:yyyy-MM-dd HH:mm}{(norAssumed ? "  (ASSUMED = arrival; AIS cannot observe a notice)" : "  (given)")}");
     Console.WriteLine();
@@ -620,6 +629,25 @@ static int Quality(string[] args)
     Console.WriteLine(
         $"  totals: {report.Sum(l => l.Quarantined):N0} rejected into quarantine, " +
         $"{report.Sum(l => l.Flagged):N0} kept with a flag.");
+
+    // R10 in its own right, not as a row above. It counts STOPS, and putting a stop count in the
+    // same column as a row count would be a wrong number under a correct heading (ADR-0036).
+    var disagreement = queries.StatusDisagreement();
+    Console.WriteLine();
+
+    if (disagreement.TotalStops == 0)
+    {
+        Console.WriteLine("  R10  no stops detected yet, so no status conflicts to count. Run detect.");
+    }
+    else
+    {
+        Console.WriteLine(
+            $"  R10  {disagreement.Disagreeing:N0} of {disagreement.TotalStops:N0} stops " +
+            $"({disagreement.Share!.Value:F1}%) report a status contradicting their own speed.");
+        Console.WriteLine(
+            "       Counted over stops, not rows: R10 is recorded on stop_event.status_agrees " +
+            "rather than as a rejection or a flag. Both readings are kept; neither wins (rule 4).");
+    }
 
     return 0;
 }

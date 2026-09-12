@@ -376,6 +376,13 @@ anything (ADR-0025). Both lists are ordered longest first rather than chronologi
 so when the page came back full — a list returned at exactly its limit is otherwise
 indistinguishable from a complete one (ADR-0028).
 
+R10 — a vessel's own navigational status contradicting its own speed — is reported below that table
+rather than in it, because it counts **stops** and the table counts **rows**. Placing 299 beside 9
+would invite a comparison the two numbers do not support
+([ADR-0036](docs/adr/0036-r10-is-reported-separately-because-it-counts-something-else.md)). It is
+also the one rule that implements rule 4 rather than rule 2: nothing is rejected and nothing is
+flagged, both readings are stored, and neither wins.
+
 The counts are over what the store holds, not over lines read — `ais ingest` reports the latter,
 and it is legitimately the larger number once duplicates in the file collapse onto one natural key.
 

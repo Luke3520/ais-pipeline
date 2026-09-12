@@ -304,6 +304,19 @@ public sealed class SqlAisQueries : IAisQueries
         public long Rows { get; init; }
     }
 
+    public StopStatusDisagreement StatusDisagreement()
+    {
+        using var c = Open();
+
+        // One scan, both numbers. Asking twice could report a share computed from two different
+        // states of the table if detect ran in between.
+        return c.QuerySingle<StopStatusDisagreement>($"""
+            SELECT COUNT(*) AS TotalStops,
+                   SUM(CASE WHEN {_dialect.IsFalse("status_agrees")} THEN 1 ELSE 0 END) AS Disagreeing
+            FROM stop_event
+            """);
+    }
+
     public IReadOnlyList<StoredRun> ListRuns()
     {
         using var c = Open();

@@ -4,11 +4,16 @@
     "from AIS so the reconcile verb can run end to end, using the event vocabulary of the",
     "Immingham 2023 document. 'All fast' sits 42 minutes after AIS sees the vessel stop --",
     "inside the 30-60 minute band the real documents exhibit (ADR-0031). The shore stop is",
-    "the kind of delay AIS is structurally unable to see."
+    "the kind of delay AIS is structurally unable to see.",
+    "",
+    "The port is AIS-derived too: the gazetteer puts this call's centroid 1.8 nm from",
+    "Fredericia (ADR-0034). It is NOT independent corroboration of the port -- a real",
+    "document would name the port on its own authority, and comparing it against AIS would",
+    "then mean something. Here both sides come from the same source."
   ],
   "mmsi": 636025106,
   "vesselName": "STINGRAY",
-  "port": "Danish waters (from AIS)",
+  "port": "Fredericia",
   "preparedBy": "constructed fixture",
   "events": [
     {

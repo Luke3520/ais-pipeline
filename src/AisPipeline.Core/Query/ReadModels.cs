@@ -161,6 +161,25 @@ public sealed record RuleHitCount
     public long Total => Quarantined + Flagged;
 }
 
+/// <summary>
+/// How often a vessel's own navigational status contradicted its own speed — rule R10.
+///
+/// Counted over stops rather than rows, which is why it is its own shape and not a
+/// <see cref="RuleHitCount"/>. R10 is not a quarantine-or-flag rule: it implements CLAUDE.md rule 4
+/// (record disagreement, do not resolve it) and lives as <c>stop_event.status_agrees</c>, so it
+/// appears in neither table the quality report is built from. Reporting it in the same column as
+/// R1 or R4 would put a stop count and a row count under one heading.
+/// </summary>
+public sealed record StopStatusDisagreement
+{
+    public long TotalStops { get; init; }
+
+    public long Disagreeing { get; init; }
+
+    /// <summary>Percentage of stops carrying the conflict, or null when there are no stops.</summary>
+    public double? Share => TotalStops == 0 ? null : 100.0 * Disagreeing / TotalStops;
+}
+
 /// <summary>Filters for the collection endpoints. Null means unrestricted.</summary>
 public sealed record PortCallFilter
 {

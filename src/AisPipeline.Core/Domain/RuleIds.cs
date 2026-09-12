@@ -3,8 +3,9 @@ namespace AisPipeline.Core.Domain;
 /// <summary>
 /// The rule ids, defined once.
 ///
-/// These are not an implementation detail of the rules: they are persisted, in
-/// <c>quarantine.rule_id</c> and in <c>position_report.quality_flags</c>, and they are quoted in
+/// These are not an implementation detail of the rules: they are persisted — in
+/// <c>quarantine.rule_id</c>, in <c>position_report.quality_flags</c>, or for R10 in
+/// <c>stop_event.status_agrees</c> — and they are quoted in
 /// the README and in ADRs. That makes them domain vocabulary, which is why they live here rather
 /// than only on the rule classes that produce them.
 ///
@@ -22,6 +23,13 @@ public static class RuleIds
     public const string Teleport = "R7";
     public const string CoverageGap = "R8";
     public const string MissingIdentity = "R9";
+    /// <summary>
+    /// Recorded as <c>stop_event.status_agrees</c>, not as a quarantine row or a quality flag.
+    ///
+    /// The odd one out: R10 implements rule 4 (record disagreement, do not resolve it) rather than
+    /// rule 2, and it judges a stop rather than a row. So it is absent from both tables the quality
+    /// report is built from, and `ais quality` reports it in its own right (ADR-0036).
+    /// </summary>
     public const string StatusDisagreement = "R10";
     public const string SpeedConsistency = "R11";
 
