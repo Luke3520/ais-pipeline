@@ -1,0 +1,47 @@
+---
+import Base from '../layouts/Base.astro';
+import VesselTable from '../components/VesselTable.astro';
+import data from '../data/pipeline.json';
+
+const { vessels, summary } = data;
+const n = (v: number, d = 0) =>
+  v.toLocaleString('en-GB', { minimumFractionDigits: d, maximumFractionDigits: d });
+
+const ranked = vessels
+  .filter((v) => v.departureLapses > 0)
+  .sort((a, b) => b.departureLapses - a.departureLapses);
+
+const fastest = [...ranked].sort(
+  (a, b) => b.fastestKnWhileClaimingStationary - a.fastestKnWhileClaimingStationary)[0];
+---
+<Base title="Forgot on departure — who kept saying 'moored' while moving">
+  <h1>Forgot on departure</h1>
+
+  <p class="lede prose">
+    The ship left. The dial stayed on <code>Moored</code> or <code>At anchor</code>.
+  </p>
+
+  <ul class="stats">
+    <li class="stat alarm"><b>{n(summary.departureLapses)}</b><span>position reports</span></li>
+    <li class="stat"><b>{ranked.length}</b><span>vessels</span></li>
+    <li class="stat alarm"><b>{n(fastest?.fastestKnWhileClaimingStationary ?? 0, 1)}</b><span>fastest, in knots, while "moored"</span></li>
+  </ul>
+
+  <p class="prose">
+    A moored ship is never perfectly still — tide, wind and GPS noise all register. So the threshold
+    isn't a guess: across every fix claiming a stationary status, speed decays smoothly to a minimum
+    at <strong>2–3 knots</strong> and then rises again. Two populations, and the trough between them
+    is where one ends and the other begins. Everything listed here is above it.
+  </p>
+
+  <p class="prose note">
+    Ranked by count here rather than share, because the denominator is every position report a
+    vessel sent — tens of thousands — so the percentages are all small and rank almost nothing.
+    {fastest && (
+      <> The stand-out is <a href={`/vessel/${fastest.mmsi}`}>{fastest.name ?? fastest.mmsi}</a> at
+      {' '}{n(fastest.fastestKnWhileClaimingStationary, 1)} knots, which is service speed.</>
+    )}
+  </p>
+
+  <VesselTable vessels={ranked} kind="departure" />
+</Base>

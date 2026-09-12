@@ -43,3 +43,42 @@ jobs:
       # docs/rules/checks-and-review.md governs what may become blocking.
       - name: Check (format, build, test)
         run: ./scripts/check.sh
+
+  # A separate job, deliberately. The site has its own toolchain and needs neither .NET nor
+  # Postgres, and check.sh runs pre-push -- putting an npm install in front of every push would
+  # make the hook slow enough to start being skipped, which is how a check stops being a check
+  # (docs/rules/checks-and-review.md).
+  site:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+
+      - name: Install
+        working-directory: site
+        run: npm ci
+
+      # Builds from the committed export, so this proves the site builds from a fresh clone with
+      # no database present (ADR-0039).
+      - name: Build
+        working-directory: site
+        run: npm run build
+
+      - name: Every page the navigation offers must exist
+        working-directory: site
+        run: |
+          for page in index arrivals/index departures/index how-ais-works/index; do
+            test -s "dist/$page.html" || { echo "missing dist/$page.html"; exit 1; }
+          done
+          count=$(find dist -name '*.html' | wc -l)
+          echo "$count pages built"
+          # One per vessel in the export, plus the four fixed pages. A drop here means
+          # getStaticPaths stopped seeing the data rather than the data being empty.
+          test "$count" -gt 50 || { echo "only $count pages built"; exit 1; }

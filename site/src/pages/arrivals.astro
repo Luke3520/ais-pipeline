@@ -1,0 +1,57 @@
+---
+import Base from '../layouts/Base.astro';
+import VesselTable from '../components/VesselTable.astro';
+import data from '../data/pipeline.json';
+
+const { vessels, statusDisagreement, summary } = data;
+const n = (v: number, d = 0) =>
+  v.toLocaleString('en-GB', { minimumFractionDigits: d, maximumFractionDigits: d });
+
+// Ranked by share, not by count: a raw count ranks the busiest ship first, which measures how
+// often it calls rather than how often the dial was left alone (ADR-0039).
+//
+// Share alone is not enough either. One stop out of one is 100% and sorts level with twenty-six
+// out of twenty-six, which reads as though the two findings are comparable. So vessels with enough
+// stops for the record to be a habit sort above those without, and only then by share. The cut is
+// the same three stops the export uses to decide "never once".
+const HABIT_MINIMUM_STOPS = 3;
+const qualifies = (v) => v.totalStops >= HABIT_MINIMUM_STOPS;
+
+const ranked = vessels
+  .filter((v) => v.arrivalLapses > 0)
+  .sort((a, b) =>
+    Number(qualifies(b)) - Number(qualifies(a)) ||
+    b.arrivalSharePercent - a.arrivalSharePercent ||
+    b.arrivalLapses - a.arrivalLapses);
+
+const byCount = [...vessels]
+  .filter((v) => v.arrivalLapses > 0)
+  .sort((a, b) => b.arrivalLapses - a.arrivalLapses)
+  .slice(0, 5);
+---
+<Base title="Forgot on arrival — who kept saying 'under way' while parked">
+  <h1>Forgot on arrival</h1>
+
+  <p class="lede prose">
+    The ship stopped. The dial stayed on <code>Under way using engine</code>.
+  </p>
+
+  <ul class="stats">
+    <li class="stat alarm"><b>{n(statusDisagreement.disagreeing)}</b><span>stops of {n(statusDisagreement.totalStops)}</span></li>
+    <li class="stat"><b>{n(summary.hoursClaimingUnderWay)}</b><span>hours spent claiming it</span></li>
+    <li class="stat alarm"><b>{summary.vesselsAlwaysWrong}</b><span>never once updated it</span></li>
+    <li class="stat ok"><b>{summary.vesselsAlwaysRight}</b><span>never once got it wrong</span></li>
+  </ul>
+
+  <p class="prose note">
+    Ranked by share rather than by count, deliberately. By raw count the leaders are simply the
+    busiest ships — {byCount.map((v, i) => (
+      <>{i > 0 ? ', ' : ''}<a href={`/vessel/${v.mmsi}`}>{v.name ?? v.mmsi}</a> ({v.arrivalLapses})</>
+    ))} — which says more about how often they call than about the dial. The
+    <span class="tag always">never once</span> tag needs at least three stops, because one stop is
+    0% or 100% and neither is a habit — and for the same reason, vessels with fewer than three stops
+    are listed below those with more, however high their percentage.
+  </p>
+
+  <VesselTable vessels={ranked} kind="arrival" />
+</Base>

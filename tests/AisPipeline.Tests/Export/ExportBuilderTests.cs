@@ -94,6 +94,18 @@ public class ExportBuilderTests
     }
 
     [Fact]
+    public void The_summary_counts_say_what_they_count()
+    {
+        // Three different populations that an earlier version collapsed into one field called
+        // "Vessels", which held the offender count and read on a page as the size of the dataset.
+        var document = Build([Stops(1, 0, 8), Stops(2, 3, 5), Stops(3, 1, 9)], []);
+
+        Assert.Equal(3, document.Summary.VesselsWithStops);
+        Assert.Equal(2, document.Summary.VesselsWithLapses);
+        Assert.Equal(2, document.Vessels.Count);
+    }
+
+    [Fact]
     public void The_manifest_carries_its_sources_in_ingest_order()
     {
         // A figure on a website is as untraceable as a row in a table unless it says which files

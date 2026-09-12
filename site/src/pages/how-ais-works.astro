@@ -1,0 +1,112 @@
+---
+import Base from '../layouts/Base.astro';
+import data from '../data/pipeline.json';
+
+const n = (v: number, d = 0) =>
+  v.toLocaleString('en-GB', { minimumFractionDigits: d, maximumFractionDigits: d });
+
+// Every status the feed carried in the window, and what each one claims. Kept here rather than in
+// the export because it is vocabulary, not measurement.
+const statuses = [
+  ['Under way using engine', 'making way', 'typed'],
+  ['Under way sailing', 'making way', 'typed'],
+  ['Constrained by her draught', 'making way, with limited room', 'typed'],
+  ['Restricted manoeuvrability', 'making way, limited ability to turn', 'typed'],
+  ['At anchor', 'stationary', 'typed'],
+  ['Moored', 'stationary', 'typed'],
+  ['Aground', 'stationary, involuntarily', 'typed'],
+  ['Not under command', 'unable to manoeuvre — says nothing about making way', 'typed'],
+];
+---
+<Base
+  title="How AIS works — what the ship types, and what the receiver measures"
+  description="An AIS message mixes machine-measured position and speed with hand-entered status and vessel name. Knowing which is which is the whole trick."
+>
+  <h1>What's measured, and what's typed</h1>
+
+  <p class="lede prose">
+    An AIS broadcast looks like one coherent statement about a ship. It isn't. Half of it comes from
+    a satellite receiver, and half of it comes from a person.
+  </p>
+
+  <h2>The two halves of a message</h2>
+
+  <div class="scroll">
+    <table>
+      <thead><tr><th>field</th><th>where it comes from</th><th>can it be wrong?</th></tr></thead>
+      <tbody>
+        <tr><td>Position (lat/lon)</td><td>GNSS receiver</td><td>Only if the equipment fails</td></tr>
+        <tr><td>Speed over ground</td><td>GNSS receiver</td><td>Only if the equipment fails</td></tr>
+        <tr><td>Course over ground</td><td>GNSS receiver</td><td>Only if the equipment fails</td></tr>
+        <tr><td><strong>Navigational status</strong></td><td><strong>Typed by the crew</strong></td><td><strong>Yes — silently</strong></td></tr>
+        <tr><td><strong>Vessel name</strong></td><td><strong>Typed at installation</strong></td><td><strong>Yes — silently</strong></td></tr>
+        <tr><td><strong>Call sign, IMO, dimensions</strong></td><td><strong>Typed at installation</strong></td><td><strong>Yes — silently</strong></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="prose">
+    Navigational status is a dropdown on the transponder's keyboard-and-display unit. It is not
+    derived from speed, not inferred from position, and nothing on board cross-checks it. Someone
+    sets it, and it stays set until someone sets it again.
+  </p>
+
+  <p class="prose">
+    That is what makes the comparison on this site possible at all. Both numbers travel in the
+    <em>same message</em>, from the same box, at the same instant — so when they disagree, no
+    question of clock skew, matching, or data fusion arises. The message contradicts itself.
+  </p>
+
+  <h2>The statuses a ship can claim</h2>
+
+  <div class="scroll">
+    <table>
+      <thead><tr><th>status</th><th>what it claims</th><th>source</th></tr></thead>
+      <tbody>
+        {statuses.map(([status, claim, source]) => (
+          <tr><td><code>{status}</code></td><td>{claim}</td><td class="note">{source}</td></tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+
+  <p class="prose note">
+    <code>Not under command</code> is deliberately excluded from every finding on this site. It means
+    a vessel cannot manoeuvre, which says nothing about whether it is moving — a broken-down ship
+    still drifts, sometimes quickly. Counting it either way would invent a result.
+  </p>
+
+  <h2>How a contradiction is detected</h2>
+
+  <div class="prose">
+    <p>
+      <strong>On arrival.</strong> The pipeline finds stops from position alone: a run of fixes where
+      the vessel stays put. It never consults the status to decide that. Only once a stop exists does
+      it ask what the ship was claiming — and if the claim was "under way", it records the
+      disagreement without resolving it.
+    </p>
+    <p>
+      <strong>On departure.</strong> A single message claiming <code>Moored</code> or
+      <code>At anchor</code> while reporting speed above <strong>3 knots</strong>. That threshold
+      isn't picked for effect: across all {n(227258)} messages claiming a stationary status, speed
+      falls away smoothly to a minimum in the 2–3 knot band and then climbs again. Below the trough
+      is a moored ship moving with the tide; above it is a ship under way.
+    </p>
+  </div>
+
+  <h2>Why the numbers are never rounded up</h2>
+
+  <div class="prose">
+    <p>
+      Neither reading is ever declared the winner. Both are stored, the conflict is flagged, and the
+      count is published. Where a figure can't be supported — a stop whose true length is unknown
+      because the observation window cut it short — it's shown as a bound rather than a number.
+    </p>
+    <p>
+      And the irony at the centre of the whole thing: the ship <em>names</em> on this site come from
+      the same hand-typed static data as the status being called out. Of {n(10703)} vessels seen,
+      {' '}{n(9537)} broadcast a name and only {n(2783)} broadcast an IMO number — the one identifier
+      that is actually assigned by a registry rather than typed into a box.
+    </p>
+  </div>
+</Base>

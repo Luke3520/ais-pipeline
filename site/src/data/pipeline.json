@@ -1,6 +1,6 @@
 {
   "manifest": {
-    "generatedUtc": "2026-09-12T22:10:15.371132Z",
+    "generatedUtc": "2026-09-12T22:16:14.572614Z",
     "sourceFiles": [
       "aisdk-2026-09-01.zip",
       "aisdk-2026-09-02.zip",
@@ -16,7 +16,8 @@
     "rowsStored": 5368195
   },
   "summary": {
-    "vessels": 101,
+    "vesselsWithStops": 204,
+    "vesselsWithLapses": 101,
     "stops": 809,
     "portCalls": 362,
     "arrivalLapses": 299,

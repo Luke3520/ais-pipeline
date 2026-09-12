@@ -1,0 +1,58 @@
+---
+import '../styles/global.css';
+import data from '../data/pipeline.json';
+
+interface Props { title: string; description?: string; }
+const { title, description } = Astro.props;
+const { manifest } = data;
+// Normalised so the comparison holds whether the URL carries a trailing slash or not.
+const path = Astro.url.pathname.replace(/\/+$/, '') || '/';
+
+const window = `${manifest.firstFixUtc.slice(0, 10)} to ${manifest.lastFixUtc.slice(0, 10)}`;
+const nav = [
+  ['/', 'Findings'],
+  ['/how-ais-works', 'How AIS works'],
+  ['/arrivals', 'Forgot on arrival'],
+  ['/departures', 'Forgot on departure'],
+];
+---
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{title}</title>
+  {description && <meta name="description" content={description} />}
+</head>
+<body>
+  <header class="site">
+    <div class="wrap">
+      <nav>
+        <a class="brand" href="/">Who forgot the dial?</a>
+        {nav.map(([href, label]) => (
+          <a href={href} aria-current={path === href ? 'page' : undefined}>{label}</a>
+        ))}
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap"><slot /></main>
+
+  <footer class="site">
+    <div class="wrap">
+      <p>
+        Built from {manifest.sourceFiles.length} daily files published by the Danish Maritime
+        Authority, covering <strong>{window}</strong>:
+        {manifest.rowsRead.toLocaleString('en-GB')} rows read,
+        {' '}{manifest.rowsStored.toLocaleString('en-GB')} stored after filtering to tankers.
+        Generated {manifest.generatedUtc.slice(0, 10)}.
+      </p>
+      <p>
+        Every figure here is derived by an open pipeline from a public feed, and the page states the
+        window it covers because a number you cannot trace is a number you cannot trust. Nothing on
+        this site is an accusation about any person: it reports what a transponder broadcast.
+      </p>
+    </div>
+  </footer>
+</body>
+</html>

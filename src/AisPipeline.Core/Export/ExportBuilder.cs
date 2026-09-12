@@ -72,7 +72,8 @@ public static class ExportBuilder
             },
             Summary = new ExportSummary
             {
-                Vessels = vessels.Count,
+                VesselsWithStops = stopStatus.Count,
+                VesselsWithLapses = records.Count,
                 Stops = disagreement.TotalStops,
                 PortCalls = portCalls,
                 ArrivalLapses = disagreement.Disagreeing,

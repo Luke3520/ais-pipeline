@@ -26,7 +26,19 @@ public sealed record ExportManifest
 /// <summary>The figures a landing page leads with.</summary>
 public sealed record ExportSummary
 {
-    public required long Vessels { get; init; }
+    /// <summary>
+    /// Vessels that stopped at least once — the denominator the lapse figures are drawn from.
+    ///
+    /// Not the number of vessels in the feed, and not the number in this document. An earlier
+    /// version of this field was simply "Vessels" and held the count of offenders, which on a
+    /// landing page reads as the size of the dataset. A figure whose name does not say what it
+    /// counts is the defect this project exists to avoid.
+    /// </summary>
+    public required long VesselsWithStops { get; init; }
+
+    /// <summary>Vessels with at least one lapse in either direction — the rows in this document.</summary>
+    public required long VesselsWithLapses { get; init; }
+
     public required long Stops { get; init; }
     public required long PortCalls { get; init; }
 

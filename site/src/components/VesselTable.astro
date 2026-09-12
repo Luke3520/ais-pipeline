@@ -1,0 +1,66 @@
+---
+interface Vessel {
+  mmsi: number; name: string | null; shipType: string | null;
+  arrivalLapses: number; totalStops: number; hoursClaimingUnderWay: number;
+  departureLapses: number; totalFixes: number; fastestKnWhileClaimingStationary: number;
+  arrivalSharePercent: number; departureSharePercent: number;
+  bothDirections: boolean; neverUpdated: boolean;
+}
+
+interface Props { vessels: Vessel[]; kind: 'arrival' | 'departure'; }
+const { vessels, kind } = Astro.props;
+
+const n = (v: number, d = 0) =>
+  v.toLocaleString('en-GB', { minimumFractionDigits: d, maximumFractionDigits: d });
+---
+<div class="scroll">
+  <table>
+    <thead>
+      <tr>
+        <th>vessel</th>
+        <th class="n">mmsi</th>
+        {kind === 'arrival' ? (
+          <>
+            <th class="n">stops wrong</th>
+            <th class="n">of</th>
+            <th class="n">share</th>
+            <th class="n">hours</th>
+          </>
+        ) : (
+          <>
+            <th class="n">fixes wrong</th>
+            <th class="n">of</th>
+            <th class="n">share</th>
+            <th class="n">fastest kn</th>
+          </>
+        )}
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {vessels.map((v) => {
+        const share = kind === 'arrival' ? v.arrivalSharePercent : v.departureSharePercent;
+        return (
+          <tr>
+            <td><a href={`/vessel/${v.mmsi}`}>{v.name ?? '(no name broadcast)'}</a></td>
+            <td class="n">{v.mmsi}</td>
+            <td class="n">{n(kind === 'arrival' ? v.arrivalLapses : v.departureLapses)}</td>
+            <td class="n">{n(kind === 'arrival' ? v.totalStops : v.totalFixes)}</td>
+            <td class="n">
+              <span class="bar" style={`width:${Math.max(2, Math.round(share * 0.4))}px`}></span>{n(share, 0)}%
+            </td>
+            <td class="n">
+              {kind === 'arrival'
+                ? n(v.hoursClaimingUnderWay, 0)
+                : n(v.fastestKnWhileClaimingStationary, 1)}
+            </td>
+            <td>
+              {v.neverUpdated && <span class="tag always">never once</span>}
+              {!v.neverUpdated && v.bothDirections && <span class="tag both">both ways</span>}
+            </td>
+          </tr>
+        );
+      })}
+    </tbody>
+  </table>
+</div>

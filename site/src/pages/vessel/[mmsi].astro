@@ -1,0 +1,101 @@
+---
+import Base from '../../layouts/Base.astro';
+import data from '../../data/pipeline.json';
+
+export function getStaticPaths() {
+  return data.vessels.map((v) => ({ params: { mmsi: String(v.mmsi) }, props: { vessel: v } }));
+}
+
+const { vessel } = Astro.props;
+const n = (v: number, d = 0) =>
+  v.toLocaleString('en-GB', { minimumFractionDigits: d, maximumFractionDigits: d });
+
+const name = vessel.name ?? '(no name broadcast)';
+const clean = vessel.totalStops - vessel.arrivalLapses;
+---
+<Base title={`${name} — what it broadcast`}>
+  <h1>{name}</h1>
+
+  <p class="lede prose">
+    MMSI {vessel.mmsi}{vessel.shipType ? `, reported as ${vessel.shipType.toLowerCase()}` : ''}.
+    What this vessel's transponder said, against what the same transponder measured.
+  </p>
+
+  <ul class="stats">
+    {vessel.arrivalLapses > 0 && (
+      <li class="stat alarm">
+        <b>{n(vessel.arrivalLapses)} / {n(vessel.totalStops)}</b>
+        <span>stops claiming "under way"</span>
+      </li>
+    )}
+    {vessel.arrivalLapses > 0 && (
+      <li class="stat"><b>{n(vessel.hoursClaimingUnderWay, 0)}</b><span>hours parked, claiming to steam</span></li>
+    )}
+    {vessel.departureLapses > 0 && (
+      <li class="stat alarm"><b>{n(vessel.departureLapses)}</b><span>fixes claiming stationary, while moving</span></li>
+    )}
+    {vessel.departureLapses > 0 && (
+      <li class="stat"><b>{n(vessel.fastestKnWhileClaimingStationary, 1)}</b><span>fastest knots while "moored"</span></li>
+    )}
+  </ul>
+
+  {vessel.neverUpdated && (
+    <blockquote class="prose">
+      <p>
+        <strong>Never once.</strong> Across all {n(vessel.totalStops)} stops this vessel made in the
+        window, the navigational status was left on "under way" every single time. Not a lapse — a
+        setting.
+      </p>
+    </blockquote>
+  )}
+
+  {vessel.bothDirections && (
+    <blockquote class="prose">
+      <p>
+        <strong>Both directions.</strong> This vessel left the dial alone on the way in
+        ({n(vessel.arrivalLapses)} stops) and on the way out ({n(vessel.departureLapses)} position
+        reports).
+      </p>
+    </blockquote>
+  )}
+
+  <h2>The record</h2>
+
+  <dl class="fields">
+    <dt>stops</dt>
+    <dd>{n(vessel.totalStops)} detected, of which {n(clean)} carried a status consistent with sitting still</dd>
+
+    <dt>arrival</dt>
+    <dd>
+      {vessel.arrivalLapses > 0
+        ? `${n(vessel.arrivalLapses)} stops (${n(vessel.arrivalSharePercent, 0)}%) claimed "under way using engine" while stationary`
+        : 'no lapses detected'}
+    </dd>
+
+    <dt>departure</dt>
+    <dd>
+      {vessel.departureLapses > 0
+        ? `${n(vessel.departureLapses)} of ${n(vessel.totalFixes)} position reports (${n(vessel.departureSharePercent, 2)}%) claimed a stationary status above 3 knots`
+        : 'no lapses detected'}
+    </dd>
+
+    <dt>fixes</dt>
+    <dd>{n(vessel.totalFixes)} position reports stored for this vessel in the window</dd>
+  </dl>
+
+  <h2>What this does and does not say</h2>
+
+  <div class="prose">
+    <p>
+      It says what this transponder broadcast, checked against the position and speed the same
+      transponder measured. It does not say who was responsible, whether anyone was negligent, or
+      whether the equipment was configured correctly at installation — none of which is visible from
+      a radio signal.
+    </p>
+    <p>
+      The name at the top of this page is itself a hand-entered field, broadcast by the same
+      equipment. If the dial was never touched, there is no particular reason to assume the name
+      was. <a href="/how-ais-works">Here's what is typed and what is measured.</a>
+    </p>
+  </div>
+</Base>

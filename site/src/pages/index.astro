@@ -1,0 +1,101 @@
+---
+import Base from '../layouts/Base.astro';
+import data from '../data/pipeline.json';
+
+const { summary, statusDisagreement, vessels } = data;
+const n = (v: number, d = 0) =>
+  v.toLocaleString('en-GB', { minimumFractionDigits: d, maximumFractionDigits: d });
+
+const share = (statusDisagreement.disagreeing / statusDisagreement.totalStops) * 100;
+const both = vessels.filter((v) => v.bothDirections).slice(0, 5);
+---
+<Base
+  title="Who forgot the dial? — AIS navigational status, checked against the ships' own movement"
+  description="Across seven days of Danish AIS, 37% of stopped ships still broadcast that they were under way. An open pipeline that checks a vessel's self-report against its own measured movement."
+>
+  <h1>A third of stopped ships still say they're under way</h1>
+
+  <p class="lede prose">
+    Every AIS message carries two things: a position the receiver measured, and a navigational
+    status a human typed in. This is what happens when you check one against the other.
+  </p>
+
+  <ul class="stats">
+    <li class="stat alarm"><b>{n(share, 0)}%</b><span>of stops claimed "under way"</span></li>
+    <li class="stat"><b>{n(summary.hoursClaimingUnderWay)}</b><span>hours parked, claiming to steam</span></li>
+    <li class="stat alarm"><b>{n(summary.departureLapses)}</b><span>fixes claiming moored, while moving</span></li>
+    <li class="stat"><b>{n(summary.vesselsWithStops)}</b><span>vessels stopped in the window</span></li>
+  </ul>
+
+  <h2>The dial is set once, or never</h2>
+
+  <p class="prose">
+    The interesting part isn't that crews forget. It's that they mostly don't forget <em>sometimes</em>.
+    Of the vessels that stopped at least {3} times in the window, <strong>{summary.vesselsAlwaysWrong}</strong>
+    got it wrong on <em>every single stop</em>, and <strong>{summary.vesselsAlwaysRight}</strong> got it
+    right on every single one. Far fewer sit in between than chance would put there.
+  </p>
+
+  <blockquote class="prose">
+    <p>
+      That looks less like a crew occasionally forgetting and more like a setting configured once at
+      installation and never touched again — by some ships, and not by others.
+    </p>
+  </blockquote>
+
+  <h2>Two ways to get it wrong</h2>
+
+  <div class="prose">
+    <p>
+      <strong><a href="/arrivals">Forgot on arrival</a></strong> — the ship stops, and the status
+      stays on "under way using engine". Detected on {n(statusDisagreement.disagreeing)} of
+      {n(statusDisagreement.totalStops)} stops. These vessels moved a mean of 92 metres over a mean
+      of 5.7 hours; a ship genuinely under way at one knot covers ten kilometres in that time.
+    </p>
+    <p>
+      <strong><a href="/departures">Forgot on departure</a></strong> — the ship leaves, and the
+      status stays on "moored" or "at anchor". Detected on {n(summary.departureLapses)} position
+      reports. The fastest was doing 15.5 knots while telling the world it was tied up.
+    </p>
+  </div>
+
+  <h2>Forgot in both directions</h2>
+
+  <p class="prose">
+    {both.length} vessels here managed both — leaving the dial alone on the way in and on the way out.
+  </p>
+
+  <div class="scroll">
+    <table>
+      <thead>
+        <tr><th>vessel</th><th class="n">stops wrong</th><th class="n">fixes wrong</th><th class="n">fastest kn</th></tr>
+      </thead>
+      <tbody>
+        {both.map((v) => (
+          <tr>
+            <td><a href={`/vessel/${v.mmsi}`}>{v.name ?? '(no name broadcast)'}</a></td>
+            <td class="n">{n(v.arrivalLapses)} of {n(v.totalStops)}</td>
+            <td class="n">{n(v.departureLapses)}</td>
+            <td class="n">{n(v.fastestKnWhileClaimingStationary, 1)}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Before you blame anyone</h2>
+
+  <div class="prose">
+    <p>
+      Three things could produce these numbers: a crew that never touched the setting, an
+      installation that was configured once and left, or a decoding fault somewhere between the
+      transponder and this page. The evidence points at the first two — a decode fault would scatter
+      randomly, and this doesn't scatter — but the pipeline reports what was <em>broadcast</em>, and
+      never who was at fault.
+    </p>
+    <p>
+      There's a further wrinkle worth enjoying: the vessel names on this site are
+      <a href="/how-ais-works">also typed in by hand</a>.
+    </p>
+  </div>
+</Base>
