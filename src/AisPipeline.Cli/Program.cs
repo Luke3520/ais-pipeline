@@ -29,6 +29,8 @@ return args[0] switch
     "laytime" => Laytime(args[1..]),
     "reconcile" => Reconcile(args[1..]),
     "quality" => Quality(args[1..]),
+    "stops" => Stops(args[1..]),
+    "portcalls" => PortCalls(args[1..]),
     _ => Unknown(args[0]),
 };
 
@@ -47,6 +49,8 @@ static void Usage() => Console.WriteLine("""
       ais laytime --mmsi <n> [--allowed <h>] [--rate <perDay>] [--nor <iso>] [--turn <h>]
       ais reconcile --sof <file.json> [--allowed <h>] [--rate <perDay>] [--turn <h>]
       ais quality [--db <path> | --postgres <conn>]
+      ais stops [--mmsi <n>] [--min-hours <h>] [--complete-only] [--disagreements] [--limit <n>]
+      ais portcalls [--mmsi <n>] [--min-waiting-hours <h>] [--complete-only] [--limit <n>]
 
     Options:
       --db          SQLite file to read/write (default: data/ais.db)
@@ -64,6 +68,11 @@ static void Usage() => Console.WriteLine("""
     quality reports every registered rule and what it did to the data: rows it rejected into
     quarantine, and rows it kept but flagged. A rule that never fired prints zero rather than
     vanishing -- silence and absence are different claims (ADR-0032).
+
+    stops and portcalls list what detect derived, longest first -- not chronologically. A
+    duration the pipeline will not stand behind prints as a lower bound with a leading >=, and
+    a drift it will not stand behind prints as ?. Neither prints as a number (ADR-0011,
+    ADR-0025). Pass --complete-only to get only rows whose extent is known.
 
     laytime computes a statement for a vessel's most recent complete port call. AIS supplies
     berthing and completion; Notice of Readiness comes from the charter party and defaults to
@@ -471,6 +480,196 @@ static int Quality(string[] args)
 
     return 0;
 }
+
+
+/// <summary>
+/// Hours, or the lower bound when the figure is censored.
+///
+/// A stop touching a coverage gap or the edge of the window has an unknown true duration
+/// (ADR-0011), and the read model makes that a null rather than a number. Printing the observed
+/// span bare would launder a lower bound into a measurement; printing nothing would throw away a
+/// fact that is available and useful. So it prints with a >=, which is exactly what is known.
+/// </summary>
+static string Hours(double? figure, double observed) =>
+    figure is { } known
+        ? known.ToString("F1", CultureInfo.InvariantCulture).PadLeft(8)
+        : (">=" + observed.ToString("F1", CultureInfo.InvariantCulture)).PadLeft(8);
+
+/// <summary>Drift, or ? when too few fixes survived exclusion for it to mean anything (ADR-0025).</summary>
+static string Drift(double? nm) =>
+    nm is { } known ? known.ToString("F3", CultureInfo.InvariantCulture).PadLeft(7) : "?".PadLeft(7);
+
+/// <summary>
+/// Says so when the page is full.
+///
+/// A list returned at exactly its limit is indistinguishable from a complete one, and a reader
+/// totalling what they can see would be short by an unknown amount. The same defect ADR-0028
+/// found in the GraphQL port-call cap, and the fix is the same: make the truncation detectable.
+/// </summary>
+static void NoteIfCapped(int returned, int limit)
+{
+    if (returned == limit)
+    {
+        Console.WriteLine();
+        Console.WriteLine(
+            $"  exactly {limit} row(s) returned, which is the limit -- there are probably more. " +
+            "Raise --limit or narrow the filters.");
+    }
+}
+
+static int Stops(string[] args)
+{
+    if (Filters(args, out var connection, out var limit) is { } failure)
+    {
+        return failure;
+    }
+
+    using var queries = connection.OpenQueries();
+
+    var stops = queries.ListStops(new StopFilter
+    {
+        Mmsi = OptionalMmsi(args),
+        MinHours = ValueOf(args, "--min-hours") is not null ? Number(args, "--min-hours", 0.0) : null,
+        CompleteOnly = Present(args, "--complete-only"),
+        DisagreementsOnly = Present(args, "--disagreements"),
+        Limit = limit,
+    });
+
+    if (stops.Count == 0)
+    {
+        Console.WriteLine("no stops match. Run detect first, or loosen the filters.");
+        return 0;
+    }
+
+    Console.WriteLine($"{stops.Count} stop(s), longest first:");
+    Console.WriteLine();
+    Console.WriteLine("  mmsi       started (UTC)     hours    drift nm  status");
+
+    foreach (var stop in stops)
+    {
+        // The vessel's own status and what it does with the contradiction, both on the line. Rule
+        // 4: the disagreement is stored and shown, never resolved into a winner.
+        var status = stop.ReportedStatus ?? "(none reported)";
+        var verdict = stop.StatusAgrees ? "" : "  CONTRADICTS its own speed";
+
+        Console.WriteLine(
+            $"  {stop.Mmsi,-10} {stop.StartedUtc:yyyy-MM-dd HH:mm}  " +
+            $"{Hours(stop.DurationHours, stop.ObservedDurationHours)}  {Drift(stop.MaxDriftNm)}  " +
+            $"{status}{verdict}");
+    }
+
+    var open = stops.Count(s => !s.IsComplete);
+    if (open > 0)
+    {
+        Console.WriteLine();
+        Console.WriteLine(
+            $"  {open} of these have an unknown true extent -- they touch a coverage gap or the " +
+            "edge of the ingested window, so their hours are lower bounds (ADR-0011).");
+    }
+
+    NoteIfCapped(stops.Count, limit);
+    return 0;
+}
+
+static int PortCalls(string[] args)
+{
+    if (Filters(args, out var connection, out var limit) is { } failure)
+    {
+        return failure;
+    }
+
+    using var queries = connection.OpenQueries();
+
+    var calls = queries.ListPortCalls(new PortCallFilter
+    {
+        Mmsi = OptionalMmsi(args),
+        MinWaitingHours = ValueOf(args, "--min-waiting-hours") is not null
+            ? Number(args, "--min-waiting-hours", 0.0)
+            : null,
+        CompleteOnly = Present(args, "--complete-only"),
+        Limit = limit,
+    });
+
+    if (calls.Count == 0)
+    {
+        Console.WriteLine("no port calls match. Run detect first, or loosen the filters.");
+        return 0;
+    }
+
+    Console.WriteLine($"{calls.Count} port call(s), longest first:");
+    Console.WriteLine();
+    Console.WriteLine("  id     mmsi       arrived (UTC)      waiting  working  unclassified");
+
+    foreach (var call in calls)
+    {
+        Console.WriteLine(
+            $"  {call.Id,-6} {call.Mmsi,-10} {call.ArrivedUtc:yyyy-MM-dd HH:mm}  " +
+            $"{call.WaitingHours,9:F1}{call.WorkingHours,9:F1}" +
+            $"{call.UnclassifiedHours,14:F1}{(call.IsComplete ? "" : "  (open)")}");
+    }
+
+    var unclassified = calls.Sum(c => c.UnclassifiedHours);
+    if (unclassified > 0)
+    {
+        // Neither waiting nor working. Counting these as either would favour one party to a
+        // charter over the other, so they are carried as their own column (ADR-0025).
+        Console.WriteLine();
+        Console.WriteLine(
+            $"  {unclassified:F1}h across these calls sit in phases whose geometry the pipeline " +
+            "does not stand behind: neither waiting nor working, and not billable as either.");
+    }
+
+    var open = calls.Count(c => !c.IsComplete);
+    if (open > 0)
+    {
+        Console.WriteLine();
+        Console.WriteLine(
+            $"  {open} marked (open): the call's true extent is unknown, so its hours are lower " +
+            "bounds. --complete-only excludes them.");
+    }
+
+    NoteIfCapped(calls.Count, limit);
+    return 0;
+}
+
+/// <summary>
+/// The setup both read verbs share: resolve the engine, check it is there, read --limit.
+/// Returns an exit code when something is wrong, null when the caller may proceed.
+/// </summary>
+static int? Filters(string[] args, out ReadConnection connection, out int limit)
+{
+    connection = ReadConnection.Resolve(ValueOf(args, "--postgres"), ValueOf(args, "--db"));
+    limit = 100;
+
+    if (connection.Dialect == SqlDialect.Sqlite && !File.Exists(connection.SqlitePath))
+    {
+        Console.Error.WriteLine($"no database at {connection.SqlitePath}; run ingest and detect first");
+        return 2;
+    }
+
+    if (ValueOf(args, "--limit") is { } raw)
+    {
+        if (!int.TryParse(raw, NumberStyles.None, CultureInfo.InvariantCulture, out var parsed)
+            || parsed <= 0)
+        {
+            Console.Error.WriteLine($"--limit needs a positive whole number, got '{raw}'");
+            return 2;
+        }
+
+        limit = parsed;
+    }
+
+    return null;
+}
+
+/// <summary>--mmsi if given and well formed, null if absent. A malformed value is not silently all.</summary>
+static long? OptionalMmsi(string[] args) =>
+    ValueOf(args, "--mmsi") is { } raw
+     && long.TryParse(raw, NumberStyles.None, CultureInfo.InvariantCulture, out var mmsi)
+        ? mmsi
+        : null;
+
+static bool Present(string[] args, string name) => Array.IndexOf(args, name) >= 0;
 
 /// <summary>Rebuilds the domain shape from stored rows, so detection logic is not duplicated here.</summary>
 static PortCall RebuildPortCall(

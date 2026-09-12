@@ -313,6 +313,8 @@ ais detect                               # stops + port calls, recomputed in pla
 ais quality                              # what each rule did: rejected, and flagged
 ais laytime --mmsi 219018271             # a statement for the most recent complete port call
 ais reconcile --sof statement.json       # that statement against what AIS observed
+ais stops --min-hours 6 --complete-only  # detected stops, longest first
+ais portcalls --min-waiting-hours 6      # waiting and working hours per call
 ```
 
 `ais quality` reports **both** things a rule can do, because a rule does exactly one of two things
@@ -331,6 +333,13 @@ and is named as silent, because silence and absence are different claims:
 
   totals: 9 rejected into quarantine, 10 kept with a flag.
 ```
+
+`ais stops` and `ais portcalls` print a figure the pipeline will not stand behind as a bound, never
+as a number: `>=2.7` for a stop whose true extent is unknown because it touches a coverage gap or
+the edge of the window (ADR-0011), and `?` for a drift computed from too few surviving fixes to mean
+anything (ADR-0025). Both lists are ordered longest first rather than chronologically, and both say
+so when the page came back full — a list returned at exactly its limit is otherwise
+indistinguishable from a complete one (ADR-0028).
 
 The counts are over what the store holds, not over lines read — `ais ingest` reports the latter,
 and it is legitimately the larger number once duplicates in the file collapse onto one natural key.
