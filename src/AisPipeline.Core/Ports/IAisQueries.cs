@@ -60,6 +60,28 @@ public interface IAisQueries : IDisposable
     /// <summary>Phases of several port calls at once, with their stops already joined.</summary>
     IReadOnlyList<(StoredPhase Phase, StoredStop Stop)> GetPhasesForPortCalls(IReadOnlyCollection<long> portCallIds);
 
+    /// <summary>
+    /// One port call by id, or null.
+    ///
+    /// A dedicated lookup rather than filtering a page of <see cref="ListPortCalls"/>: that one
+    /// ranks by total duration before applying its limit, so a call outside the page is invisible
+    /// and a caller cannot tell "no such call" from "not on this page" (ADR-0028).
+    /// </summary>
+    StoredPortCall? GetPortCall(long id);
+
+    /// <summary>
+    /// One vessel's port calls that share time with a window, most recent first.
+    ///
+    /// Exists so a Statement of Facts can be matched to the call it describes rather than to
+    /// whichever call <see cref="MostRecentCompletePortCall"/> happens to return. Overlap is
+    /// strict: a call ending exactly as the window opens shares no time with it (ADR-0035).
+    ///
+    /// Incomplete calls are included deliberately. Excluding them would report "no call matches
+    /// this document" for a document whose call the store does hold but could not measure, and the
+    /// trust gates downstream already refuse with a message that says which problem it is.
+    /// </summary>
+    IReadOnlyList<StoredPortCall> PortCallsOverlapping(long mmsi, DateTime fromUtc, DateTime toUtc);
+
     IReadOnlyList<RuleHitCount> QualityReport();
 
     /// <summary>

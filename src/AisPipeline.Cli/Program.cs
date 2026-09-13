@@ -262,57 +262,9 @@ static int Laytime(string[] args)
 
     var phases = queries.GetPhasesForPortCalls([call.Id]);
 
-    // Rebuild the domain shape and let VoyageTimeline decide what can be measured, rather than
-    // picking berth timestamps out of the rows here. It refuses to fabricate a berth time from an
-    // anchorage-only call, and it reports hours inside the berth span whose geometry the pipeline
-    // does not stand behind.
-    var portCall = new PortCall
-    {
-        Mmsi = call.Mmsi,
-        Phases = [.. phases
-            .OrderBy(p => p.Phase.Sequence)
-            .Select(p => new PortCallPhase(
-                p.Phase.Sequence,
-                Enum.Parse<StopPhase>(p.Phase.Phase),
-                new StopEvent
-                {
-                    Mmsi = p.Stop.Mmsi,
-                    StartedUtc = p.Stop.StartedUtc,
-                    EndedUtc = p.Stop.EndedUtc,
-                    CentroidLatitude = p.Stop.CentroidLatitude,
-                    CentroidLongitude = p.Stop.CentroidLongitude,
-                    MaxDriftNm = p.Stop.ObservedMaxDriftNm,
-                    FixCount = p.Stop.FixCount,
-                    ReliableFixCount = p.Stop.ReliableFixCount,
-                    ReportedStatus = p.Stop.ReportedStatus,
-                    StatusAgrees = p.Stop.StatusAgrees,
-                    IsComplete = p.Stop.IsComplete,
-                    FirstPositionId = p.Stop.FirstPositionId,
-                    LastPositionId = p.Stop.LastPositionId,
-                }))],
-    };
-
-    if (VoyageTimeline.FromPortCall(portCall) is not { } timeline)
-    {
-        Console.Error.WriteLine(
-            $"port call {call.Id} has no berth phase, so there are no cargo operations to measure");
-        return 2;
-    }
-
-    if (!timeline.BerthSpanIsTrustworthy)
-    {
-        // Neither excluding these hours (which favours the charterer) nor counting them (which
-        // favours the owner) is supportable, so no figure is produced. ADR-0025's own title:
-        // a stop must refuse to guess.
-        Console.Error.WriteLine(
-            $"port call {call.Id}: {timeline.UntrustworthyHoursInBerthSpan:F2}h inside the berth " +
-            "span have geometry the pipeline does not stand behind, so this call cannot be priced. " +
-            "Re-run detect after ingesting more of the window, or price it by hand.");
-        return 2;
-    }
-
-    var berthedUtc = timeline.BerthedUtc!.Value;
-    var completedUtc = timeline.DepartedBerthUtc!.Value;
+    // The rebuild and the assessment are shared with the API, so the two cannot disagree about
+    // when a call is priceable (ADR-0042).
+    var portCall = PortCallRebuilder.FromStored(call, queries.GetPhasesForPortCalls([call.Id]));
 
     // NOR is a document, not a physical event -- no transponder emits one. Substituting arrival
     // is an assumption, and it travels with the terms into the statement rather than being
@@ -332,7 +284,19 @@ static int Laytime(string[] args)
         TurnTimeHours = Number(args, "--turn", 6.0),
     };
 
-    var statement = new LaytimeCalculator().Calculate(terms, berthedUtc, completedUtc);
+    var assessment = LaytimeAssessor.Assess(portCall, terms);
+
+    if (!assessment.IsPriced)
+    {
+        // Neither excluding untrustworthy hours (which favours the charterer) nor counting them
+        // (which favours the owner) is supportable, so no figure is produced at all.
+        Console.Error.WriteLine($"port call {call.Id}: {assessment.RefusalDetail}.");
+        Console.Error.WriteLine(
+            "  Re-run detect after ingesting more of the window, or price it by hand.");
+        return 2;
+    }
+
+    var statement = assessment.Statement!;
 
     Console.WriteLine($"mmsi {mmsi}  port call {call.Id}  {call.ArrivedUtc:yyyy-MM-dd HH:mm} -> {call.DepartedUtc:yyyy-MM-dd HH:mm}");
 
@@ -458,7 +422,7 @@ static int Reconcile(string[] args)
     // call can be absent from the page entirely (ADR-0028).
     var call = overlapping.Single(c => c.Id == selection.Chosen!.Id);
 
-    var portCall = RebuildPortCall(call, queries.GetPhasesForPortCalls([call.Id]));
+    var portCall = PortCallRebuilder.FromStored(call, queries.GetPhasesForPortCalls([call.Id]));
 
     // Still evaluated, and still the reconciler's own precondition. The selector picked on overlap
     // so this cannot fail today -- it is the invariant that keeps the two agreeing if either
@@ -937,48 +901,6 @@ static long? OptionalMmsi(string[] args) =>
         : null;
 
 static bool Present(string[] args, string name) => Array.IndexOf(args, name) >= 0;
-
-/// <summary>Rebuilds the domain shape from stored rows, so detection logic is not duplicated here.</summary>
-static PortCall RebuildPortCall(
-    AisPipeline.Core.Query.StoredPortCall call,
-    IReadOnlyList<(AisPipeline.Core.Query.StoredPhase Phase, AisPipeline.Core.Query.StoredStop Stop)> phases) => new()
-    {
-        Mmsi = call.Mmsi,
-
-        // Carried across, not recomputed. Omitting it here is not a missing feature that shows up
-        // as an error -- reconcile simply reported "AIS named no port for this call" for a call
-        // whose port was sitting in the row it was handed.
-        Attribution = call.PortName is null || call.PortDistanceNm is null
-            ? null
-            : new PortAttribution
-            {
-                WpiNumber = call.PortWpiNumber ?? 0,
-                Name = call.PortName,
-                Country = call.PortCountry ?? "",
-                DistanceNm = call.PortDistanceNm.Value,
-            },
-        Phases = [.. phases
-        .OrderBy(p => p.Phase.Sequence)
-        .Select(p => new PortCallPhase(
-            p.Phase.Sequence,
-            Enum.Parse<StopPhase>(p.Phase.Phase),
-            new StopEvent
-            {
-                Mmsi = p.Stop.Mmsi,
-                StartedUtc = p.Stop.StartedUtc,
-                EndedUtc = p.Stop.EndedUtc,
-                CentroidLatitude = p.Stop.CentroidLatitude,
-                CentroidLongitude = p.Stop.CentroidLongitude,
-                MaxDriftNm = p.Stop.ObservedMaxDriftNm,
-                FixCount = p.Stop.FixCount,
-                ReliableFixCount = p.Stop.ReliableFixCount,
-                ReportedStatus = p.Stop.ReportedStatus,
-                StatusAgrees = p.Stop.StatusAgrees,
-                IsComplete = p.Stop.IsComplete,
-                FirstPositionId = p.Stop.FirstPositionId,
-                LastPositionId = p.Stop.LastPositionId,
-            }))],
-    };
 
 static double Number(string[] args, string name, double fallback) =>
     ValueOf(args, name) is { } raw

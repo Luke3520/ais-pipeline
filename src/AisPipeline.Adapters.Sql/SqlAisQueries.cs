@@ -196,6 +196,15 @@ public sealed class SqlAisQueries : IAisQueries
         return [.. rows];
     }
 
+    public StoredPortCall? GetPortCall(long id)
+    {
+        using var c = Open();
+        return c.QuerySingleOrDefault<StoredPortCall>($"""
+            {PortCallColumns}
+            WHERE id = @id
+            """, new { id });
+    }
+
     public IReadOnlyList<StoredPortCall> PortCallsOverlapping(long mmsi, DateTime fromUtc, DateTime toUtc)
     {
         using var c = Open();

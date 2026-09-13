@@ -197,6 +197,18 @@ moving. ([ADR-0030](docs/adr/0030-laytime-engine.md))
 
 ## Querying it
 
+`GET /portcalls/{id}/laytime?allowedHours=48&ratePerDay=32000` prices one call on supplied charter
+party terms and returns the line items, not just the total — every hour between commencement and
+completion belongs to exactly one line with a reason attached, because a total nobody can decompose
+is a total nobody can dispute. A call that cannot be priced answers **422** and names what is
+missing, rather than failing as though the server broke.
+
+`reconcile` deliberately has no endpoint. It needs a Statement of Facts document, and accepting one
+is the write surface [ADR-0029](docs/adr/0029-when-to-revisit-the-architecture.md) names as a
+trigger — a signed commercial record arriving over an unauthenticated connection is a decision about
+authentication, not a missing feature
+([ADR-0042](docs/adr/0042-laytime-over-http-reconcile-stays-a-verb.md)).
+
 REST is the operational surface — `/vessels`, `/stops`, `/portcalls`, `/quality`, `/runs`, with a
 generated OpenAPI document. GraphQL is the analytical one. They do not duplicate each other.
 
