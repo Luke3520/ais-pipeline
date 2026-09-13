@@ -14,6 +14,13 @@ public sealed record Vessel
     public string? Name { get; init; }
     public string? CallSign { get; init; }
     public string? ShipType { get; init; }
+
+    /// <summary>IMO pollution category for a chemical tanker, where the feed carries one.</summary>
+    public string? CargoType { get; init; }
+
+    /// <summary>GPS, Combined GPS/GLONASS, Surveyed or Internal — a property of the installation.</summary>
+    public string? PositionFixingDevice { get; init; }
+
     public double? LengthM { get; init; }
     public double? WidthM { get; init; }
     public required DateTime FirstSeenUtc { get; init; }
@@ -29,6 +36,8 @@ public sealed record Vessel
         Name = record.Name ?? Name,
         CallSign = record.CallSign ?? CallSign,
         ShipType = record.ShipType ?? ShipType,
+        CargoType = record.CargoType ?? CargoType,
+        PositionFixingDevice = record.PositionFixingDevice ?? PositionFixingDevice,
         LengthM = record.LengthM ?? LengthM,
         WidthM = record.WidthM ?? WidthM,
         FirstSeenUtc = record.TimestampUtc < FirstSeenUtc ? record.TimestampUtc : FirstSeenUtc,
@@ -42,6 +51,8 @@ public sealed record Vessel
         Name = record.Name,
         CallSign = record.CallSign,
         ShipType = record.ShipType,
+        CargoType = record.CargoType,
+        PositionFixingDevice = record.PositionFixingDevice,
         LengthM = record.LengthM,
         WidthM = record.WidthM,
         FirstSeenUtc = record.TimestampUtc,

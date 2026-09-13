@@ -58,6 +58,7 @@ the design.
 | [0037](0037-a-read-only-browser-ui-over-the-derived-layer.md) | A read-only browser UI, over the derived layer only | Accepted |
 | [0038](0038-r12-the-mirror-of-r10.md) | R12 — a stationary claim contradicted by the vessel's own speed | Accepted |
 | [0039](0039-an-export-contract-for-a-static-site.md) | An export contract, so the site never touches the database | Accepted |
+| [0040](0040-store-the-rest-of-the-feed.md) | Store the rest of the feed | Accepted |
 
 ### † Measurement corrected, 2026-09-12
 

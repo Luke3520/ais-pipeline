@@ -30,6 +30,13 @@ internal static class SqliteSchema
           cog REAL,
           heading REAL,
           nav_status TEXT,
+          rot REAL,
+          -- Voyage data, hand-entered and therefore able to go stale on its own. Stored per row
+          -- because the DMA feed flattens AIS's static and dynamic messages onto one line, and
+          -- this table is the log of what the feed said (ADR-0040).
+          draught_m REAL,
+          destination TEXT,
+          eta_utc TEXT,
           quality_flags TEXT NOT NULL DEFAULT '',
           ingest_run_id INTEGER NOT NULL REFERENCES ingest_run(id),
           source_line INTEGER NOT NULL,
@@ -45,6 +52,8 @@ internal static class SqliteSchema
           name TEXT,
           callsign TEXT,
           ship_type TEXT,
+          cargo_type TEXT,
+          position_fixing_device TEXT,
           length_m REAL,
           width_m REAL,
           first_seen_utc TEXT NOT NULL,

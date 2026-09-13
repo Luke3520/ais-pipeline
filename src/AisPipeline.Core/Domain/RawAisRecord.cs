@@ -25,10 +25,31 @@ public sealed record RawAisRecord
     public double? CourseOverGround { get; init; }
     public double? HeadingDegrees { get; init; }
 
+    /// <summary>Rate of turn, degrees per minute. Measured, like position and speed.</summary>
+    public double? RateOfTurnDegPerMin { get; init; }
+
+    /// <summary>
+    /// Voyage data, all of it hand-entered — the same class of field as the navigational status.
+    ///
+    /// Draught is read off the ship and typed in; destination and ETA are typed at the start of a
+    /// voyage and go stale on their own. They sit on every position row because the DMA feed
+    /// flattens AIS's static and dynamic messages onto one line, and position_report is the log of
+    /// what the feed said (ADR-0040).
+    /// </summary>
+    public double? DraughtM { get; init; }
+
+    public string? Destination { get; init; }
+
+    public DateTime? EtaUtc { get; init; }
+
     public string? Imo { get; init; }
     public string? CallSign { get; init; }
     public string? Name { get; init; }
     public string? ShipType { get; init; }
+    public string? CargoType { get; init; }
+
+    /// <summary>GPS, Combined GPS/GLONASS, Surveyed, Internal. A property of the installation.</summary>
+    public string? PositionFixingDevice { get; init; }
     public double? LengthM { get; init; }
     public double? WidthM { get; init; }
 }

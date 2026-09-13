@@ -76,10 +76,16 @@ public static class RawAisRecordParser
             SpeedOverGroundKn = OptionalDouble(fields[DmaColumns.SpeedOverGround]),
             CourseOverGround = OptionalDouble(fields[DmaColumns.CourseOverGround]),
             HeadingDegrees = OptionalDouble(fields[DmaColumns.Heading]),
+            RateOfTurnDegPerMin = OptionalDouble(fields[DmaColumns.RateOfTurn]),
+            DraughtM = OptionalDouble(fields[DmaColumns.Draught]),
+            Destination = OptionalText(fields[DmaColumns.Destination]),
+            EtaUtc = OptionalTimestamp(fields[DmaColumns.Eta]),
             Imo = OptionalText(fields[DmaColumns.Imo]),
             CallSign = OptionalText(fields[DmaColumns.CallSign]),
             Name = OptionalText(fields[DmaColumns.Name]),
             ShipType = OptionalText(fields[DmaColumns.ShipType]),
+            CargoType = OptionalText(fields[DmaColumns.CargoType]),
+            PositionFixingDevice = OptionalText(fields[DmaColumns.PositionFixingDevice]),
             LengthM = OptionalDouble(fields[DmaColumns.Length]),
             WidthM = OptionalDouble(fields[DmaColumns.Width]),
         });
@@ -91,6 +97,24 @@ public static class RawAisRecordParser
     /// <summary>Blank or unparseable optional numerics become null, never a sentinel.</summary>
     private static double? OptionalDouble(string value) =>
         TryDouble(value, out var parsed) ? parsed : null;
+
+    /// <summary>
+    /// An ETA, or null when absent or unreadable.
+    ///
+    /// Same format as the row's own timestamp, and parsed the same way. Unreadable becomes null
+    /// rather than a rejection: a malformed ETA says nothing about whether the POSITION on the row
+    /// is good, and R1 rejects a row only when the line itself cannot be read.
+    /// </summary>
+    private static DateTime? OptionalTimestamp(string value) =>
+        !DmaColumns.IsUnknown(value)
+        && DateTime.TryParseExact(
+            value,
+            DmaColumns.TimestampFormat,
+            Invariant,
+            DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal,
+            out var parsed)
+            ? parsed
+            : null;
 
     /// <summary>DMA's textual unknowns ("Unknown", "Undefined") become null.</summary>
     private static string? OptionalText(string value) =>

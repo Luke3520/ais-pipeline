@@ -28,6 +28,70 @@ public class RawAisRecordParserTests
         Assert.Equal(121.0, record.HeadingDegrees);
     }
 
+    /// <summary>
+    /// A row carrying the voyage fields the feed populates on roughly half its rows. Columns are
+    /// timestamp, mobile, mmsi, lat, lon, status, ROT, SOG, COG, heading, IMO, callsign, name,
+    /// ship type, cargo type, width, length, fixing device, draught, destination, ETA, source,
+    /// A, B, C, D.
+    /// </summary>
+    private const string RowWithVoyageData =
+        "05/09/2026 06:30:00,Class A,219018272,56.150000,10.216667,Moored,-1.1,0.2,90.0," +
+        "88,9319466,OWNM2,TRESFJORD,Tanker,Category X,16,99,GPS,5.4,DKCPH," +
+        "06/09/2026 14:00:00,AIS,50,49,8,8";
+
+    [Fact]
+    public void TheVoyageFieldsTheFeedCarriesAreRead()
+    {
+        // Eleven columns were parsed and then ignored for most of this project's life, including
+        // two hand-entered ones whose staleness is the point of the whole site (ADR-0040).
+        var record = RawAisRecordParser.Parse(Line(RowWithVoyageData)).Record!;
+
+        Assert.Equal(-1.1, record.RateOfTurnDegPerMin);
+        Assert.Equal(5.4, record.DraughtM);
+        Assert.Equal("DKCPH", record.Destination);
+        Assert.Equal("Category X", record.CargoType);
+        Assert.Equal("GPS", record.PositionFixingDevice);
+    }
+
+    [Fact]
+    public void AnEtaIsReadAsUtcInTheFeedsOwnFormat()
+    {
+        // Same format as the row's own timestamp, and the same trap: a local reading would shift
+        // it by the host's offset and an "ETA in the past" rule would fire on the wrong rows.
+        var record = RawAisRecordParser.Parse(Line(RowWithVoyageData)).Record!;
+
+        Assert.Equal(new DateTime(2026, 9, 6, 14, 0, 0, DateTimeKind.Utc), record.EtaUtc);
+        Assert.Equal(DateTimeKind.Utc, record.EtaUtc!.Value.Kind);
+    }
+
+    [Fact]
+    public void MissingVoyageFieldsAreNullAndTheRowIsStillGood()
+    {
+        // The real row at the top of this file carries none of them. A blank destination or an
+        // unreadable ETA says nothing about whether the POSITION is good, so the row stands.
+        var result = RawAisRecordParser.Parse(Line(RealRow));
+
+        Assert.True(result.Ok);
+        Assert.Null(result.Record!.Destination);
+        Assert.Null(result.Record.EtaUtc);
+        Assert.Null(result.Record.DraughtM);
+        Assert.Null(result.Record.CargoType);
+    }
+
+    [Fact]
+    public void AnUnreadableEtaBecomesNullRatherThanRejectingTheRow()
+    {
+        var mangled = RowWithVoyageData.Replace("06/09/2026 14:00:00", "31/02/2026 99:00:00");
+        var result = RawAisRecordParser.Parse(Line(mangled));
+
+        Assert.True(result.Ok);
+        Assert.Null(result.Record!.EtaUtc);
+
+        // And the fields either side of it still land, so a bad ETA cannot shift the row.
+        Assert.Equal("DKCPH", result.Record.Destination);
+        Assert.Equal(5.4, result.Record.DraughtM);
+    }
+
     [Fact]
     public void TimestampIsUtcNotLocal()
     {

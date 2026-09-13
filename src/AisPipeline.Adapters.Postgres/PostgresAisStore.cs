@@ -98,13 +98,16 @@ public sealed class PostgresAisStore : IAisStore
             CREATE TEMP TABLE IF NOT EXISTS staging_position (
               mmsi BIGINT, ts_utc TIMESTAMPTZ, lat DOUBLE PRECISION, lon DOUBLE PRECISION,
               sog_kn DOUBLE PRECISION, cog DOUBLE PRECISION, heading DOUBLE PRECISION,
-              nav_status TEXT, quality_flags TEXT, source_line BIGINT, ord BIGINT
+              nav_status TEXT, rot DOUBLE PRECISION, draught_m DOUBLE PRECISION,
+              destination TEXT, eta_utc TIMESTAMPTZ,
+              quality_flags TEXT, source_line BIGINT, ord BIGINT
             ) ON COMMIT DROP;
             """, transaction);
 
         using (var writer = _connection.BeginBinaryImport("""
             COPY staging_position (mmsi, ts_utc, lat, lon, sog_kn, cog, heading,
-                                   nav_status, quality_flags, source_line, ord)
+                                   nav_status, rot, draught_m, destination, eta_utc,
+                                   quality_flags, source_line, ord)
             FROM STDIN (FORMAT BINARY);
             """))
         {
@@ -121,6 +124,27 @@ public sealed class PostgresAisStore : IAisStore
                 WriteNullable(writer, r.CourseOverGround);
                 WriteNullable(writer, r.HeadingDegrees);
                 writer.Write(r.NavigationalStatus, NpgsqlDbType.Text);
+                WriteNullable(writer, r.RateOfTurnDegPerMin);
+                WriteNullable(writer, r.DraughtM);
+
+                if (r.Destination is { } destination)
+                {
+                    writer.Write(destination, NpgsqlDbType.Text);
+                }
+                else
+                {
+                    writer.WriteNull();
+                }
+
+                if (r.EtaUtc is { } eta)
+                {
+                    writer.Write(Utc(eta), NpgsqlDbType.TimestampTz);
+                }
+                else
+                {
+                    writer.WriteNull();
+                }
+
                 writer.Write(accepted.QualityFlags, NpgsqlDbType.Text);
                 writer.Write(r.SourceLine, NpgsqlDbType.Bigint);
                 writer.Write((long)i, NpgsqlDbType.Bigint);
@@ -133,8 +157,10 @@ public sealed class PostgresAisStore : IAisStore
         move.Transaction = transaction;
         move.CommandText = """
             INSERT INTO position_report (mmsi, ts_utc, lat, lon, sog_kn, cog, heading,
-                                         nav_status, quality_flags, ingest_run_id, source_line)
-            SELECT mmsi, ts_utc, lat, lon, sog_kn, cog, heading, nav_status, quality_flags,
+                                         nav_status, rot, draught_m, destination, eta_utc,
+                                         quality_flags, ingest_run_id, source_line)
+            SELECT mmsi, ts_utc, lat, lon, sog_kn, cog, heading, nav_status, rot,
+                   draught_m, destination, eta_utc, quality_flags,
                    $1, source_line
             FROM staging_position
             ORDER BY ord
@@ -201,20 +227,24 @@ public sealed class PostgresAisStore : IAisStore
         // LEAST/GREATEST rather than SQLite's two-argument MIN/MAX -- same intent, different
         // spelling, and Postgres's MIN/MAX are aggregates that would not compile here.
         command.CommandText = """
-            INSERT INTO vessel (mmsi, imo, name, callsign, ship_type, length_m, width_m,
+            INSERT INTO vessel (mmsi, imo, name, callsign, ship_type, cargo_type,
+                                position_fixing_device, length_m, width_m,
                                 first_seen_utc, last_seen_utc)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
             ON CONFLICT (mmsi) DO UPDATE SET
               imo = COALESCE(excluded.imo, vessel.imo),
               name = COALESCE(excluded.name, vessel.name),
               callsign = COALESCE(excluded.callsign, vessel.callsign),
               ship_type = COALESCE(excluded.ship_type, vessel.ship_type),
+              cargo_type = COALESCE(excluded.cargo_type, vessel.cargo_type),
+              position_fixing_device =
+                  COALESCE(excluded.position_fixing_device, vessel.position_fixing_device),
               length_m = COALESCE(excluded.length_m, vessel.length_m),
               width_m = COALESCE(excluded.width_m, vessel.width_m),
               first_seen_utc = LEAST(excluded.first_seen_utc, vessel.first_seen_utc),
               last_seen_utc = GREATEST(excluded.last_seen_utc, vessel.last_seen_utc);
             """;
-        var p = new NpgsqlParameter[9];
+        var p = new NpgsqlParameter[11];
         for (var i = 0; i < p.Length; i++)
         {
             p[i] = command.Parameters.Add(new NpgsqlParameter());
@@ -227,10 +257,12 @@ public sealed class PostgresAisStore : IAisStore
             p[2].Value = (object?)v.Name ?? DBNull.Value;
             p[3].Value = (object?)v.CallSign ?? DBNull.Value;
             p[4].Value = (object?)v.ShipType ?? DBNull.Value;
-            p[5].Value = (object?)v.LengthM ?? DBNull.Value;
-            p[6].Value = (object?)v.WidthM ?? DBNull.Value;
-            p[7].Value = Utc(v.FirstSeenUtc);
-            p[8].Value = Utc(v.LastSeenUtc);
+            p[5].Value = (object?)v.CargoType ?? DBNull.Value;
+            p[6].Value = (object?)v.PositionFixingDevice ?? DBNull.Value;
+            p[7].Value = (object?)v.LengthM ?? DBNull.Value;
+            p[8].Value = (object?)v.WidthM ?? DBNull.Value;
+            p[9].Value = Utc(v.FirstSeenUtc);
+            p[10].Value = Utc(v.LastSeenUtc);
             command.ExecuteNonQuery();
         }
 

@@ -34,6 +34,13 @@ internal static class PostgresSchema
           cog DOUBLE PRECISION,
           heading DOUBLE PRECISION,
           nav_status TEXT,
+          rot DOUBLE PRECISION,
+          -- Voyage data, hand-entered and able to go stale on its own. Stored per row
+          -- because the feed flattens AIS's static and dynamic messages onto one line,
+          -- and this table is the log of what the feed said (ADR-0040).
+          draught_m DOUBLE PRECISION,
+          destination TEXT,
+          eta_utc TIMESTAMPTZ,
           quality_flags TEXT NOT NULL DEFAULT '',
           ingest_run_id BIGINT NOT NULL REFERENCES ingest_run(id),
           source_line BIGINT NOT NULL,
@@ -129,6 +136,12 @@ internal static class PostgresSchema
     /// on insert with "column does not exist".
     /// </summary>
     public const string ProjectionUpgrades = """
+        ALTER TABLE position_report ADD COLUMN IF NOT EXISTS rot DOUBLE PRECISION;
+        ALTER TABLE position_report ADD COLUMN IF NOT EXISTS draught_m DOUBLE PRECISION;
+        ALTER TABLE position_report ADD COLUMN IF NOT EXISTS destination TEXT;
+        ALTER TABLE position_report ADD COLUMN IF NOT EXISTS eta_utc TIMESTAMPTZ;
+        ALTER TABLE vessel ADD COLUMN IF NOT EXISTS cargo_type TEXT;
+        ALTER TABLE vessel ADD COLUMN IF NOT EXISTS position_fixing_device TEXT;
         ALTER TABLE port_call ADD COLUMN IF NOT EXISTS port_wpi_number INTEGER;
         ALTER TABLE port_call ADD COLUMN IF NOT EXISTS port_name TEXT;
         ALTER TABLE port_call ADD COLUMN IF NOT EXISTS port_country TEXT;

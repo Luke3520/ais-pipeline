@@ -42,41 +42,54 @@ public sealed class SqliteAisStore : IAisStore
     public void EnsureSchema()
     {
         Execute(SqliteSchema.Ddl);
-        RebuildProjectionsIfStale();
+        AddMissingColumns();
     }
 
     /// <summary>
-    /// Adds the port columns to a port_call built before ADR-0034.
+    /// Columns added to a table after rows already existed, with the release that added them.
     ///
-    /// CREATE TABLE IF NOT EXISTS cannot add a column to a table that already exists, so without
-    /// this every insert into an older database fails on "no such column". ALTER rather than drop
-    /// and recreate: port_call is a projection and could legitimately be rebuilt, but adding a
-    /// column keeps the detections already there, and they are correct in every other respect.
-    /// The new columns read null until the next `detect` fills them, which is exactly what null
-    /// means here -- no port was named.
+    /// CREATE TABLE IF NOT EXISTS does nothing when the table is there, so a column added later is
+    /// invisible to an existing database and every insert fails on "no such column". SQLite has no
+    /// ADD COLUMN IF NOT EXISTS, which is why each one is checked before it is added rather than
+    /// attempted and swallowed -- a swallowed error hides the case where the ALTER failed for some
+    /// other reason.
     ///
-    /// Guarded on the column being absent, so it runs once in a database's life. Doing schema work
-    /// unconditionally on every open is what made the test suite flaky: a schema change invalidates
-    /// statements cached on pooled connections, measured at roughly one failed run in forty.
+    /// ALTER rather than a rebuild. position_report is the immutable log and cannot be recomputed
+    /// from anything; the new columns read null on rows ingested before they existed, which is
+    /// exactly what null means here. Re-ingesting the same files will not fill them either --
+    /// ingest is idempotent by natural key, so the rows are skipped (ADR-0038, ADR-0040).
     /// </summary>
-    private void RebuildProjectionsIfStale()
+    private static readonly (string Table, string Column, string Type)[] AddedColumns =
+    [
+        ("port_call", "port_wpi_number", "INTEGER"),
+        ("port_call", "port_name", "TEXT"),
+        ("port_call", "port_country", "TEXT"),
+        ("port_call", "port_distance_nm", "REAL"),
+        ("position_report", "rot", "REAL"),
+        ("position_report", "draught_m", "REAL"),
+        ("position_report", "destination", "TEXT"),
+        ("position_report", "eta_utc", "TEXT"),
+        ("vessel", "cargo_type", "TEXT"),
+        ("vessel", "position_fixing_device", "TEXT"),
+    ];
+
+    private void AddMissingColumns()
     {
-        using var check = _connection.CreateCommand();
-        check.CommandText = "SELECT COUNT(*) FROM pragma_table_info('port_call') WHERE name = 'port_name';";
-
-        if ((long)check.ExecuteScalar()! > 0)
+        foreach (var (table, column, type) in AddedColumns)
         {
-            return;
-        }
+            using var check = _connection.CreateCommand();
+            check.CommandText =
+                $"SELECT COUNT(*) FROM pragma_table_info('{table}') WHERE name = '{column}';";
 
-        // SQLite has no ADD COLUMN IF NOT EXISTS, which is why the guard above is a query rather
-        // than a clause.
-        Execute("""
-            ALTER TABLE port_call ADD COLUMN port_wpi_number INTEGER;
-            ALTER TABLE port_call ADD COLUMN port_name TEXT;
-            ALTER TABLE port_call ADD COLUMN port_country TEXT;
-            ALTER TABLE port_call ADD COLUMN port_distance_nm REAL;
-            """);
+            if ((long)check.ExecuteScalar()! > 0)
+            {
+                continue;
+            }
+
+            using var alter = _connection.CreateCommand();
+            alter.CommandText = $"ALTER TABLE {table} ADD COLUMN {column} {type};";
+            alter.ExecuteNonQuery();
+        }
     }
 
     public long BeginRun(string sourceFile, DateTime startedUtc)
@@ -128,9 +141,10 @@ public sealed class SqliteAisStore : IAisStore
         command.Transaction = transaction;
         command.CommandText = """
             INSERT OR IGNORE INTO position_report
-              (mmsi, ts_utc, lat, lon, sog_kn, cog, heading, nav_status,
-               quality_flags, ingest_run_id, source_line)
-            VALUES ($mmsi, $ts, $lat, $lon, $sog, $cog, $heading, $nav, $flags, $run, $line);
+              (mmsi, ts_utc, lat, lon, sog_kn, cog, heading, nav_status, rot,
+               draught_m, destination, eta_utc, quality_flags, ingest_run_id, source_line)
+            VALUES ($mmsi, $ts, $lat, $lon, $sog, $cog, $heading, $nav, $rot,
+                    $draught, $dest, $eta, $flags, $run, $line);
             """;
 
         var mmsi = command.Parameters.Add("$mmsi", SqliteType.Integer);
@@ -141,6 +155,10 @@ public sealed class SqliteAisStore : IAisStore
         var cog = command.Parameters.Add("$cog", SqliteType.Real);
         var heading = command.Parameters.Add("$heading", SqliteType.Real);
         var nav = command.Parameters.Add("$nav", SqliteType.Text);
+        var rot = command.Parameters.Add("$rot", SqliteType.Real);
+        var draught = command.Parameters.Add("$draught", SqliteType.Real);
+        var dest = command.Parameters.Add("$dest", SqliteType.Text);
+        var eta = command.Parameters.Add("$eta", SqliteType.Text);
         var flags = command.Parameters.Add("$flags", SqliteType.Text);
         var run = command.Parameters.Add("$run", SqliteType.Integer);
         var line = command.Parameters.Add("$line", SqliteType.Integer);
@@ -159,6 +177,10 @@ public sealed class SqliteAisStore : IAisStore
             cog.Value = (object?)record.CourseOverGround ?? DBNull.Value;
             heading.Value = (object?)record.HeadingDegrees ?? DBNull.Value;
             nav.Value = record.NavigationalStatus;
+            rot.Value = (object?)record.RateOfTurnDegPerMin ?? DBNull.Value;
+            draught.Value = (object?)record.DraughtM ?? DBNull.Value;
+            dest.Value = (object?)record.Destination ?? DBNull.Value;
+            eta.Value = record.EtaUtc is { } etaUtc ? Format(etaUtc) : DBNull.Value;
             flags.Value = accepted.QualityFlags;
             line.Value = record.SourceLine;
 
@@ -224,14 +246,19 @@ public sealed class SqliteAisStore : IAisStore
         // carries none: static data rides only on message-type-5 rows, so most rows have none
         // and overwriting with null would erase what an earlier file established (ADR-0007).
         command.CommandText = """
-            INSERT INTO vessel (mmsi, imo, name, callsign, ship_type, length_m, width_m,
+            INSERT INTO vessel (mmsi, imo, name, callsign, ship_type, cargo_type,
+                                position_fixing_device, length_m, width_m,
                                 first_seen_utc, last_seen_utc)
-            VALUES ($mmsi, $imo, $name, $callsign, $type, $length, $width, $first, $last)
+            VALUES ($mmsi, $imo, $name, $callsign, $type, $cargo, $fixing,
+                    $length, $width, $first, $last)
             ON CONFLICT (mmsi) DO UPDATE SET
               imo = COALESCE(excluded.imo, vessel.imo),
               name = COALESCE(excluded.name, vessel.name),
               callsign = COALESCE(excluded.callsign, vessel.callsign),
               ship_type = COALESCE(excluded.ship_type, vessel.ship_type),
+              cargo_type = COALESCE(excluded.cargo_type, vessel.cargo_type),
+              position_fixing_device =
+                  COALESCE(excluded.position_fixing_device, vessel.position_fixing_device),
               length_m = COALESCE(excluded.length_m, vessel.length_m),
               width_m = COALESCE(excluded.width_m, vessel.width_m),
               first_seen_utc = MIN(excluded.first_seen_utc, vessel.first_seen_utc),
@@ -243,6 +270,8 @@ public sealed class SqliteAisStore : IAisStore
         var name = command.Parameters.Add("$name", SqliteType.Text);
         var callsign = command.Parameters.Add("$callsign", SqliteType.Text);
         var type = command.Parameters.Add("$type", SqliteType.Text);
+        var cargo = command.Parameters.Add("$cargo", SqliteType.Text);
+        var fixing = command.Parameters.Add("$fixing", SqliteType.Text);
         var length = command.Parameters.Add("$length", SqliteType.Real);
         var width = command.Parameters.Add("$width", SqliteType.Real);
         var first = command.Parameters.Add("$first", SqliteType.Text);
@@ -256,6 +285,8 @@ public sealed class SqliteAisStore : IAisStore
             name.Value = (object?)vessel.Name ?? DBNull.Value;
             callsign.Value = (object?)vessel.CallSign ?? DBNull.Value;
             type.Value = (object?)vessel.ShipType ?? DBNull.Value;
+            cargo.Value = (object?)vessel.CargoType ?? DBNull.Value;
+            fixing.Value = (object?)vessel.PositionFixingDevice ?? DBNull.Value;
             length.Value = (object?)vessel.LengthM ?? DBNull.Value;
             width.Value = (object?)vessel.WidthM ?? DBNull.Value;
             first.Value = Format(vessel.FirstSeenUtc);
