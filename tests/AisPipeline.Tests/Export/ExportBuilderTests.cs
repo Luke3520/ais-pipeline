@@ -23,9 +23,11 @@ public class ExportBuilderTests
     private static ExportDocument Build(
         IReadOnlyList<VesselStopStatus> stopStatus,
         IReadOnlyList<VesselFixStatus> fixStatus,
-        IReadOnlyDictionary<long, StoredVessel>? vessels = null) =>
+        IReadOnlyDictionary<long, StoredVessel>? vessels = null,
+        IReadOnlyList<StoredRun>? runs = null) =>
         ExportBuilder.Build(
             T0,
+            runs ??
             [new StoredRun { Id = 1, SourceFile = "day-1.zip", RowsRead = 100, RowsInserted = 40 },
              new StoredRun { Id = 2, SourceFile = "day-2.zip", RowsRead = 60, RowsInserted = 20 }],
             [],
@@ -116,6 +118,44 @@ public class ExportBuilderTests
         Assert.Equal(160, document.Manifest.RowsRead);
         Assert.Equal(60, document.Manifest.RowsStored);
         Assert.Equal(T0, document.Manifest.GeneratedUtc);
+    }
+
+    [Fact]
+    public void A_file_ingested_twice_is_listed_once_and_counted_once()
+    {
+        // Re-running the refresh on a file already in the store is a no-op for the data but still
+        // records a run, by design. Summing runs made the manifest claim eight source files where
+        // seven exist, and inflated "rows read" by a whole day -- 149.6M against an actual 127.6M.
+        var document = Build([], [], runs:
+        [
+            new StoredRun { Id = 1, SourceFile = "day-1.zip", RowsRead = 100, RowsInserted = 40 },
+            new StoredRun { Id = 2, SourceFile = "day-2.zip", RowsRead = 60, RowsInserted = 20 },
+            new StoredRun { Id = 3, SourceFile = "day-2.zip", RowsRead = 60, RowsInserted = 0 },
+        ]);
+
+        Assert.Equal(["day-1.zip", "day-2.zip"], document.Manifest.SourceFiles);
+
+        // The feed held 160 rows however many times it was offered.
+        Assert.Equal(160, document.Manifest.RowsRead);
+
+        // Stored is already immune: the re-ingest inserted nothing.
+        Assert.Equal(60, document.Manifest.RowsStored);
+    }
+
+    [Fact]
+    public void Files_are_listed_in_the_order_they_were_first_ingested()
+    {
+        var document = Build([], [], runs:
+        [
+            new StoredRun { Id = 1, SourceFile = "day-1.zip", RowsRead = 10, RowsInserted = 5 },
+            new StoredRun { Id = 2, SourceFile = "day-2.zip", RowsRead = 10, RowsInserted = 5 },
+            new StoredRun { Id = 3, SourceFile = "day-1.zip", RowsRead = 10, RowsInserted = 0 },
+            new StoredRun { Id = 4, SourceFile = "day-3.zip", RowsRead = 10, RowsInserted = 5 },
+        ]);
+
+        // Not re-ordered by the re-ingest: day-1 keeps its original place.
+        Assert.Equal(["day-1.zip", "day-2.zip", "day-3.zip"], document.Manifest.SourceFiles);
+        Assert.Equal(30, document.Manifest.RowsRead);
     }
 
     [Fact]

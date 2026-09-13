@@ -24,6 +24,13 @@ public static class ExportBuilder
         DateTime firstFixUtc,
         DateTime lastFixUtc)
     {
+        var firstRunPerFile = runs
+            .OrderBy(r => r.Id)
+            .GroupBy(r => r.SourceFile, StringComparer.Ordinal)
+            .Select(g => g.First())
+            .OrderBy(r => r.Id)
+            .ToList();
+
         var byMmsi = new Dictionary<long, VesselRecord>();
 
         // Only vessels that actually lapsed reach the document. The no-lapse rows are needed for
@@ -64,10 +71,16 @@ public static class ExportBuilder
             Manifest = new ExportManifest
             {
                 GeneratedUtc = generatedUtc,
-                SourceFiles = [.. runs.OrderBy(r => r.Id).Select(r => r.SourceFile)],
+                SourceFiles = [.. firstRunPerFile.Select(r => r.SourceFile)],
                 FirstFixUtc = firstFixUtc,
                 LastFixUtc = lastFixUtc,
-                RowsRead = runs.Sum(r => r.RowsRead),
+
+                // One run per file. Summing every run counts a re-ingested file's rows twice, and
+                // the site reads this figure as the size of the feed.
+                RowsRead = firstRunPerFile.Sum(r => r.RowsRead),
+
+                // Every run, and correct as it stands: a re-ingest inserts nothing, so this is the
+                // count of distinct rows stored however many times the files were offered.
                 RowsStored = runs.Sum(r => r.RowsInserted),
             },
             Summary = new ExportSummary

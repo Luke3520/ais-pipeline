@@ -14,11 +14,25 @@ public sealed record ExportManifest
 {
     public required DateTime GeneratedUtc { get; init; }
 
-    /// <summary>The source files whose rows this export summarises, in ingest order.</summary>
+    /// <summary>
+    /// The source files this export summarises, distinct, in the order they were first ingested.
+    ///
+    /// Distinct because a file can be ingested more than once -- re-running the refresh on a file
+    /// already in the store is a no-op for the data but still records a run, by design. Listing
+    /// runs here put the same day in twice and made the site claim it was built from eight files
+    /// when seven exist.
+    /// </summary>
     public required IReadOnlyList<string> SourceFiles { get; init; }
 
     public required DateTime FirstFixUtc { get; init; }
     public required DateTime LastFixUtc { get; init; }
+    /// <summary>
+    /// Rows the source files contained, counting each file once.
+    ///
+    /// A statement about the data, not about the work: summing every run double-counts a file that
+    /// was ingested twice, and the site phrases this as the size of the feed. Re-reading the same
+    /// 22 million rows does not make the feed larger.
+    /// </summary>
     public required long RowsRead { get; init; }
     public required long RowsStored { get; init; }
 }
