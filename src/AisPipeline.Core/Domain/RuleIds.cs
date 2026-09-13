@@ -44,6 +44,15 @@ public static class RuleIds
     public const string StatusClaimsStationary = "R12";
 
     /// <summary>
+    /// An ETA so far ahead that it is a stale one the decoder rolled forward, not a plan.
+    ///
+    /// The AIS ETA field carries month, day, hour and minute — and no year. A decoder reading a
+    /// date that has already passed must assume the next occurrence, so an ETA nobody updated
+    /// reappears up to a year in the future (ADR-0041).
+    /// </summary>
+    public const string EtaImplausiblyFarAhead = "R13";
+
+    /// <summary>
     /// Rules whose firing means a fix's POSITION cannot be trusted, so it must not contribute to
     /// a centroid or a drift maximum (ADR-0021).
     ///

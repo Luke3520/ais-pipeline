@@ -44,7 +44,7 @@ public sealed class RuleRegistry
     public static RuleRegistry Default() => new(
         [new R1UnparseableRow()],
         [new R4PositionSentinel(), new R5SpeedUnavailable(), new R6ImplausibleSpeed(),
-            new R12StatusClaimsStationary()],
+            new R12StatusClaimsStationary(), new R13EtaImplausiblyFarAhead()],
         [new R7Teleport(), new R8CoverageGap(), new R11SpeedConsistency()]);
 
     /// <summary>
