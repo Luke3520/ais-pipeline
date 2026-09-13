@@ -1,6 +1,6 @@
 {
   "manifest": {
-    "generatedUtc": "2026-09-12T22:16:14.572614Z",
+    "generatedUtc": "2026-09-13T05:52:48.875746Z",
     "sourceFiles": [
       "aisdk-2026-09-01.zip",
       "aisdk-2026-09-02.zip",
@@ -89,6 +89,14 @@
       "quarantined": 0,
       "flagged": 4055,
       "total": 4055,
+      "silent": false
+    },
+    {
+      "ruleId": "R13",
+      "description": "ETA more than 60 days ahead; a stale one the decoder rolled over",
+      "quarantined": 0,
+      "flagged": 353069,
+      "total": 353069,
       "silent": false
     }
   ],

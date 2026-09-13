@@ -21,15 +21,23 @@ public sealed class R13EtaImplausiblyFarAhead : IRecordRule
     /// <summary>
     /// How far ahead an ETA stops being a plan, in days.
     ///
-    /// 60, and the number is unusually well behaved: the observed distribution has a **literal
-    /// gap** on either side of it. Across 120,225 fixes carrying an ETA, 95,075 fall within 14
-    /// days and 12,526 within 30 -- then <b>nothing at all</b> between 30 and 90 days -- and then
-    /// 911, 1,679, 628 and 8,213 in the bands beyond, clustering hard at about one year.
+    /// 60, and it sits inside a run of days on which **no fix at all** carries an ETA. Measured
+    /// across all 4.8M fixes carrying one over the seven-day window: 4,012,881 fall within 14 days
+    /// and 438,762 more within 30; the count then falls away through 30, 31, 32 and 33 days, shows
+    /// 127 fixes at exactly 41 and 5 at exactly 77 -- and is <b>empty for every day from 42 to
+    /// 76</b>. Beyond that it climbs again to 39,713 in the 90-180 band and 313,351 past 180,
+    /// clustering at about a year.
     ///
-    /// So any threshold between 30 and 90 days classifies exactly the same rows. Unlike ADR-0020's
-    /// berth distance, which was a guess that later moved by a factor of thirty, and unlike R12's,
-    /// which sits in a trough that is shallow rather than empty, the precise value here provably
-    /// changes nothing. 60 is the middle of the empty band.
+    /// So every threshold between 42 and 76 classifies exactly the same rows, and the precise
+    /// value provably cannot matter. That is a stronger footing than any other constant here:
+    /// ADR-0020's berth distance was a guess that later moved by a factor of thirty, and R12's
+    /// sits in a trough that is shallow rather than empty.
+    ///
+    /// ADR-0041 originally put the empty band at 30-90 days, measured on a three-million-line
+    /// slice of a single day, and told the reader to re-check the gap against a full rebuild. The
+    /// full seven days narrowed it to 42-76. The threshold was already inside both, so nothing it
+    /// classifies changed -- but the range as that record states it is wrong, and the index carries
+    /// the correction.
     /// </summary>
     public const int ImplausibleAfterDays = 60;
 

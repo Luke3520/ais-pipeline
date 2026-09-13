@@ -94,6 +94,29 @@ const statuses = [
     </p>
   </div>
 
+  <h2>The ETA has no year</h2>
+
+  <div class="prose">
+    <p>
+      This one is worth its own section, because it inverts what you would expect. The ETA in an AIS
+      message is four fields — <strong>month, day, hour, minute</strong> — and nothing else. There
+      is no year in the encoding at all.
+    </p>
+    <p>
+      So a decoder reading <code>31 August, 16:00</code> on the first of September has to decide
+      which 31st of August is meant, and the only sane answer is the next one. An ETA that nobody
+      has updated does not drift into the past where you would look for it. It is rolled forward and
+      turns up <em>next year</em>.
+    </p>
+    <p>
+      That is why this site does not flag an ETA in the past. Being late is not a data defect — it
+      is a forecast that did not come true, which happens to every forecast, and the furthest into
+      the past anything was observed is six hours. The stale ones are all in the future, clustered
+      at about 364 days, and there is a clean hole in the distribution between the real plans and
+      the forgotten ones: not one message anywhere between 42 and 76 days ahead.
+    </p>
+  </div>
+
   <h2>Why the numbers are never rounded up</h2>
 
   <div class="prose">

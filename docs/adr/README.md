@@ -59,7 +59,7 @@ the design.
 | [0038](0038-r12-the-mirror-of-r10.md) | R12 — a stationary claim contradicted by the vessel's own speed | Accepted |
 | [0039](0039-an-export-contract-for-a-static-site.md) | An export contract, so the site never touches the database | Accepted |
 | [0040](0040-store-the-rest-of-the-feed.md) | Store the rest of the feed | Accepted |
-| [0041](0041-r13-a-stale-eta-goes-forward-not-backward.md) | R13 — a stale ETA goes forward, not backward | Accepted |
+| [0041](0041-r13-a-stale-eta-goes-forward-not-backward.md) | R13 — a stale ETA goes forward, not backward | Accepted † |
 
 ### † Measurement corrected, 2026-09-12
 
@@ -76,3 +76,16 @@ the index is the one path every reader of these records passes through.
 The rule that would have caught it is now in
 [`docs/rules/quality-rules.md`](../rules/quality-rules.md): a dormancy claim has to name the window
 it was measured on.
+
+### † Measurement corrected, 2026-09-13 (ADR-0041)
+
+That record puts the empty band in the ETA distribution at **30–90 days**, measured on a
+three-million-line slice of one day, and says explicitly that the claim to re-check after a full
+rebuild is the gap rather than the counts. Re-checked against all seven days, the gap is narrower:
+fixes do occur at 30, 31, 32, 33 and 41 days ahead, and 5 occur at 77. The run of days carrying no
+fix at all is **42–76**.
+
+The decision is unaffected. The threshold of 60 sits inside the empty run on both measurements, so
+it classifies identically and the reasoning — that its exact value cannot matter — still holds on
+the narrower band. The record is not superseded and has not been edited; the numbers it states for
+the band are simply drawn from a slice, as it warned.

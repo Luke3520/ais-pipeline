@@ -8,6 +8,7 @@ const n = (v: number, d = 0) =>
 
 const share = (statusDisagreement.disagreeing / statusDisagreement.totalStops) * 100;
 const both = vessels.filter((v) => v.bothDirections).slice(0, 5);
+const eta = data.rules.find((r) => r.ruleId === 'R13');
 ---
 <Base
   title="Who forgot the dial? — AIS navigational status, checked against the ships' own movement"
@@ -24,7 +25,7 @@ const both = vessels.filter((v) => v.bothDirections).slice(0, 5);
     <li class="stat alarm"><b>{n(share, 0)}%</b><span>of stops claimed "under way"</span></li>
     <li class="stat"><b>{n(summary.hoursClaimingUnderWay)}</b><span>hours parked, claiming to steam</span></li>
     <li class="stat alarm"><b>{n(summary.departureLapses)}</b><span>fixes claiming moored, while moving</span></li>
-    <li class="stat"><b>{n(summary.vesselsWithStops)}</b><span>vessels stopped in the window</span></li>
+    <li class="stat alarm"><b>{n(eta?.flagged ?? 0)}</b><span>messages with an ETA over a year out</span></li>
   </ul>
 
   <h2>The dial is set once, or never</h2>
@@ -58,6 +59,24 @@ const both = vessels.filter((v) => v.bothDirections).slice(0, 5);
       reports. The fastest was doing 15.5 knots while telling the world it was tied up.
     </p>
   </div>
+
+  <h2>A third field, going stale sideways</h2>
+
+  <p class="prose">
+    The ETA is hand-typed too, and it rots the same way — but it shows up <em>inverted</em>, because
+    of a quirk in the encoding. <strong>The AIS ETA field has no year.</strong> It carries month,
+    day, hour and minute and nothing else, so a decoder meeting a date that has already gone by has
+    to assume the next one. A forgotten ETA is never left behind in the past; it gets rolled forward
+    and reappears up to a year ahead.
+  </p>
+
+  <p class="prose">
+    You can see it in the data as a hole. Across {n(4800000)} messages carrying an ETA, the count
+    falls away smoothly to about a month out — and then there is <strong>not one single message</strong>
+    anywhere between 42 and 76 days ahead, before the numbers climb again and pile up at almost
+    exactly one year. Two populations with nothing in between: real voyage plans, and dates nobody
+    has touched since they passed. {n(eta?.flagged ?? 0)} messages sit in the far one.
+  </p>
 
   <h2>Forgot in both directions</h2>
 
