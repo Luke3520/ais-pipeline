@@ -226,6 +226,26 @@ public sealed record VesselFixStatus
     public double SharePercent => TotalFixes == 0 ? 0 : 100.0 * Lapses / TotalFixes;
 }
 
+/// <summary>
+/// One completed call's hours, with what is needed to decide whether it belongs in a benchmark.
+///
+/// The filtering happens in Core rather than in SQL so the exclusions can be counted and reported:
+/// a benchmark that quietly drops two thirds of its input is a benchmark nobody can check, and on
+/// this window it does drop two thirds — 357 attributed calls become 119 usable ones (ADR-0043).
+/// </summary>
+public sealed record PortCallHours
+{
+    public int WpiNumber { get; init; }
+    public string PortName { get; init; } = "";
+    public string Country { get; init; } = "";
+    public double WaitingHours { get; init; }
+    public double WorkingHours { get; init; }
+    public double DistanceNm { get; init; }
+
+    /// <summary>False when the call's true extent is unknown, so its hours are lower bounds.</summary>
+    public bool IsComplete { get; init; }
+}
+
 /// <summary>Filters for the collection endpoints. Null means unrestricted.</summary>
 public sealed record PortCallFilter
 {

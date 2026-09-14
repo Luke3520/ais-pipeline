@@ -196,6 +196,20 @@ public sealed class SqlAisQueries : IAisQueries
         return [.. rows];
     }
 
+    public IReadOnlyList<PortCallHours> PortCallHoursForBenchmarks()
+    {
+        using var c = Open();
+        return [.. c.Query<PortCallHours>("""
+            SELECT port_wpi_number AS WpiNumber, port_name AS PortName,
+                   port_country AS Country, waiting_hours AS WaitingHours,
+                   working_hours AS WorkingHours, port_distance_nm AS DistanceNm,
+                   is_complete AS IsComplete
+            FROM port_call
+            WHERE port_name IS NOT NULL
+            ORDER BY port_wpi_number, arrived_utc
+            """)];
+    }
+
     public StoredPortCall? GetPortCall(long id)
     {
         using var c = Open();

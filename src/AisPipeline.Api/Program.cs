@@ -2,6 +2,7 @@ using AisPipeline.Adapters.Sql;
 using AisPipeline.Api;
 using AisPipeline.Api.GraphQL;
 using AisPipeline.Core.Ports;
+using AisPipeline.Core.Benchmarks;
 using AisPipeline.Core.Laytime;
 using AisPipeline.Core.Quality;
 using AisPipeline.Core.Query;
@@ -205,6 +206,69 @@ app.MapGet("/portcalls/{id:long}/laytime", (
         });
     })
    .WithSummary("Laytime and demurrage for one port call, on supplied charter party terms");
+
+// Port benchmarks: what calls at a port actually took.
+//
+// Every figure ships with the count behind it and with what was thrown away to produce it. On the
+// current window 357 attributed calls become 119 usable ones, and a median drawn from a third of
+// the data without saying so is worse than no median (ADR-0043).
+app.MapGet("/ports", (IAisQueries q) =>
+        Results.Ok(PortBenchmarkBuilder.Build(q.PortCallHoursForBenchmarks())
+            .Select(b => new
+            {
+                b.WpiNumber,
+                b.PortName,
+                b.Country,
+                b.AttributedCalls,
+                b.UsableCalls,
+                b.ExcludedIncomplete,
+                b.ExcludedTooFar,
+                b.MedianWaitingHours,
+                b.P90WaitingHours,
+                b.MedianWorkingHours,
+            })))
+   .WithSummary("Waiting and working benchmarks per port, with the sample each rests on");
+
+// The question an agent actually asks is not "what is the median" but "was mine unusual".
+app.MapGet("/ports/{wpiNumber:int}", (IAisQueries q, int wpiNumber, double? waitingHours) =>
+    {
+        var benchmark = PortBenchmarkBuilder.Build(q.PortCallHoursForBenchmarks())
+            .FirstOrDefault(b => b.WpiNumber == wpiNumber);
+
+        if (benchmark is null)
+        {
+            return Results.NotFound(new { error = $"no calls attributed to port {wpiNumber}" });
+        }
+
+        return Results.Ok(new
+        {
+            benchmark.WpiNumber,
+            benchmark.PortName,
+            benchmark.Country,
+            benchmark.AttributedCalls,
+            benchmark.UsableCalls,
+            benchmark.ExcludedIncomplete,
+            benchmark.ExcludedTooFar,
+            benchmark.MedianWaitingHours,
+            benchmark.P90WaitingHours,
+            benchmark.MedianWorkingHours,
+
+            // Published so the percentiles can be checked rather than trusted.
+            waitingHoursObserved = benchmark.WaitingHours,
+
+            // Null when the sample is too small to rank against, never a confident-looking zero.
+            comparison = waitingHours is { } hours
+                ? new
+                {
+                    hours,
+                    percentile = benchmark.RankWaiting(hours),
+                    longerThanCalls = benchmark.WaitingHours.Count(h => h <= hours),
+                    ofCalls = benchmark.UsableCalls,
+                }
+                : null,
+        });
+    })
+   .WithSummary("One port's benchmark, optionally ranking a given wait against it");
 
 app.MapGet("/quality", (IAisQueries q) =>
         Results.Ok(QualityReport.Build(RuleRegistry.Default(), q.QualityReport())))

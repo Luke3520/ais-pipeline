@@ -82,6 +82,15 @@ public interface IAisQueries : IDisposable
     /// </summary>
     IReadOnlyList<StoredPortCall> PortCallsOverlapping(long mmsi, DateTime fromUtc, DateTime toUtc);
 
+    /// <summary>
+    /// Every attributed port call's hours, unfiltered.
+    ///
+    /// Unfiltered on purpose: deciding which calls a benchmark may use is a judgement about
+    /// evidence, and it belongs where it can be tested and where the exclusions can be counted,
+    /// not in a WHERE clause nobody sees (ADR-0043).
+    /// </summary>
+    IReadOnlyList<PortCallHours> PortCallHoursForBenchmarks();
+
     IReadOnlyList<RuleHitCount> QualityReport();
 
     /// <summary>

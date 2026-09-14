@@ -203,6 +203,19 @@ completion belongs to exactly one line with a reason attached, because a total n
 is a total nobody can dispute. A call that cannot be priced answers **422** and names what is
 missing, rather than failing as though the server broke.
 
+`GET /ports` and `GET /ports/{wpi}?waitingHours=40` answer the question an agent actually asks —
+not "what is the median" but "was mine unusual". On the seven-day window:
+
+> **Skagen Havn** — median wait 12.0 h, p90 48.2 h, from 33 complete calls.
+> 40 hours is longer than 28 of 33 → **85th percentile**.
+> 27 calls excluded as still open, 11 as too far offshore.
+
+Every figure ships with the sample behind it and with what was thrown away to get there, because
+357 attributed calls become 119 usable ones once lower-bound hours and far-offshore attributions are
+removed — and a median drawn from a third of the data without saying so is worse than no median.
+Below five usable calls there is no median at all, and below ten no p90
+([ADR-0043](docs/adr/0043-port-benchmarks-carry-their-sample.md)).
+
 `reconcile` deliberately has no endpoint. It needs a Statement of Facts document, and accepting one
 is the write surface [ADR-0029](docs/adr/0029-when-to-revisit-the-architecture.md) names as a
 trigger — a signed commercial record arriving over an unauthenticated connection is a decision about

@@ -61,6 +61,7 @@ the design.
 | [0040](0040-store-the-rest-of-the-feed.md) | Store the rest of the feed | Accepted |
 | [0041](0041-r13-a-stale-eta-goes-forward-not-backward.md) | R13 — a stale ETA goes forward, not backward | Accepted † |
 | [0042](0042-laytime-over-http-reconcile-stays-a-verb.md) | Laytime over HTTP; reconcile stays a CLI verb | Accepted |
+| [0043](0043-port-benchmarks-carry-their-sample.md) | A port benchmark carries the sample it rests on | Accepted |
 
 ### † Measurement corrected, 2026-09-12
 
