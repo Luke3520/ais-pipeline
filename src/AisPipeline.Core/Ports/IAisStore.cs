@@ -69,4 +69,19 @@ public interface IAisStore : IDisposable
     /// re-running detection must land on exactly the same result as running it once (ADR-0009).
     /// </summary>
     void ReplaceDetections(IReadOnlyList<PortCall> portCalls);
+
+    /// <summary>
+    /// Drops every projection and every fix before <paramref name="cutoffUtc"/>, and records it.
+    ///
+    /// Projections go too, and that is what makes this safe rather than clever. They are a total
+    /// function of the log (rule 5), so a store that keeps derived rows over a partly-pruned log is
+    /// a contradiction -- and every attempt to maintain one produced a defect at the seam
+    /// (ADR-0044). Dropping both leaves the invariant intact: everything here is derived from
+    /// what is still here. `detect` rebuilds afterwards from the fixes that remain.
+    ///
+    /// The caller is responsible for archiving what will be lost BEFORE calling this. The store
+    /// cannot check that, which is why the CLI refuses to prune without writing an archive first.
+    /// </summary>
+    /// <returns>How many position reports were removed.</returns>
+    long PruneBefore(DateTime cutoffUtc, long portCallsArchived, string archivePath);
 }

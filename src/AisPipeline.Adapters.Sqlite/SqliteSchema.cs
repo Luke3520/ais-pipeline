@@ -79,6 +79,16 @@ internal static class SqliteSchema
         -- position_report would stay flat while quarantine doubled (ADR-0006).
 
         CREATE INDEX IF NOT EXISTS ix_quarantine_rule ON quarantine (rule_id);
+        -- Rule 2 applied to deletion. Rows removed on purpose still leave evidence: without it a
+        -- pruned store is indistinguishable from one that was never fully ingested (ADR-0045).
+        CREATE TABLE IF NOT EXISTS retention_event (
+          id INTEGER PRIMARY KEY,
+          applied_utc TEXT NOT NULL,
+          cutoff_utc TEXT NOT NULL,
+          fixes_removed INTEGER NOT NULL,
+          port_calls_archived INTEGER NOT NULL,
+          archive_path TEXT NOT NULL
+        );
 
         CREATE TABLE IF NOT EXISTS stop_event (
           id INTEGER PRIMARY KEY,

@@ -84,6 +84,10 @@ internal sealed class FakeAisStore : IAisStore
         }
     }
 
+    /// <summary>Retention is a store concern; the integration suite covers it on both engines.</summary>
+    public long PruneBefore(DateTime cutoffUtc, long portCallsArchived, string archivePath) =>
+        throw new NotSupportedException("the fake store does not retain, so it cannot prune");
+
     public void ReplaceDetections(IReadOnlyList<PortCall> portCalls)
     {
         ReplaceDetectionsCalls++;

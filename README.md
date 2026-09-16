@@ -271,6 +271,7 @@ uploaded, which is a write surface and a separate trigger.
 
 ```bash
 ais export --out site/src/data     # refresh the data the site builds from
+ais prune --keep-days 90 --force   # archive old port calls, then drop what is past the time bar
 cd site && npm install && npm run dev
 ```
 

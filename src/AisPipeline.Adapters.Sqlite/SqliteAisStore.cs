@@ -354,6 +354,48 @@ public sealed class SqliteAisStore : IAisStore
         transaction.Commit();
     }
 
+    public long PruneBefore(DateTime cutoffUtc, long portCallsArchived, string archivePath)
+    {
+        using var transaction = _connection.BeginTransaction();
+        var cutoff = Format(cutoffUtc);
+
+        // Projections first, and all of them. Phases reference both tables below, and a stop
+        // reaching back across the cutoff references a fix about to go -- deleting the lot removes
+        // every ordering question at once, and detect rebuilds from what remains.
+        foreach (var table in new[] { "port_call_phase", "port_call", "stop_event" })
+        {
+            using var drop = _connection.CreateCommand();
+            drop.Transaction = transaction;
+            drop.CommandText = $"DELETE FROM {table};";
+            drop.ExecuteNonQuery();
+        }
+
+        using var delete = _connection.CreateCommand();
+        delete.Transaction = transaction;
+        delete.CommandText = "DELETE FROM position_report WHERE ts_utc < $cutoff;";
+        delete.Parameters.AddWithValue("$cutoff", cutoff);
+        var removed = (long)delete.ExecuteNonQuery();
+
+        // Same transaction as the deletion: rows that vanish without a record are the silent
+        // disappearance rule 2 forbids.
+        using var record = _connection.CreateCommand();
+        record.Transaction = transaction;
+        record.CommandText = """
+            INSERT INTO retention_event
+              (applied_utc, cutoff_utc, fixes_removed, port_calls_archived, archive_path)
+            VALUES ($applied, $cutoff, $removed, $archived, $path);
+            """;
+        record.Parameters.AddWithValue("$applied", Format(DateTime.UtcNow));
+        record.Parameters.AddWithValue("$cutoff", cutoff);
+        record.Parameters.AddWithValue("$removed", removed);
+        record.Parameters.AddWithValue("$archived", portCallsArchived);
+        record.Parameters.AddWithValue("$path", archivePath);
+        record.ExecuteNonQuery();
+
+        transaction.Commit();
+        return removed;
+    }
+
     public void ReplaceDetections(IReadOnlyList<PortCall> portCalls)
     {
         using var transaction = _connection.BeginTransaction();

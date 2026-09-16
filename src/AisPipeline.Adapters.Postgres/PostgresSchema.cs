@@ -73,6 +73,15 @@ internal static class PostgresSchema
         );
 
         CREATE INDEX IF NOT EXISTS ix_quarantine_rule ON quarantine (rule_id);
+        -- Rule 2 applied to deletion: rows removed on purpose still leave evidence (ADR-0045).
+        CREATE TABLE IF NOT EXISTS retention_event (
+          id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+          applied_utc TIMESTAMPTZ NOT NULL,
+          cutoff_utc TIMESTAMPTZ NOT NULL,
+          fixes_removed BIGINT NOT NULL,
+          port_calls_archived BIGINT NOT NULL,
+          archive_path TEXT NOT NULL
+        );
 
         CREATE TABLE IF NOT EXISTS stop_event (
           id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,

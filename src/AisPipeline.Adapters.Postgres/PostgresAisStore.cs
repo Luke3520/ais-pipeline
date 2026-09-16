@@ -331,6 +331,45 @@ public sealed class PostgresAisStore : IAisStore
         transaction.Commit();
     }
 
+    public long PruneBefore(DateTime cutoffUtc, long portCallsArchived, string archivePath)
+    {
+        using var connection = _source.OpenConnection();
+        using var transaction = connection.BeginTransaction();
+
+        // Every projection, then the old fixes. Dropping both keeps the invariant that everything
+        // derived here comes from what is still here (ADR-0045).
+        foreach (var table in new[] { "port_call_phase", "port_call", "stop_event" })
+        {
+            using var drop = connection.CreateCommand();
+            drop.Transaction = transaction;
+            drop.CommandText = $"DELETE FROM {table};";
+            drop.ExecuteNonQuery();
+        }
+
+        using var delete = connection.CreateCommand();
+        delete.Transaction = transaction;
+        delete.CommandText = "DELETE FROM position_report WHERE ts_utc < $1;";
+        delete.Parameters.AddWithValue(Utc(cutoffUtc));
+        var removed = (long)delete.ExecuteNonQuery();
+
+        using var record = connection.CreateCommand();
+        record.Transaction = transaction;
+        record.CommandText = """
+            INSERT INTO retention_event
+              (applied_utc, cutoff_utc, fixes_removed, port_calls_archived, archive_path)
+            VALUES ($1, $2, $3, $4, $5);
+            """;
+        record.Parameters.AddWithValue(Utc(DateTime.UtcNow));
+        record.Parameters.AddWithValue(Utc(cutoffUtc));
+        record.Parameters.AddWithValue(removed);
+        record.Parameters.AddWithValue(portCallsArchived);
+        record.Parameters.AddWithValue(archivePath);
+        record.ExecuteNonQuery();
+
+        transaction.Commit();
+        return removed;
+    }
+
     public void ReplaceDetections(IReadOnlyList<PortCall> portCalls)
     {
         using var connection = _source.OpenConnection();

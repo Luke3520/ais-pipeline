@@ -35,6 +35,7 @@ return args[0] switch
     "stops" => Stops(args[1..]),
     "portcalls" => PortCalls(args[1..]),
     "export" => Export(args[1..]),
+    "prune" => Prune(args[1..]),
     _ => Unknown(args[0]),
 };
 
@@ -54,6 +55,7 @@ static void Usage() => Console.WriteLine("""
       ais reconcile --sof <file.json> [--allowed <h>] [--rate <perDay>] [--turn <h>]
       ais quality [--db <path> | --postgres <conn>]
       ais export --out <dir> [--db <path> | --postgres <conn>]
+      ais prune --keep-days <n> [--archive <dir>] [--force] [--db <path> | --postgres <conn>]
       ais stops [--mmsi <n>] [--min-hours <h>] [--complete-only] [--disagreements] [--limit <n>]
       ais portcalls [--mmsi <n>] [--min-waiting-hours <h>] [--complete-only] [--limit <n>]
 
@@ -75,6 +77,11 @@ static void Usage() => Console.WriteLine("""
     quality reports every registered rule and what it did to the data: rows it rejected into
     quarantine, and rows it kept but flagged. A rule that never fired prints zero rather than
     vanishing -- silence and absence are different claims (ADR-0032).
+
+    prune archives the port calls it is about to lose, then removes every projection and every
+    fix older than --keep-days. Projections go too, on purpose: they are a total function of the
+    log, and a derived layer over a partly-pruned log is a contradiction that produces a defect
+    at every seam. Run detect afterwards to rebuild from what remains (ADR-0045).
 
     export writes the derived layer as JSON for a static site to build from. It carries its own
     provenance -- which source files, which window, how many rows -- so a published figure can say
@@ -637,6 +644,115 @@ static string Hours(double? figure, double observed) =>
     figure is { } known
         ? known.ToString("F1", CultureInfo.InvariantCulture).PadLeft(8)
         : (">=" + observed.ToString("F1", CultureInfo.InvariantCulture)).PadLeft(8);
+
+static int Prune(string[] args)
+{
+    if (ValueOf(args, "--keep-days") is not { } rawDays
+        || !int.TryParse(rawDays, NumberStyles.None, CultureInfo.InvariantCulture, out var keepDays)
+        || keepDays <= 0)
+    {
+        Console.Error.WriteLine("prune needs --keep-days <positive whole number>");
+        return 2;
+    }
+
+    var connection = ReadConnection.Resolve(ValueOf(args, "--postgres"), ValueOf(args, "--db"));
+
+    if (connection.Dialect == SqlDialect.Sqlite && !File.Exists(connection.SqlitePath))
+    {
+        Console.Error.WriteLine($"no database at {connection.SqlitePath}");
+        return 2;
+    }
+
+    var cutoff = DateTime.UtcNow.AddDays(-keepDays);
+    var archiveDir = ValueOf(args, "--archive") ?? "archive";
+
+    using var queries = connection.OpenQueries();
+
+    // Everything that will not survive: a call arriving before the cutoff either disappears with
+    // its fixes or is rebuilt truncated, and either way the record held now is the last complete
+    // one. The export does NOT cover this -- it carries the lapse analysis, not the calls -- so
+    // the archive is written here or the history is simply lost (ADR-0045).
+    var losing = queries.ListPortCalls(new PortCallFilter { Limit = 100_000 })
+        .Where(c => c.ArrivedUtc < cutoff)
+        .OrderBy(c => c.ArrivedUtc)
+        .ToList();
+
+    Console.WriteLine($"cutoff: everything before {cutoff:yyyy-MM-dd HH:mm} UTC");
+    Console.WriteLine($"  {losing.Count} port call(s) would no longer be derivable");
+
+    if (!Present(args, "--force"))
+    {
+        Console.Error.WriteLine(
+            $"  nothing removed. Re-run with --force to archive them to {archiveDir}/ and prune.");
+        return 2;
+    }
+
+    Directory.CreateDirectory(archiveDir);
+    var archivePath = Path.Combine(archiveDir, $"port-calls-before-{cutoff:yyyyMMddTHHmmss}Z.json");
+
+    var phases = queries.GetPhasesForPortCalls([.. losing.Select(c => c.Id)]);
+
+    var archive = new
+    {
+        archivedUtc = DateTime.UtcNow,
+        cutoffUtc = cutoff,
+        sourceFiles = queries.ListRuns().OrderBy(r => r.Id).Select(r => r.SourceFile).Distinct(),
+        portCalls = losing.Select(call => new
+        {
+            call.Id,
+            call.Mmsi,
+            call.ArrivedUtc,
+            call.DepartedUtc,
+            call.WaitingHours,
+            call.WorkingHours,
+            call.UnclassifiedHours,
+            call.IsComplete,
+            call.PortName,
+            call.PortCountry,
+            call.PortDistanceNm,
+            phases = phases.Where(p => p.Phase.PortCallId == call.Id)
+                .OrderBy(p => p.Phase.Sequence)
+                .Select(p => new
+                {
+                    p.Phase.Sequence,
+                    p.Phase.Phase,
+                    p.Stop.StartedUtc,
+                    p.Stop.EndedUtc,
+                    p.Stop.ObservedDurationHours,
+                    p.Stop.IsComplete,
+                    p.Stop.ReportedStatus,
+                    p.Stop.StatusAgrees,
+                }),
+        }),
+    };
+
+    File.WriteAllText(
+        archivePath,
+        JsonSerializer.Serialize(archive, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            WriteIndented = true,
+        }));
+
+    // Written and readable before a single row is deleted. An archive that failed to write, on a
+    // prune that succeeded, loses the history permanently.
+    if (!File.Exists(archivePath) || new FileInfo(archivePath).Length == 0)
+    {
+        Console.Error.WriteLine($"  archive at {archivePath} is missing or empty; nothing removed");
+        return 1;
+    }
+
+    Console.WriteLine($"  archived to {archivePath} ({new FileInfo(archivePath).Length / 1024.0:F0} KB)");
+
+    using var store = OpenStore(args);
+    store.EnsureSchema();
+    var removed = store.PruneBefore(cutoff, losing.Count, archivePath);
+
+    Console.WriteLine($"  removed {removed:N0} position report(s) and every projection");
+    Console.WriteLine("  run detect to rebuild stops and port calls from what remains.");
+
+    return 0;
+}
 
 static int Export(string[] args)
 {
