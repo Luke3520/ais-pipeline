@@ -56,6 +56,19 @@ internal static class DialectExtensions
     }
 
     /// <summary>
+    /// Whole days from one timestamp column to another, truncated toward zero.
+    ///
+    /// SQLite has no interval type and reaches for julianday; Postgres subtracts the timestamps
+    /// and needs the seconds out of the interval. TRUNC on both sides rather than FLOOR, because
+    /// SQLite's CAST(... AS INTEGER) truncates toward zero and FLOOR would disagree with it for
+    /// an ETA that has already passed -- which is exactly the population this measures.
+    /// </summary>
+    public static string DaysBetween(this SqlDialect dialect, string from, string to) =>
+        dialect == SqlDialect.Postgres
+            ? $"TRUNC(EXTRACT(EPOCH FROM ({to} - {from})) / 86400)::int"
+            : $"CAST(julianday({to}) - julianday({from}) AS INTEGER)";
+
+    /// <summary>
     /// Predicate matching a column against a collection of values.
     ///
     /// Dapper expands <c>IN @ids</c> into <c>IN (@ids1, @ids2, ...)</c>, which SQLite accepts and

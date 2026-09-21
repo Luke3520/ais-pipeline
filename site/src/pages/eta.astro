@@ -1,0 +1,158 @@
+---
+import Base from '../layouts/Base.astro';
+import data from '../data/pipeline.json';
+
+const { etaHorizon: h, rules } = data;
+const n = (v: number, d = 0) =>
+  v.toLocaleString('en-GB', { minimumFractionDigits: d, maximumFractionDigits: d });
+
+const r13 = rules.find((r) => r.ruleId === 'R13');
+
+// Everything up to a year. Beyond that the rollover cannot reach, so a bin there would be a
+// different phenomenon sharing an axis.
+const MAX_DAYS = 366;
+const bins = h.bins.filter((b) => b.daysAhead <= MAX_DAYS);
+const peak = Math.max(...bins.map((b) => b.fixes));
+
+// Square root rather than log. A log axis makes an empty bin and a bin holding five fixes look
+// alike at this scale, and the point of the chart is that one of them is empty.
+const W = 960;
+const H = 260;
+const x = (day: number) => (day / MAX_DAYS) * W;
+const y = (fixes: number) => H - (Math.sqrt(fixes) / Math.sqrt(peak)) * H;
+const barWidth = Math.max(1.1, W / MAX_DAYS);
+
+const threshold = h.bandContainingTheThreshold;
+const straggler = bins
+  .filter((b) => b.fixes > 0 && b.daysAhead > 33 && b.daysAhead < 131)
+  .map((b) => `day ${b.daysAhead} carries ${n(b.fixes)}`);
+
+const nearTerm = bins.filter((b) => b.daysAhead <= 33).reduce((t, b) => t + b.fixes, 0);
+const desert = bins
+  .filter((b) => b.daysAhead >= 34 && b.daysAhead <= 130)
+  .reduce((t, b) => t + b.fixes, 0);
+---
+<Base
+  title="The ETA cliff — a field that cannot expire, so it rolls over instead"
+  description="The AIS estimated-time-of-arrival field carries no year. A forgotten ETA is never left behind in the past; it is catapulted up to a year into the future. You can see the seam."
+>
+  <h1>The field that cannot expire</h1>
+
+  <p class="lede prose">
+    Every AIS message can carry an estimated time of arrival, typed in by the crew. It has{' '}
+    <strong>no year</strong> — month, day, hour and minute, and nothing else. So a decoder meeting
+    a date that has already gone by has no way to read it as the past, and must assume the next
+    one. A forgotten ETA is never left behind. It is rolled forward, and reappears months ahead.
+  </p>
+
+  <p class="prose">
+    Here is every ETA in the feed, placed by how far ahead of its own message it pointed.
+  </p>
+
+  <figure class="chart">
+    <svg viewBox={`0 0 ${W} ${H + 42}`} role="img"
+         aria-label={`Histogram of AIS ETAs by days ahead. Fixes fall away smoothly to about day 33, then a ${threshold?.days}-day stretch carries none at all, before the count climbs again and peaks near one year.`}>
+      {threshold && (
+        <rect class="band" x={x(threshold.fromDays)} y="0"
+              width={x(threshold.toDays + 1) - x(threshold.fromDays)} height={H} />
+      )}
+
+      {bins.map((b) => (
+        b.fixes > 0 && (
+          <rect class={b.daysAhead > h.flaggedBeyondDays ? 'col stale' : 'col'}
+                x={x(b.daysAhead)} y={y(b.fixes)}
+                width={barWidth} height={H - y(b.fixes)}>
+            <title>{`day ${b.daysAhead}: ${n(b.fixes)} fixes`}</title>
+          </rect>
+        )
+      ))}
+
+      <line class="axis" x1="0" y1={H} x2={W} y2={H} />
+
+      {[0, 30, 60, 90, 180, 270, 365].map((d) => (
+        <>
+          <line class="tick" x1={x(d)} y1={H} x2={x(d)} y2={H + 5} />
+          <text class="label" x={x(d)} y={H + 20}>{d}</text>
+        </>
+      ))}
+      <text class="label axis-title" x={W / 2} y={H + 38}>days ahead of the message that carried it</text>
+    </svg>
+    <figcaption class="note">
+      Bar height is the square root of the count, so a day carrying five fixes is still visible
+      beside one carrying two million. A day carrying none has no bar at all — which is the point.
+      The shaded stretch is the {threshold?.days} days where R13 draws its line.
+    </figcaption>
+  </figure>
+
+  <ul class="stats">
+    <li class="stat"><b>{n(h.fixesWithAnEta)}</b><span>fixes carrying an ETA</span></li>
+    <li class="stat ok"><b>{n(nearTerm)}</b><span>pointing inside 33 days</span></li>
+    <li class="stat alarm"><b>{n(desert)}</b><span>across the next 97 days</span></li>
+    <li class="stat alarm"><b>{n(r13?.flagged ?? 0)}</b><span>flagged stale by R13</span></li>
+  </ul>
+
+  <h2>The seam</h2>
+
+  <div class="prose">
+    <p>
+      Real voyage plans behave the way you would expect: most ETAs point at today or tomorrow, and
+      the count falls away smoothly for about a month. Then it stops. Between day 34 and day 130 —{' '}
+      <strong>97 days</strong> — the entire feed carries {n(desert)} fixes, against tens of
+      thousands a day on either side. {straggler.length > 0 && (
+        <>Only {straggler.join(' and ')}.</>
+      )}
+    </p>
+    <p>
+      After that the count climbs back and piles up towards a year out. Those are not voyage plans.
+      A ship does not know in September where it will be next August. They are dates nobody has
+      touched since they passed, rolled forward by a decoder that had no year to tell it otherwise.
+    </p>
+  </div>
+
+  <blockquote class="prose">
+    <p>
+      This is what makes the ETA different from the other hand-typed fields. A stale navigational
+      status looks like a plausible status. A stale ETA cannot look like a plausible ETA — the
+      encoding will not let it sit in the past — so it has to announce itself, months out, where
+      nobody would ever have typed it.
+    </p>
+  </blockquote>
+
+  <h2>Why the threshold cannot matter</h2>
+
+  <p class="prose">
+    Rule <strong>R13</strong> flags an ETA more than <strong>{h.flaggedBeyondDays} days</strong>
+    ahead as stale, and flags {n(r13?.flagged ?? 0)} fixes — about one in fifteen of everything
+    stored. A threshold like that usually deserves an argument about whether it is set in the right
+    place.
+    {threshold
+      ? <> Not here: <strong>day {h.flaggedBeyondDays} sits inside a run of {threshold.days} days
+        ({threshold.fromDays}–{threshold.toDays}) on which no fix lands at all.</strong> Anywhere in
+        that run classifies every message identically, so the exact value cannot change a single
+        answer.</>
+      : <> On this window no such run exists, which means the threshold <em>is</em> deciding
+        something and deserves the argument after all.</>}
+  </p>
+
+  <p class="note prose">
+    That claim is recomputed from the data every time this page is built, rather than quoted from
+    the decision that made it. A threshold justified by a gap that has since closed is a threshold
+    nobody is justifying.
+  </p>
+
+  <h2>What is not being claimed</h2>
+
+  <div class="prose">
+    <p>
+      Nothing is rejected for this. A stale ETA is still exactly what the vessel broadcast, and the
+      pipeline keeps it and records the doubt beside it — the same treatment every hand-typed field
+      gets here. {n(h.fixesWithAPastEta)} fixes even carry an ETA that had already passed, which
+      the rollover is supposed to make impossible; they are kept too.
+    </p>
+    <p>
+      And it is not a claim about any crew. An ETA is a forecast, and a forecast nobody revised is
+      the most ordinary thing on a ship. What the shape shows is that the <em>field</em> has no way
+      to say "I am out of date" — so it says something much louder instead.
+    </p>
+  </div>
+</Base>

@@ -896,7 +896,8 @@ static int Export(string[] args)
         stops.Count > 0 ? stops.Min(s => s.StartedUtc) : DateTime.UnixEpoch,
         stops.Count > 0 ? stops.Max(s => s.EndedUtc) : DateTime.UnixEpoch,
         queries.PortCallHoursForBenchmarks(),
-        callsForPricing);
+        callsForPricing,
+        queries.EtaHorizon());
 
     Directory.CreateDirectory(outDir);
     var path = Path.Combine(outDir, "pipeline.json");

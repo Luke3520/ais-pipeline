@@ -1,6 +1,7 @@
 using AisPipeline.Core.Benchmarks;
 using AisPipeline.Core.Laytime;
 using AisPipeline.Core.Quality;
+using AisPipeline.Core.Voyage;
 using AisPipeline.Core.Query;
 
 namespace AisPipeline.Core.Export;
@@ -146,6 +147,15 @@ public sealed record ExportDocument
     /// label rather than to a number. The API answers the same question at /meta (ADR-0047).
     /// </summary>
     public required ExportThresholds Thresholds { get; init; }
+
+    /// <summary>
+    /// Every ETA in the feed, binned by how far ahead it pointed.
+    ///
+    /// Publishable without reservation: it is a shape, not a claim about any vessel. It is also the
+    /// clearest thing in this document -- the two populations and the empty run between them are
+    /// visible at a glance, where the prose describing them takes a paragraph.
+    /// </summary>
+    public required EtaHorizon EtaHorizon { get; init; }
 }
 
 /// <summary>The constants a reader needs in order to argue with a figure in this document.</summary>

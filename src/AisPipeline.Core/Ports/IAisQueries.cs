@@ -1,7 +1,9 @@
+using AisPipeline.Core.Voyage;
 using AisPipeline.Core.Domain;
 using AisPipeline.Core.Query;
 
 namespace AisPipeline.Core.Ports;
+
 
 /// <summary>
 /// The read side.
@@ -90,6 +92,15 @@ public interface IAisQueries : IDisposable
     /// not in a WHERE clause nobody sees (ADR-0043).
     /// </summary>
     IReadOnlyList<PortCallHours> PortCallHoursForBenchmarks();
+
+    /// <summary>
+    /// Every ETA in the store, binned by whole days ahead of the fix that carried it.
+    ///
+    /// Counted in SQL rather than streamed into Core: this is an aggregate over five million rows
+    /// and the answer is a few hundred bins. Negative days are kept -- an ETA already in the past
+    /// is the population the rollover is supposed to make impossible.
+    /// </summary>
+    IReadOnlyList<EtaHorizonBin> EtaHorizon();
 
     IReadOnlyList<RuleHitCount> QualityReport();
 

@@ -2,6 +2,7 @@ using System.Data.Common;
 using AisPipeline.Core.Domain;
 using AisPipeline.Core.Ports;
 using AisPipeline.Core.Query;
+using AisPipeline.Core.Voyage;
 using Dapper;
 
 namespace AisPipeline.Adapters.Sql;
@@ -194,6 +195,22 @@ public sealed class SqlAisQueries : IAisQueries
             """, (phase, stop) => (phase, stop), new { ids = Ids(portCallIds) }, splitOn: "Id");
 
         return [.. rows];
+    }
+
+    public IReadOnlyList<EtaHorizonBin> EtaHorizon()
+    {
+        using var c = Open();
+        var days = _dialect.DaysBetween("ts_utc", "eta_utc");
+
+        // Grouped in the database. Five million timestamps do not need to cross a process boundary
+        // to be counted, and the result is a few hundred rows either way.
+        return [.. c.Query<EtaHorizonBin>($"""
+            SELECT {days} AS DaysAhead, COUNT(*) AS Fixes
+            FROM position_report
+            WHERE eta_utc IS NOT NULL
+            GROUP BY {days}
+            ORDER BY DaysAhead
+            """)];
     }
 
     public IReadOnlyList<PortCallHours> PortCallHoursForBenchmarks()

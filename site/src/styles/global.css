@@ -103,3 +103,19 @@ dl.fields dd { margin: 0; }
 
 /* A rule or step description is a sentence, not a datum, so it may wrap. */
 td code { white-space: nowrap; }
+
+/* ---- charts ---- */
+.chart { margin: 1.5rem 0; padding: 0; }
+.chart svg { width: 100%; height: auto; display: block; overflow: visible; }
+.chart figcaption { margin-top: .6rem; }
+
+/* Deliberately not ".bar": that class already exists above for the inline bars in the vessel
+   tables, and it sets height: .5rem. CSS geometry properties override SVG presentation
+   attributes, so a 260-unit column silently rendered as an 8px tick. */
+.chart .col { fill: var(--accent); }
+.chart .col.stale { fill: var(--alarm); }
+.chart .col:hover { fill: var(--ink); }
+.chart .band { fill: var(--warn); opacity: .12; }
+.chart .axis, .chart .tick { stroke: var(--line); stroke-width: 1; }
+.chart .label { fill: var(--ink-soft); font-size: 11px; font-family: var(--mono); text-anchor: middle; }
+.chart .axis-title { font-family: inherit; font-size: 11px; }

@@ -2,6 +2,7 @@ using AisPipeline.Core.Benchmarks;
 using AisPipeline.Core.Domain;
 using AisPipeline.Core.Laytime;
 using AisPipeline.Core.Quality;
+using AisPipeline.Core.Voyage;
 using AisPipeline.Core.Query;
 
 namespace AisPipeline.Core.Export;
@@ -27,7 +28,8 @@ public static class ExportBuilder
         DateTime firstFixUtc,
         DateTime lastFixUtc,
         IReadOnlyList<PortCallHours> portCallHours,
-        IReadOnlyList<PortCall> callsForPricing)
+        IReadOnlyList<PortCall> callsForPricing,
+        IReadOnlyList<EtaHorizonBin> etaBins)
     {
         var firstRunPerFile = runs
             .OrderBy(r => r.Id)
@@ -115,6 +117,7 @@ public static class ExportBuilder
             Ports = PortBenchmarkBuilder.Build(portCallHours),
             Priceability = Priceability(callsForPricing),
             Thresholds = new ExportThresholds(),
+            EtaHorizon = EtaHorizonBuilder.Build(etaBins),
         };
     }
 

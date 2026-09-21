@@ -1,5 +1,6 @@
 using AisPipeline.Core.Domain;
 using AisPipeline.Core.Export;
+using AisPipeline.Core.Voyage;
 using AisPipeline.Core.Quality;
 using AisPipeline.Core.Query;
 
@@ -27,7 +28,8 @@ public class ExportBuilderTests
         IReadOnlyDictionary<long, StoredVessel>? vessels = null,
         IReadOnlyList<StoredRun>? runs = null,
         IReadOnlyList<PortCallHours>? portCallHours = null,
-        IReadOnlyList<PortCall>? callsForPricing = null) =>
+        IReadOnlyList<PortCall>? callsForPricing = null,
+        IReadOnlyList<EtaHorizonBin>? etaBins = null) =>
         ExportBuilder.Build(
             T0,
             runs ??
@@ -42,7 +44,8 @@ public class ExportBuilderTests
             firstFixUtc: T0,
             lastFixUtc: T0.AddDays(7),
             portCallHours ?? [],
-            callsForPricing ?? []);
+            callsForPricing ?? [],
+            etaBins ?? []);
 
     [Fact]
     public void A_vessel_appearing_in_both_lists_becomes_one_record()
