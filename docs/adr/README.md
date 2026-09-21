@@ -65,6 +65,7 @@ the design.
 | [0044](0044-retention-and-what-it-collides-with.md) | Retention: attempted, and rejected for now | Superseded by ADR-0045 |
 | [0045](0045-prune-whole-periods-archive-first.md) | Prune whole periods, and archive before deleting | Accepted |
 | [0046](0046-an-archive-nothing-reads-is-not-an-archive.md) | An archive nothing reads is not an archive | Accepted |
+| [0047](0047-the-page-shows-what-the-api-can-now-price.md) | The page shows what the API can now price | Accepted |
 
 ### † Measurement corrected, 2026-09-12
 
