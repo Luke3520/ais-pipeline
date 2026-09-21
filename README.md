@@ -78,8 +78,13 @@ Or open the browser page, which does both against your own database:
 
 ```bash
 cd src/AisPipeline.Api && AIS_SQLITE=../../data/ais.db dotnet run
-# then open http://localhost:5000
+# opens http://localhost:5273
 ```
+
+Pick a call, put your charter party terms in, and read the statement line by line: every hour
+between commencement and completion sits on exactly one line with a reason attached. Calls it
+cannot price say so, and say why. `Port waits` ranks a wait against what other vessels actually
+experienced at that port.
 
 Every verb is in [`docs/cli.md`](docs/cli.md). You need .NET 10; the site additionally needs Node.
 
