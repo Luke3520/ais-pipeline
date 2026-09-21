@@ -1,0 +1,180 @@
+---
+import Base from '../layouts/Base.astro';
+import data from '../data/pipeline.json';
+
+const { destinations: d } = data;
+const n = (v: number, d2 = 0) =>
+  v.toLocaleString('en-GB', { minimumFractionDigits: d2, maximumFractionDigits: d2 });
+
+const total = d.fixesWithADestination;
+const of = (shape: string) => d.destinations.filter((x) => x.shape === shape);
+const fixesOf = (shape: string) => of(shape).reduce((t, x) => t + x.fixes, 0);
+const pct = (v: number) => (100 * v) / total;
+
+const shapes = [
+  ['UnLocode', 'A UN/LOCODE', 'Five characters: a country and a place. The standard, and the majority.'],
+  ['FreeText', 'A place, in words', 'Written the way a person would say it out loud.'],
+  ['ForOrders', 'No destination yet', '"For orders" — a real commercial state, not an omission.'],
+  ['Route', 'A whole route', 'Two or more places and an arrow, in a field sized for one place.'],
+  ['Unreadable', 'Debris', 'Characters no keyboard puts there on purpose.'],
+] as const;
+
+const top = d.destinations.slice(0, 20);
+const forOrders = of('ForOrders');
+const routes = of('Route').slice(0, 8);
+const junk = of('Unreadable');
+---
+<Base
+  title="Where they said they were going — 443 ways to fill in one field"
+  description="The AIS destination field is free text, and it shows. UN/LOCODEs, port names in four languages, nautical nicknames, whole routes with an arrow, and 37 different ways to write 'I don't know yet'."
+>
+  <h1>443 ways to fill in one field</h1>
+
+  <p class="lede prose">
+    Position and speed are measured. The destination is <em>typed</em> — by a person, into a free
+    text box, on a bridge, at sea. {n(d.vesselsTyping)} vessels filled it in across this window,
+    and between them they produced <strong>{n(d.distinctStrings)} distinct strings</strong>.
+  </p>
+
+  <ul class="stats">
+    <li class="stat"><b>{n(d.distinctStrings)}</b><span>distinct strings typed</span></li>
+    <li class="stat"><b>{n(d.distinctIgnoringSpacingAndCase)}</b><span>still distinct ignoring spacing</span></li>
+    <li class="stat"><b>{n(d.vesselsTyping)}</b><span>vessels that typed one</span></li>
+    <li class="stat"><b>{n(d.vesselsThatChangedIt)}</b><span>ever changed it</span></li>
+  </ul>
+
+  <h2>What shape was it?</h2>
+
+  <p class="prose">
+    Every judgement below is about the <em>shape</em> of a string and never about which place it
+    means. Deciding that <code>DKSKA</code> is LOCODE-shaped needs only the string; deciding that
+    <code>DKSKA</code>, <code>SKAGEN</code> and <code>SKAW</code> are one harbour needs a gazetteer
+    and an opinion about spelling, so that claim is not made here.
+  </p>
+
+  <div class="scroll">
+    <table>
+      <thead>
+        <tr><th>shape</th><th class="n">strings</th><th class="n">fixes</th><th class="n">share</th><th>what it is</th></tr>
+      </thead>
+      <tbody>
+        {shapes.map(([key, label, note]) => (
+          <tr>
+            <td><strong>{label}</strong></td>
+            <td class="n">{n(of(key).length)}</td>
+            <td class="n">{n(fixesOf(key))}</td>
+            <td class="n">
+              <span class="bar" style={`width:${Math.max(2, Math.round(pct(fixesOf(key)) * 1.6))}px`}></span>
+              {n(pct(fixesOf(key)), 1)}%
+            </td>
+            <td class="wrap">{note}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+
+  <p class="note prose">
+    Just over half the feed reached for the standard. The rest is language.
+  </p>
+
+  <h2>Skagen, in several hands</h2>
+
+  <p class="prose">
+    The northern tip of Denmark is where ships wait. It is also the clearest illustration of what a
+    free text field does to a place name — a code, the Danish name, and the old English sailors'
+    name for the same headland, all in the same week of the same feed.
+  </p>
+
+  <div class="scroll">
+    <table>
+      <thead><tr><th>as typed</th><th class="n">vessels</th><th class="n">fixes</th><th>shape</th></tr></thead>
+      <tbody>
+        {d.destinations
+          .filter((x) => /^(DK ?SKA|SKAGEN|SKAW|OFF SKAW|SKAW EAST)$/i.test(x.text))
+          .map((x) => (
+            <tr>
+              <td><code>{x.text}</code></td>
+              <td class="n">{n(x.vessels)}</td>
+              <td class="n">{n(x.fixes)}</td>
+              <td>{x.shape === 'UnLocode' ? 'a code' : 'a name'}</td>
+            </tr>
+          ))}
+      </tbody>
+    </table>
+  </div>
+
+  <p class="note prose">
+    Selected by matching the strings themselves, not by looking up a port. A reader who thinks
+    <code>SKAW</code> belongs somewhere else is disagreeing with the caption, not with the data.
+  </p>
+
+  <h2>{n(forOrders.length)} ways to say "I don't know yet"</h2>
+
+  <p class="prose">
+    <strong>For orders</strong> is not a blank. It is a vessel that has sailed without knowing
+    where it will discharge, waiting on the charterer to tell it — one of the most ordinary states
+    in tramp shipping, and one the AIS destination field has no code for. So crews write it out,{' '}
+    {n(forOrders.length)} different ways, on {n(fixesOf('ForOrders'))} fixes.
+  </p>
+
+  <p class="wordlist">
+    {forOrders.map((x) => <code title={`${n(x.fixes)} fixes`}>{x.text}</code>)}
+  </p>
+
+  <p class="note prose">
+    One of those is a typo for "Baltic" and stayed that way for {
+      n(forOrders.find((x) => x.text.includes('BCLTIC'))?.fixes ?? 0)
+    } consecutive position reports. Nothing in AIS spell-checks a destination, because nothing in
+    AIS knows what a destination is supposed to look like.
+  </p>
+
+  <h2>A route, in a field sized for one place</h2>
+
+  <p class="prose">
+    {n(of('Route').length)} strings carry an arrow. The field holds one destination; a voyage has
+    at least two ends, so crews put both in and point between them — in whichever direction seems
+    natural, which is why both <code>&gt;</code> and <code>&lt;</code> appear.
+  </p>
+
+  <p class="wordlist">
+    {routes.map((x) => <code title={`${n(x.fixes)} fixes`}>{x.text}</code>)}
+  </p>
+
+  <h2>The most-typed strings in the feed</h2>
+
+  <div class="scroll">
+    <table>
+      <thead><tr><th class="n">#</th><th>as typed</th><th class="n">vessels</th><th class="n">fixes</th><th>shape</th></tr></thead>
+      <tbody>
+        {top.map((x, i) => (
+          <tr>
+            <td class="n">{i + 1}</td>
+            <td><code>{x.text}</code></td>
+            <td class="n">{n(x.vessels)}</td>
+            <td class="n">{n(x.fixes)}</td>
+            <td>{x.shape}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+
+  <h2>And two that nobody typed</h2>
+
+  <p class="prose">
+    {n(junk.length)} strings out of {n(d.distinctStrings)} contain characters no keyboard produces
+    on purpose — {junk.map((x, i) => (<>{i > 0 ? ' and ' : ''}<code>{x.text}</code></>))}. They are
+    kept, like everything else here. A row that disappears without a record is a defect, and that
+    does not stop being true because the row is embarrassing.
+  </p>
+
+  <blockquote class="prose">
+    <p>
+      None of this is a complaint about crews. The field is free text with no vocabulary, no
+      validation and no code for the commonest answer in tramp shipping. People filled it in
+      anyway, sensibly, in the language they had — and the pipeline's job is to report what they
+      wrote rather than to tidy it into something that was never broadcast.
+    </p>
+  </blockquote>
+</Base>

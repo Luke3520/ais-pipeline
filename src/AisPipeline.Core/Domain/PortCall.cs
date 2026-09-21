@@ -24,6 +24,36 @@ public enum StopPhase
 /// <summary>One stop within a port call, in order.</summary>
 public sealed record PortCallPhase(int Sequence, StopPhase Phase, StopEvent Stop);
 
+/// <summary>What the vessel's own reported draught says happened to its cargo.</summary>
+public enum CargoMovement
+{
+    /// <summary>No draught was reported at either end, so nothing can be said.</summary>
+    Unknown,
+
+    /// <summary>Reported draught did not move by more than the threshold.</summary>
+    Unchanged,
+
+    /// <summary>Reported draught fell: cargo off.</summary>
+    Discharged,
+
+    /// <summary>Reported draught rose: cargo on.</summary>
+    Loaded,
+}
+
+/// <summary>How much reported draught must move before it is read as cargo.</summary>
+public static class CargoThresholds
+{
+    /// <summary>
+    /// Metres of reported draught change below which nothing is claimed. Half a metre.
+    ///
+    /// Draught is typed in, and crews round it -- 12.0, 12.5, 13.0 are far commoner than 12.3.
+    /// A threshold under half a metre would turn a crew's rounding into a cargo operation. It is
+    /// a heuristic and ADR-0048 says so; it was chosen from the reporting granularity, not tuned
+    /// against the result.
+    /// </summary>
+    public const double ReportedChangeM = 0.5;
+}
+
 /// <summary>
 /// A vessel's consecutive nearby stops chained into one visit.
 ///
@@ -47,6 +77,45 @@ public sealed record PortCall
     public PortAttribution? Attribution { get; init; }
 
     public DateTime ArrivedUtc => Phases[0].Stop.StartedUtc;
+
+    /// <summary>First draught reported anywhere in this call, or null when none was.</summary>
+    public double? DraughtOnArrivalM => Phases
+        .Select(p => p.Stop.DraughtFirstM)
+        .FirstOrDefault(d => d is not null);
+
+    /// <summary>Last draught reported anywhere in this call, or null when none was.</summary>
+    public double? DraughtOnDepartureM => Phases
+        .Select(p => p.Stop.DraughtLastM)
+        .LastOrDefault(d => d is not null);
+
+    /// <summary>
+    /// What the reported draught says the cargo did.
+    ///
+    /// A <em>report</em>, not an observation. Draught arrives in the same hand-typed voyage message
+    /// as the destination and the ETA, so this says a crew told the world its draught changed --
+    /// which is evidence about cargo exactly as far as the crew is reliable, and no further
+    /// (ADR-0048). It is deliberately not folded into waiting or working hours, which are derived
+    /// from measured position alone.
+    /// </summary>
+    public CargoMovement ReportedCargoMovement
+    {
+        get
+        {
+            if (DraughtOnArrivalM is not { } arrival || DraughtOnDepartureM is not { } departure)
+            {
+                return CargoMovement.Unknown;
+            }
+
+            var change = departure - arrival;
+
+            if (Math.Abs(change) <= CargoThresholds.ReportedChangeM)
+            {
+                return CargoMovement.Unchanged;
+            }
+
+            return change > 0 ? CargoMovement.Loaded : CargoMovement.Discharged;
+        }
+    }
 
     public DateTime DepartedUtc => Phases[^1].Stop.EndedUtc;
 

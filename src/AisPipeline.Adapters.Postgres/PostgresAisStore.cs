@@ -278,7 +278,7 @@ public sealed class PostgresAisStore : IAisStore
         // non-deterministic read order makes detection produce different stops from identical
         // data -- the same reasoning as the SQLite adapter, and the same ORDER BY.
         command.CommandText = """
-            SELECT id, mmsi, ts_utc, lat, lon, sog_kn, nav_status, quality_flags
+            SELECT id, mmsi, ts_utc, lat, lon, sog_kn, nav_status, quality_flags, draught_m
             FROM position_report
             ORDER BY mmsi, ts_utc, id;
             """;
@@ -298,6 +298,7 @@ public sealed class PostgresAisStore : IAisStore
                 SpeedOverGroundKn = reader.IsDBNull(5) ? null : reader.GetDouble(5),
                 NavigationalStatus = reader.IsDBNull(6) ? null : reader.GetString(6),
                 QualityFlags = reader.GetString(7),
+                DraughtM = reader.IsDBNull(8) ? null : reader.GetDouble(8),
             };
         }
     }
@@ -445,8 +446,9 @@ public sealed class PostgresAisStore : IAisStore
             INSERT INTO stop_event (mmsi, started_utc, ended_utc, duration_hours, centroid_lat,
                                     centroid_lon, max_drift_nm, fix_count, reliable_fix_count,
                                     geometry_trustworthy, reported_status, status_agrees,
-                                    is_complete, first_position_id, last_position_id)
-            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING id;
+                                    is_complete, draught_first_m, draught_last_m,
+                                    first_position_id, last_position_id)
+            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17) RETURNING id;
             """;
         command.Parameters.AddWithValue(stop.Mmsi);
         command.Parameters.AddWithValue(Utc(stop.StartedUtc));
@@ -461,6 +463,8 @@ public sealed class PostgresAisStore : IAisStore
         command.Parameters.AddWithValue((object?)stop.ReportedStatus ?? DBNull.Value);
         command.Parameters.AddWithValue(stop.StatusAgrees);
         command.Parameters.AddWithValue(stop.IsComplete);
+        command.Parameters.AddWithValue((object?)stop.DraughtFirstM ?? DBNull.Value);
+        command.Parameters.AddWithValue((object?)stop.DraughtLastM ?? DBNull.Value);
         command.Parameters.AddWithValue(stop.FirstPositionId);
         command.Parameters.AddWithValue(stop.LastPositionId);
         return (long)command.ExecuteScalar()!;

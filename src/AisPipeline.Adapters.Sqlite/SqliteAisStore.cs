@@ -71,6 +71,8 @@ public sealed class SqliteAisStore : IAisStore
         ("position_report", "eta_utc", "TEXT"),
         ("vessel", "cargo_type", "TEXT"),
         ("vessel", "position_fixing_device", "TEXT"),
+        ("stop_event", "draught_first_m", "REAL"),
+        ("stop_event", "draught_last_m", "REAL"),
     ];
 
     private void AddMissingColumns()
@@ -307,7 +309,7 @@ public sealed class SqliteAisStore : IAisStore
         // otherwise sort arbitrarily, and a non-deterministic order makes re-running detection
         // produce different stops from identical data.
         command.CommandText = """
-            SELECT id, mmsi, ts_utc, lat, lon, sog_kn, nav_status, quality_flags
+            SELECT id, mmsi, ts_utc, lat, lon, sog_kn, nav_status, quality_flags, draught_m
             FROM position_report
             ORDER BY mmsi, ts_utc, id;
             """;
@@ -325,6 +327,7 @@ public sealed class SqliteAisStore : IAisStore
                 SpeedOverGroundKn = reader.IsDBNull(5) ? null : reader.GetDouble(5),
                 NavigationalStatus = reader.IsDBNull(6) ? null : reader.GetString(6),
                 QualityFlags = reader.GetString(7),
+                DraughtM = reader.IsDBNull(8) ? null : reader.GetDouble(8),
             };
         }
     }
@@ -468,9 +471,11 @@ public sealed class SqliteAisStore : IAisStore
             INSERT INTO stop_event (mmsi, started_utc, ended_utc, duration_hours, centroid_lat,
                                     centroid_lon, max_drift_nm, fix_count, reliable_fix_count,
                                     geometry_trustworthy, reported_status, status_agrees,
-                                    is_complete, first_position_id, last_position_id)
+                                    is_complete, draught_first_m, draught_last_m,
+                                    first_position_id, last_position_id)
             VALUES ($mmsi, $started, $ended, $duration, $lat, $lon, $drift, $fixes, $reliable,
-                    $trustworthy, $status, $agrees, $complete, $first, $last);
+                    $trustworthy, $status, $agrees, $complete, $draughtFirst, $draughtLast,
+                    $first, $last);
             SELECT last_insert_rowid();
             """;
         command.Parameters.AddWithValue("$mmsi", stop.Mmsi);
@@ -486,6 +491,8 @@ public sealed class SqliteAisStore : IAisStore
         command.Parameters.AddWithValue("$status", (object?)stop.ReportedStatus ?? DBNull.Value);
         command.Parameters.AddWithValue("$agrees", stop.StatusAgrees ? 1 : 0);
         command.Parameters.AddWithValue("$complete", stop.IsComplete ? 1 : 0);
+        command.Parameters.AddWithValue("$draughtFirst", (object?)stop.DraughtFirstM ?? DBNull.Value);
+        command.Parameters.AddWithValue("$draughtLast", (object?)stop.DraughtLastM ?? DBNull.Value);
         command.Parameters.AddWithValue("$first", stop.FirstPositionId);
         command.Parameters.AddWithValue("$last", stop.LastPositionId);
         return (long)command.ExecuteScalar()!;

@@ -66,6 +66,7 @@ the design.
 | [0045](0045-prune-whole-periods-archive-first.md) | Prune whole periods, and archive before deleting | Accepted |
 | [0046](0046-an-archive-nothing-reads-is-not-an-archive.md) | An archive nothing reads is not an archive | Accepted |
 | [0047](0047-the-page-shows-what-the-api-can-now-price.md) | The page shows what the API can now price | Accepted |
+| [0048](0048-reported-draught-corroborates-the-berth-it-does-not-prove-it.md) | Reported draught corroborates the berth, it does not prove it | Accepted |
 
 ### † Measurement corrected, 2026-09-12
 

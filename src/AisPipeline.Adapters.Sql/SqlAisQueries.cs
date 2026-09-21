@@ -213,6 +213,38 @@ public sealed class SqlAisQueries : IAisQueries
             """)];
     }
 
+    public IReadOnlyList<DestinationCount> TypedDestinations()
+    {
+        using var c = Open();
+
+        // Grouped in the database: 5.3 million strings in, a few hundred rows out. Classification
+        // happens in Core, where it can be tested without a database.
+        return [.. c.Query<DestinationCount>("""
+            SELECT destination AS Text,
+                   COUNT(DISTINCT mmsi) AS Vessels,
+                   COUNT(*) AS Fixes
+            FROM position_report
+            WHERE destination IS NOT NULL AND destination <> ''
+            GROUP BY destination
+            ORDER BY Fixes DESC
+            """)];
+    }
+
+    public DestinationTypists DestinationTypists()
+    {
+        using var c = Open();
+        return c.QuerySingle<DestinationTypists>("""
+            SELECT COUNT(*) AS Vessels,
+                   SUM(CASE WHEN distinct_strings > 1 THEN 1 ELSE 0 END) AS VesselsThatChangedIt
+            FROM (
+                SELECT mmsi, COUNT(DISTINCT destination) AS distinct_strings
+                FROM position_report
+                WHERE destination IS NOT NULL AND destination <> ''
+                GROUP BY mmsi
+            ) per_vessel
+            """);
+    }
+
     public IReadOnlyList<PortCallHours> PortCallHoursForBenchmarks()
     {
         using var c = Open();
@@ -400,6 +432,8 @@ public sealed class SqlAisQueries : IAisQueries
         {alias}.centroid_lat AS CentroidLatitude, {alias}.centroid_lon AS CentroidLongitude,
         {alias}.max_drift_nm AS ObservedMaxDriftNm, {alias}.fix_count AS FixCount,
         {alias}.reliable_fix_count AS ReliableFixCount,
+        {alias}.draught_first_m AS DraughtFirstM,
+        {alias}.draught_last_m AS DraughtLastM,
         {alias}.geometry_trustworthy AS GeometryTrustworthy,
         {alias}.reported_status AS ReportedStatus, {alias}.status_agrees AS StatusAgrees,
         {alias}.is_complete AS IsComplete, {alias}.first_position_id AS FirstPositionId,

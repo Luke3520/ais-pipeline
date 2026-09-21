@@ -32,7 +32,7 @@ const eta = data.rules.find((r) => r.ruleId === 'R13');
 
   <p class="prose">
     The interesting part isn't that crews forget. It's that they mostly don't forget <em>sometimes</em>.
-    Of the vessels that stopped at least {3} times in the window, <strong>{summary.vesselsAlwaysWrong}</strong>
+    Of the vessels that stopped at least {3} times in the window, <strong>{summary.vesselsAlwaysWrong}</strong>{' '}
     got it wrong on <em>every single stop</em>, and <strong>{summary.vesselsAlwaysRight}</strong> got it
     right on every single one. Far fewer sit in between than chance would put there.
   </p>
@@ -72,7 +72,7 @@ const eta = data.rules.find((r) => r.ruleId === 'R13');
 
   <p class="prose">
     You can see it in the data as a hole. Across {n(4800000)} messages carrying an ETA, the count
-    falls away smoothly to about a month out — and then there is <strong>not one single message</strong>
+    falls away smoothly to about a month out — and then there is <strong>not one single message</strong>{' '}
     anywhere between 42 and 76 days ahead, before the numbers climb again and pile up at almost
     exactly one year. Two populations with nothing in between: real voyage plans, and dates nobody
     has touched since they passed. {n(eta?.flagged ?? 0)} messages sit in the far one.

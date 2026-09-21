@@ -26,6 +26,12 @@ public sealed record StoredVessel
 
 public sealed record StoredStop
 {
+    /// <summary>First draught reported during the stop. Typed in, not measured (ADR-0048).</summary>
+    public double? DraughtFirstM { get; init; }
+
+    /// <summary>Last draught reported during the stop.</summary>
+    public double? DraughtLastM { get; init; }
+
     public long Id { get; init; }
     public long Mmsi { get; init; }
     public DateTime StartedUtc { get; init; }

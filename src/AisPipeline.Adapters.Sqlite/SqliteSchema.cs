@@ -106,6 +106,8 @@ internal static class SqliteSchema
           status_agrees INTEGER NOT NULL,
           is_complete INTEGER NOT NULL,
           first_position_id INTEGER NOT NULL REFERENCES position_report(id),
+          draught_first_m REAL,
+          draught_last_m REAL,
           last_position_id INTEGER NOT NULL REFERENCES position_report(id),
           UNIQUE (mmsi, started_utc)
         );

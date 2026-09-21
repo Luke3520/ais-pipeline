@@ -45,6 +45,8 @@ public static class PortCallRebuilder
                         ReportedStatus = p.Stop.ReportedStatus,
                         StatusAgrees = p.Stop.StatusAgrees,
                         IsComplete = p.Stop.IsComplete,
+                        DraughtFirstM = p.Stop.DraughtFirstM,
+                        DraughtLastM = p.Stop.DraughtLastM,
                         FirstPositionId = p.Stop.FirstPositionId,
                         LastPositionId = p.Stop.LastPositionId,
                     }))],

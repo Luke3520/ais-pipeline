@@ -20,6 +20,15 @@ public sealed record PositionFix
 
     public string? NavigationalStatus { get; init; }
 
+    /// <summary>
+    /// Maximum present static draught in metres, or null when none was reported.
+    ///
+    /// Typed in, not measured. It arrives in the voyage-static message beside the destination and
+    /// the ETA, which is the company it keeps in every sense: a change in it is a crew's *report*
+    /// that cargo moved, never an observation that it did (ADR-0048).
+    /// </summary>
+    public double? DraughtM { get; init; }
+
     /// <summary>Comma-joined rule ids that flagged this fix.</summary>
     public string QualityFlags { get; init; } = string.Empty;
 

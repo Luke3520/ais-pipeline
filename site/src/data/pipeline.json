@@ -1,6 +1,6 @@
 {
   "manifest": {
-    "generatedUtc": "2026-09-21T18:48:22.189588Z",
+    "generatedUtc": "2026-09-21T19:09:41.280272Z",
     "sourceFiles": [
       "aisdk-2026-09-01.zip",
       "aisdk-2026-09-02.zip",
@@ -4135,5 +4135,3130 @@
       "toDays": 76,
       "days": 35
     }
+  },
+  "destinations": {
+    "fixesWithADestination": 5311065,
+    "vesselsTyping": 447,
+    "vesselsThatChangedIt": 205,
+    "destinations": [
+      {
+        "text": "DKSKA",
+        "vessels": 34,
+        "fixes": 261703,
+        "shape": "UnLocode",
+        "normalised": "DKSKA"
+      },
+      {
+        "text": "FOR ORDERS",
+        "vessels": 19,
+        "fixes": 192089,
+        "shape": "ForOrders",
+        "normalised": "FORORDERS"
+      },
+      {
+        "text": "EGPSD",
+        "vessels": 10,
+        "fixes": 146237,
+        "shape": "UnLocode",
+        "normalised": "EGPSD"
+      },
+      {
+        "text": "SEGOT",
+        "vessels": 26,
+        "fixes": 133992,
+        "shape": "UnLocode",
+        "normalised": "SEGOT"
+      },
+      {
+        "text": "PLGDN",
+        "vessels": 8,
+        "fixes": 89303,
+        "shape": "UnLocode",
+        "normalised": "PLGDN"
+      },
+      {
+        "text": "DK SVE",
+        "vessels": 2,
+        "fixes": 69476,
+        "shape": "UnLocode",
+        "normalised": "DKSVE"
+      },
+      {
+        "text": "SE BRO",
+        "vessels": 10,
+        "fixes": 68909,
+        "shape": "UnLocode",
+        "normalised": "SEBRO"
+      },
+      {
+        "text": "EG PSD",
+        "vessels": 4,
+        "fixes": 68894,
+        "shape": "UnLocode",
+        "normalised": "EGPSD"
+      },
+      {
+        "text": "SE GOT",
+        "vessels": 13,
+        "fixes": 68272,
+        "shape": "UnLocode",
+        "normalised": "SEGOT"
+      },
+      {
+        "text": "SKAGEN",
+        "vessels": 5,
+        "fixes": 67775,
+        "shape": "FreeText",
+        "normalised": "SKAGEN"
+      },
+      {
+        "text": "PORT SAID",
+        "vessels": 6,
+        "fixes": 66271,
+        "shape": "FreeText",
+        "normalised": "PORTSAID"
+      },
+      {
+        "text": "GOTHENBURG",
+        "vessels": 5,
+        "fixes": 65181,
+        "shape": "FreeText",
+        "normalised": "GOTHENBURG"
+      },
+      {
+        "text": "PLGDY",
+        "vessels": 5,
+        "fixes": 63523,
+        "shape": "UnLocode",
+        "normalised": "PLGDY"
+      },
+      {
+        "text": "BALTIC FOR ORDER",
+        "vessels": 5,
+        "fixes": 62475,
+        "shape": "ForOrders",
+        "normalised": "BALTICFORORDER"
+      },
+      {
+        "text": "ESBJERG",
+        "vessels": 2,
+        "fixes": 58139,
+        "shape": "FreeText",
+        "normalised": "ESBJERG"
+      },
+      {
+        "text": "GULF OF FINLAND",
+        "vessels": 4,
+        "fixes": 57440,
+        "shape": "FreeText",
+        "normalised": "GULFOFFINLAND"
+      },
+      {
+        "text": "BUNKERING OPR.",
+        "vessels": 1,
+        "fixes": 50321,
+        "shape": "FreeText",
+        "normalised": "BUNKERINGOPR."
+      },
+      {
+        "text": "SEBRO",
+        "vessels": 11,
+        "fixes": 48431,
+        "shape": "UnLocode",
+        "normalised": "SEBRO"
+      },
+      {
+        "text": "SKAW",
+        "vessels": 6,
+        "fixes": 43219,
+        "shape": "FreeText",
+        "normalised": "SKAW"
+      },
+      {
+        "text": "DKFDH",
+        "vessels": 7,
+        "fixes": 42522,
+        "shape": "UnLocode",
+        "normalised": "DKFDH"
+      },
+      {
+        "text": "BALTICS FOR ORDERS",
+        "vessels": 3,
+        "fixes": 42045,
+        "shape": "ForOrders",
+        "normalised": "BALTICSFORORDERS"
+      },
+      {
+        "text": "DKKAL",
+        "vessels": 7,
+        "fixes": 41579,
+        "shape": "UnLocode",
+        "normalised": "DKKAL"
+      },
+      {
+        "text": "NLRTM",
+        "vessels": 12,
+        "fixes": 38783,
+        "shape": "UnLocode",
+        "normalised": "NLRTM"
+      },
+      {
+        "text": "FR DKK  \u003E LT KLJ",
+        "vessels": 1,
+        "fixes": 38462,
+        "shape": "Route",
+        "normalised": "FRDKK\u003ELTKLJ"
+      },
+      {
+        "text": "FI PRV",
+        "vessels": 4,
+        "fixes": 38072,
+        "shape": "UnLocode",
+        "normalised": "FIPRV"
+      },
+      {
+        "text": "RUULU",
+        "vessels": 3,
+        "fixes": 36964,
+        "shape": "UnLocode",
+        "normalised": "RUULU"
+      },
+      {
+        "text": "SESTE",
+        "vessels": 6,
+        "fixes": 36422,
+        "shape": "UnLocode",
+        "normalised": "SESTE"
+      },
+      {
+        "text": "PORT SAID FOR ORDERS",
+        "vessels": 2,
+        "fixes": 36198,
+        "shape": "ForOrders",
+        "normalised": "PORTSAIDFORORDERS"
+      },
+      {
+        "text": "TR GEB",
+        "vessels": 1,
+        "fixes": 35482,
+        "shape": "UnLocode",
+        "normalised": "TRGEB"
+      },
+      {
+        "text": "NLAMS",
+        "vessels": 7,
+        "fixes": 32527,
+        "shape": "UnLocode",
+        "normalised": "NLAMS"
+      },
+      {
+        "text": "DERSK",
+        "vessels": 5,
+        "fixes": 32130,
+        "shape": "UnLocode",
+        "normalised": "DERSK"
+      },
+      {
+        "text": "RUPRI",
+        "vessels": 3,
+        "fixes": 31663,
+        "shape": "UnLocode",
+        "normalised": "RUPRI"
+      },
+      {
+        "text": "FI SKV",
+        "vessels": 3,
+        "fixes": 31103,
+        "shape": "UnLocode",
+        "normalised": "FISKV"
+      },
+      {
+        "text": "PLSWI",
+        "vessels": 3,
+        "fixes": 30885,
+        "shape": "UnLocode",
+        "normalised": "PLSWI"
+      },
+      {
+        "text": "DK SKA\u003EPL GDN",
+        "vessels": 1,
+        "fixes": 29364,
+        "shape": "Route",
+        "normalised": "DKSKA\u003EPLGDN"
+      },
+      {
+        "text": "DKFRC",
+        "vessels": 6,
+        "fixes": 28983,
+        "shape": "UnLocode",
+        "normalised": "DKFRC"
+      },
+      {
+        "text": "SEGOT\u003EDKFDH",
+        "vessels": 1,
+        "fixes": 28789,
+        "shape": "Route",
+        "normalised": "SEGOT\u003EDKFDH"
+      },
+      {
+        "text": "RU LED",
+        "vessels": 2,
+        "fixes": 28143,
+        "shape": "UnLocode",
+        "normalised": "RULED"
+      },
+      {
+        "text": "LTKLJ",
+        "vessels": 3,
+        "fixes": 26003,
+        "shape": "UnLocode",
+        "normalised": "LTKLJ"
+      },
+      {
+        "text": "PL SZZ",
+        "vessels": 2,
+        "fixes": 25937,
+        "shape": "UnLocode",
+        "normalised": "PLSZZ"
+      },
+      {
+        "text": "DK SKA",
+        "vessels": 6,
+        "fixes": 25032,
+        "shape": "UnLocode",
+        "normalised": "DKSKA"
+      },
+      {
+        "text": "BEANR",
+        "vessels": 5,
+        "fixes": 24753,
+        "shape": "UnLocode",
+        "normalised": "BEANR"
+      },
+      {
+        "text": "DKCPH",
+        "vessels": 5,
+        "fixes": 24505,
+        "shape": "UnLocode",
+        "normalised": "DKCPH"
+      },
+      {
+        "text": "FOR ORDER",
+        "vessels": 5,
+        "fixes": 24348,
+        "shape": "ForOrders",
+        "normalised": "FORORDER"
+      },
+      {
+        "text": "NL RTM",
+        "vessels": 5,
+        "fixes": 23343,
+        "shape": "UnLocode",
+        "normalised": "NLRTM"
+      },
+      {
+        "text": "AARHUS",
+        "vessels": 3,
+        "fixes": 23235,
+        "shape": "FreeText",
+        "normalised": "AARHUS"
+      },
+      {
+        "text": "SE GOT PEC-48",
+        "vessels": 1,
+        "fixes": 23190,
+        "shape": "FreeText",
+        "normalised": "SEGOTPEC-48"
+      },
+      {
+        "text": "SEHEL",
+        "vessels": 3,
+        "fixes": 23011,
+        "shape": "UnLocode",
+        "normalised": "SEHEL"
+      },
+      {
+        "text": "DKODE",
+        "vessels": 2,
+        "fixes": 22800,
+        "shape": "UnLocode",
+        "normalised": "DKODE"
+      },
+      {
+        "text": "DE RSK",
+        "vessels": 4,
+        "fixes": 22785,
+        "shape": "UnLocode",
+        "normalised": "DERSK"
+      },
+      {
+        "text": "DKTYB",
+        "vessels": 2,
+        "fixes": 22751,
+        "shape": "UnLocode",
+        "normalised": "DKTYB"
+      },
+      {
+        "text": "BEZEE",
+        "vessels": 2,
+        "fixes": 22056,
+        "shape": "UnLocode",
+        "normalised": "BEZEE"
+      },
+      {
+        "text": "TRMAR",
+        "vessels": 1,
+        "fixes": 21471,
+        "shape": "UnLocode",
+        "normalised": "TRMAR"
+      },
+      {
+        "text": "SKAW EAST",
+        "vessels": 1,
+        "fixes": 21369,
+        "shape": "FreeText",
+        "normalised": "SKAWEAST"
+      },
+      {
+        "text": "NOFRO",
+        "vessels": 3,
+        "fixes": 20935,
+        "shape": "UnLocode",
+        "normalised": "NOFRO"
+      },
+      {
+        "text": "SUEZ",
+        "vessels": 1,
+        "fixes": 20623,
+        "shape": "FreeText",
+        "normalised": "SUEZ"
+      },
+      {
+        "text": "SE KOG",
+        "vessels": 1,
+        "fixes": 20617,
+        "shape": "UnLocode",
+        "normalised": "SEKOG"
+      },
+      {
+        "text": "NL AMS",
+        "vessels": 3,
+        "fixes": 20454,
+        "shape": "UnLocode",
+        "normalised": "NLAMS"
+      },
+      {
+        "text": "NO KAR",
+        "vessels": 3,
+        "fixes": 19948,
+        "shape": "UnLocode",
+        "normalised": "NOKAR"
+      },
+      {
+        "text": "DZAZW\u003EFIUKI",
+        "vessels": 1,
+        "fixes": 19851,
+        "shape": "Route",
+        "normalised": "DZAZW\u003EFIUKI"
+      },
+      {
+        "text": "SEROR",
+        "vessels": 1,
+        "fixes": 19278,
+        "shape": "UnLocode",
+        "normalised": "SEROR"
+      },
+      {
+        "text": "SELAA",
+        "vessels": 3,
+        "fixes": 19251,
+        "shape": "UnLocode",
+        "normalised": "SELAA"
+      },
+      {
+        "text": "GIGIB",
+        "vessels": 1,
+        "fixes": 19191,
+        "shape": "UnLocode",
+        "normalised": "GIGIB"
+      },
+      {
+        "text": "DEHAM",
+        "vessels": 7,
+        "fixes": 19165,
+        "shape": "UnLocode",
+        "normalised": "DEHAM"
+      },
+      {
+        "text": "GOF_FOR ORDERS",
+        "vessels": 1,
+        "fixes": 19160,
+        "shape": "ForOrders",
+        "normalised": "GOF_FORORDERS"
+      },
+      {
+        "text": "ROTTERDAM",
+        "vessels": 6,
+        "fixes": 19134,
+        "shape": "FreeText",
+        "normalised": "ROTTERDAM"
+      },
+      {
+        "text": "SN SIN",
+        "vessels": 1,
+        "fixes": 19057,
+        "shape": "UnLocode",
+        "normalised": "SNSIN"
+      },
+      {
+        "text": "SE KAN",
+        "vessels": 3,
+        "fixes": 19035,
+        "shape": "UnLocode",
+        "normalised": "SEKAN"
+      },
+      {
+        "text": "BRAZIL FOR ORDERS",
+        "vessels": 1,
+        "fixes": 18941,
+        "shape": "ForOrders",
+        "normalised": "BRAZILFORORDERS"
+      },
+      {
+        "text": "OPL GIBRALTAR",
+        "vessels": 1,
+        "fixes": 18597,
+        "shape": "FreeText",
+        "normalised": "OPLGIBRALTAR"
+      },
+      {
+        "text": "TURKEY FOR ORDER",
+        "vessels": 1,
+        "fixes": 18565,
+        "shape": "ForOrders",
+        "normalised": "TURKEYFORORDER"
+      },
+      {
+        "text": "DEKEL",
+        "vessels": 4,
+        "fixes": 18032,
+        "shape": "UnLocode",
+        "normalised": "DEKEL"
+      },
+      {
+        "text": "ARROS",
+        "vessels": 1,
+        "fixes": 17973,
+        "shape": "UnLocode",
+        "normalised": "ARROS"
+      },
+      {
+        "text": "SKAGEN FOR ORDERS",
+        "vessels": 3,
+        "fixes": 17814,
+        "shape": "ForOrders",
+        "normalised": "SKAGENFORORDERS"
+      },
+      {
+        "text": "NOMON\u003EPLGDN",
+        "vessels": 1,
+        "fixes": 17680,
+        "shape": "Route",
+        "normalised": "NOMON\u003EPLGDN"
+      },
+      {
+        "text": "SE LYS",
+        "vessels": 1,
+        "fixes": 17662,
+        "shape": "UnLocode",
+        "normalised": "SELYS"
+      },
+      {
+        "text": "DKGRE",
+        "vessels": 2,
+        "fixes": 17268,
+        "shape": "UnLocode",
+        "normalised": "DKGRE"
+      },
+      {
+        "text": "LTBOT\u003ENOMON",
+        "vessels": 1,
+        "fixes": 17258,
+        "shape": "Route",
+        "normalised": "LTBOT\u003ENOMON"
+      },
+      {
+        "text": "BCLTIC FOR ORDER",
+        "vessels": 1,
+        "fixes": 17176,
+        "shape": "ForOrders",
+        "normalised": "BCLTICFORORDER"
+      },
+      {
+        "text": "NOHFT",
+        "vessels": 1,
+        "fixes": 17135,
+        "shape": "UnLocode",
+        "normalised": "NOHFT"
+      },
+      {
+        "text": "NYNASHAMN",
+        "vessels": 1,
+        "fixes": 17114,
+        "shape": "FreeText",
+        "normalised": "NYNASHAMN"
+      },
+      {
+        "text": "SWINOUJSCIE",
+        "vessels": 1,
+        "fixes": 16947,
+        "shape": "FreeText",
+        "normalised": "SWINOUJSCIE"
+      },
+      {
+        "text": "EETLL",
+        "vessels": 2,
+        "fixes": 16870,
+        "shape": "UnLocode",
+        "normalised": "EETLL"
+      },
+      {
+        "text": "NO HVI",
+        "vessels": 1,
+        "fixes": 16855,
+        "shape": "UnLocode",
+        "normalised": "NOHVI"
+      },
+      {
+        "text": "SEMMA",
+        "vessels": 5,
+        "fixes": 16854,
+        "shape": "UnLocode",
+        "normalised": "SEMMA"
+      },
+      {
+        "text": "INDIA",
+        "vessels": 1,
+        "fixes": 16853,
+        "shape": "UnLocode",
+        "normalised": "INDIA"
+      },
+      {
+        "text": "NOHRY",
+        "vessels": 4,
+        "fixes": 16812,
+        "shape": "UnLocode",
+        "normalised": "NOHRY"
+      },
+      {
+        "text": "LVVNT",
+        "vessels": 2,
+        "fixes": 16724,
+        "shape": "UnLocode",
+        "normalised": "LVVNT"
+      },
+      {
+        "text": "SUEZ TO ORDER",
+        "vessels": 1,
+        "fixes": 16625,
+        "shape": "ForOrders",
+        "normalised": "SUEZTOORDER"
+      },
+      {
+        "text": "DK CPH",
+        "vessels": 2,
+        "fixes": 16617,
+        "shape": "UnLocode",
+        "normalised": "DKCPH"
+      },
+      {
+        "text": "DE WVN",
+        "vessels": 2,
+        "fixes": 16325,
+        "shape": "UnLocode",
+        "normalised": "DEWVN"
+      },
+      {
+        "text": "FR ROUEN",
+        "vessels": 1,
+        "fixes": 16288,
+        "shape": "FreeText",
+        "normalised": "FRROUEN"
+      },
+      {
+        "text": "PLGDN-NOMON",
+        "vessels": 1,
+        "fixes": 16167,
+        "shape": "FreeText",
+        "normalised": "PLGDN-NOMON"
+      },
+      {
+        "text": "GBFAW",
+        "vessels": 1,
+        "fixes": 16046,
+        "shape": "UnLocode",
+        "normalised": "GBFAW"
+      },
+      {
+        "text": "RU LED \u003E RU MMK",
+        "vessels": 1,
+        "fixes": 15973,
+        "shape": "Route",
+        "normalised": "RULED\u003ERUMMK"
+      },
+      {
+        "text": "FIUKI",
+        "vessels": 2,
+        "fixes": 15794,
+        "shape": "UnLocode",
+        "normalised": "FIUKI"
+      },
+      {
+        "text": "DKAAR",
+        "vessels": 3,
+        "fixes": 15471,
+        "shape": "UnLocode",
+        "normalised": "DKAAR"
+      },
+      {
+        "text": "SE NYN-SE GOT",
+        "vessels": 1,
+        "fixes": 15354,
+        "shape": "FreeText",
+        "normalised": "SENYN-SEGOT"
+      },
+      {
+        "text": "BE ANR",
+        "vessels": 3,
+        "fixes": 15245,
+        "shape": "UnLocode",
+        "normalised": "BEANR"
+      },
+      {
+        "text": "NO ELN\u003ESE GVX",
+        "vessels": 1,
+        "fixes": 15116,
+        "shape": "Route",
+        "normalised": "NOELN\u003ESEGVX"
+      },
+      {
+        "text": "NL AMS \u003E PL GDY",
+        "vessels": 1,
+        "fixes": 15106,
+        "shape": "Route",
+        "normalised": "NLAMS\u003EPLGDY"
+      },
+      {
+        "text": "OFF SKAW",
+        "vessels": 2,
+        "fixes": 15070,
+        "shape": "FreeText",
+        "normalised": "OFFSKAW"
+      },
+      {
+        "text": "FI HMN",
+        "vessels": 2,
+        "fixes": 14918,
+        "shape": "UnLocode",
+        "normalised": "FIHMN"
+      },
+      {
+        "text": "ESLPA",
+        "vessels": 1,
+        "fixes": 14862,
+        "shape": "UnLocode",
+        "normalised": "ESLPA"
+      },
+      {
+        "text": "GDANSK",
+        "vessels": 1,
+        "fixes": 14516,
+        "shape": "FreeText",
+        "normalised": "GDANSK"
+      },
+      {
+        "text": "FISKV\u003E\u003ESEBRO",
+        "vessels": 1,
+        "fixes": 14512,
+        "shape": "Route",
+        "normalised": "FISKV\u003E\u003ESEBRO"
+      },
+      {
+        "text": "MTMLA\u003ELTBOT",
+        "vessels": 1,
+        "fixes": 14489,
+        "shape": "Route",
+        "normalised": "MTMLA\u003ELTBOT"
+      },
+      {
+        "text": "NL SCE",
+        "vessels": 1,
+        "fixes": 14380,
+        "shape": "UnLocode",
+        "normalised": "NLSCE"
+      },
+      {
+        "text": "EE TLL",
+        "vessels": 1,
+        "fixes": 14071,
+        "shape": "UnLocode",
+        "normalised": "EETLL"
+      },
+      {
+        "text": "SE NYN",
+        "vessels": 1,
+        "fixes": 13974,
+        "shape": "UnLocode",
+        "normalised": "SENYN"
+      },
+      {
+        "text": "OFFSKAW",
+        "vessels": 1,
+        "fixes": 13947,
+        "shape": "FreeText",
+        "normalised": "OFFSKAW"
+      },
+      {
+        "text": "DK LIN\u003ENO STU",
+        "vessels": 1,
+        "fixes": 13810,
+        "shape": "Route",
+        "normalised": "DKLIN\u003ENOSTU"
+      },
+      {
+        "text": "SEGOT\u003EFIINKPEC100028",
+        "vessels": 1,
+        "fixes": 13782,
+        "shape": "Route",
+        "normalised": "SEGOT\u003EFIINKPEC100028"
+      },
+      {
+        "text": "DE BRB",
+        "vessels": 5,
+        "fixes": 13384,
+        "shape": "UnLocode",
+        "normalised": "DEBRB"
+      },
+      {
+        "text": "PL GDN\u003ENO KAR",
+        "vessels": 1,
+        "fixes": 13295,
+        "shape": "Route",
+        "normalised": "PLGDN\u003ENOKAR"
+      },
+      {
+        "text": "FISKV\u003ESEMMA",
+        "vessels": 1,
+        "fixes": 13265,
+        "shape": "Route",
+        "normalised": "FISKV\u003ESEMMA"
+      },
+      {
+        "text": "BALTIC",
+        "vessels": 2,
+        "fixes": 13016,
+        "shape": "FreeText",
+        "normalised": "BALTIC"
+      },
+      {
+        "text": "COPENHAGEN",
+        "vessels": 3,
+        "fixes": 12977,
+        "shape": "FreeText",
+        "normalised": "COPENHAGEN"
+      },
+      {
+        "text": "PLGDN=\u003ENOMON",
+        "vessels": 1,
+        "fixes": 12970,
+        "shape": "Route",
+        "normalised": "PLGDN=\u003ENOMON"
+      },
+      {
+        "text": "FI OUL",
+        "vessels": 1,
+        "fixes": 12925,
+        "shape": "UnLocode",
+        "normalised": "FIOUL"
+      },
+      {
+        "text": "FI FOR\u003ENO ELN",
+        "vessels": 1,
+        "fixes": 12697,
+        "shape": "Route",
+        "normalised": "FIFOR\u003ENOELN"
+      },
+      {
+        "text": "FR PJE",
+        "vessels": 1,
+        "fixes": 12609,
+        "shape": "UnLocode",
+        "normalised": "FRPJE"
+      },
+      {
+        "text": "SE HAD",
+        "vessels": 1,
+        "fixes": 12578,
+        "shape": "UnLocode",
+        "normalised": "SEHAD"
+      },
+      {
+        "text": "BE ANR \u003E DK LIN",
+        "vessels": 1,
+        "fixes": 12467,
+        "shape": "Route",
+        "normalised": "BEANR\u003EDKLIN"
+      },
+      {
+        "text": "NOKAR",
+        "vessels": 3,
+        "fixes": 12424,
+        "shape": "UnLocode",
+        "normalised": "NOKAR"
+      },
+      {
+        "text": "FIPRV",
+        "vessels": 1,
+        "fixes": 12416,
+        "shape": "UnLocode",
+        "normalised": "FIPRV"
+      },
+      {
+        "text": "SEGOT-DERSK",
+        "vessels": 1,
+        "fixes": 12415,
+        "shape": "FreeText",
+        "normalised": "SEGOT-DERSK"
+      },
+      {
+        "text": "FIOUL\u003ENLRTM",
+        "vessels": 1,
+        "fixes": 12292,
+        "shape": "Route",
+        "normalised": "FIOUL\u003ENLRTM"
+      },
+      {
+        "text": "SE GVX PEC:10-0027",
+        "vessels": 1,
+        "fixes": 12238,
+        "shape": "FreeText",
+        "normalised": "SEGVXPEC:10-0027"
+      },
+      {
+        "text": "SE HEL",
+        "vessels": 2,
+        "fixes": 11891,
+        "shape": "UnLocode",
+        "normalised": "SEHEL"
+      },
+      {
+        "text": "ROSTOCK",
+        "vessels": 2,
+        "fixes": 11810,
+        "shape": "FreeText",
+        "normalised": "ROSTOCK"
+      },
+      {
+        "text": "PLGDN\u003EDKSKA",
+        "vessels": 2,
+        "fixes": 11686,
+        "shape": "Route",
+        "normalised": "PLGDN\u003EDKSKA"
+      },
+      {
+        "text": "NOMJF",
+        "vessels": 1,
+        "fixes": 11655,
+        "shape": "UnLocode",
+        "normalised": "NOMJF"
+      },
+      {
+        "text": "TALLINN FOR ORDER",
+        "vessels": 2,
+        "fixes": 11620,
+        "shape": "ForOrders",
+        "normalised": "TALLINNFORORDER"
+      },
+      {
+        "text": "TALLIN FOR ORDERS",
+        "vessels": 1,
+        "fixes": 11531,
+        "shape": "ForOrders",
+        "normalised": "TALLINFORORDERS"
+      },
+      {
+        "text": "GB KYL",
+        "vessels": 1,
+        "fixes": 11531,
+        "shape": "UnLocode",
+        "normalised": "GBKYL"
+      },
+      {
+        "text": "DESTA",
+        "vessels": 4,
+        "fixes": 11440,
+        "shape": "UnLocode",
+        "normalised": "DESTA"
+      },
+      {
+        "text": "PL SZCZECIN",
+        "vessels": 1,
+        "fixes": 11414,
+        "shape": "FreeText",
+        "normalised": "PLSZCZECIN"
+      },
+      {
+        "text": "LTKLJ FOR ORDERS",
+        "vessels": 1,
+        "fixes": 11378,
+        "shape": "ForOrders",
+        "normalised": "LTKLJFORORDERS"
+      },
+      {
+        "text": "TALLINN OPL",
+        "vessels": 1,
+        "fixes": 11113,
+        "shape": "FreeText",
+        "normalised": "TALLINNOPL"
+      },
+      {
+        "text": "DK VEJ",
+        "vessels": 1,
+        "fixes": 10894,
+        "shape": "UnLocode",
+        "normalised": "DKVEJ"
+      },
+      {
+        "text": "DKSKA\u003EDERSK",
+        "vessels": 1,
+        "fixes": 10822,
+        "shape": "Route",
+        "normalised": "DKSKA\u003EDERSK"
+      },
+      {
+        "text": "DKLIP",
+        "vessels": 1,
+        "fixes": 10809,
+        "shape": "UnLocode",
+        "normalised": "DKLIP"
+      },
+      {
+        "text": "KIEL",
+        "vessels": 1,
+        "fixes": 10741,
+        "shape": "FreeText",
+        "normalised": "KIEL"
+      },
+      {
+        "text": "EG SUZ FOR ORDER",
+        "vessels": 1,
+        "fixes": 10450,
+        "shape": "ForOrders",
+        "normalised": "EGSUZFORORDER"
+      },
+      {
+        "text": "GBTEE",
+        "vessels": 2,
+        "fixes": 10364,
+        "shape": "UnLocode",
+        "normalised": "GBTEE"
+      },
+      {
+        "text": "PORT SAID,EGYPT",
+        "vessels": 1,
+        "fixes": 10185,
+        "shape": "FreeText",
+        "normalised": "PORTSAID,EGYPT"
+      },
+      {
+        "text": "KARLSHAMN",
+        "vessels": 1,
+        "fixes": 10078,
+        "shape": "FreeText",
+        "normalised": "KARLSHAMN"
+      },
+      {
+        "text": "PLSZZ",
+        "vessels": 4,
+        "fixes": 9983,
+        "shape": "UnLocode",
+        "normalised": "PLSZZ"
+      },
+      {
+        "text": "SEGOT\u003ESEKLR",
+        "vessels": 1,
+        "fixes": 9917,
+        "shape": "Route",
+        "normalised": "SEGOT\u003ESEKLR"
+      },
+      {
+        "text": "DK AAR PEC 654",
+        "vessels": 1,
+        "fixes": 9905,
+        "shape": "FreeText",
+        "normalised": "DKAARPEC654"
+      },
+      {
+        "text": "DKBAL STS PEC-48",
+        "vessels": 1,
+        "fixes": 9800,
+        "shape": "FreeText",
+        "normalised": "DKBALSTSPEC-48"
+      },
+      {
+        "text": "DKFRC\u003EPLGDN",
+        "vessels": 1,
+        "fixes": 9782,
+        "shape": "Route",
+        "normalised": "DKFRC\u003EPLGDN"
+      },
+      {
+        "text": "BALTIC FOR ORDERS",
+        "vessels": 1,
+        "fixes": 9776,
+        "shape": "ForOrders",
+        "normalised": "BALTICFORORDERS"
+      },
+      {
+        "text": "FIINK",
+        "vessels": 1,
+        "fixes": 9754,
+        "shape": "UnLocode",
+        "normalised": "FIINK"
+      },
+      {
+        "text": "DECKL",
+        "vessels": 4,
+        "fixes": 9533,
+        "shape": "UnLocode",
+        "normalised": "DECKL"
+      },
+      {
+        "text": "TALLIN FOR ORDER",
+        "vessels": 1,
+        "fixes": 9493,
+        "shape": "ForOrders",
+        "normalised": "TALLINFORORDER"
+      },
+      {
+        "text": "US MAH",
+        "vessels": 1,
+        "fixes": 9441,
+        "shape": "UnLocode",
+        "normalised": "USMAH"
+      },
+      {
+        "text": "SEKAA",
+        "vessels": 2,
+        "fixes": 9434,
+        "shape": "UnLocode",
+        "normalised": "SEKAA"
+      },
+      {
+        "text": "DEBRV",
+        "vessels": 1,
+        "fixes": 9428,
+        "shape": "UnLocode",
+        "normalised": "DEBRV"
+      },
+      {
+        "text": "NORAF",
+        "vessels": 2,
+        "fixes": 9425,
+        "shape": "UnLocode",
+        "normalised": "NORAF"
+      },
+      {
+        "text": "BALTIC SEA FOR ORDER",
+        "vessels": 4,
+        "fixes": 9419,
+        "shape": "ForOrders",
+        "normalised": "BALTICSEAFORORDER"
+      },
+      {
+        "text": "SGSIN FOR ORDERS",
+        "vessels": 1,
+        "fixes": 9291,
+        "shape": "ForOrders",
+        "normalised": "SGSINFORORDERS"
+      },
+      {
+        "text": "HAMBURG",
+        "vessels": 2,
+        "fixes": 9218,
+        "shape": "FreeText",
+        "normalised": "HAMBURG"
+      },
+      {
+        "text": "DERSK\u003EDKSKA",
+        "vessels": 1,
+        "fixes": 9178,
+        "shape": "Route",
+        "normalised": "DERSK\u003EDKSKA"
+      },
+      {
+        "text": "NOBVK",
+        "vessels": 2,
+        "fixes": 9160,
+        "shape": "UnLocode",
+        "normalised": "NOBVK"
+      },
+      {
+        "text": "NLDOR",
+        "vessels": 3,
+        "fixes": 9154,
+        "shape": "UnLocode",
+        "normalised": "NLDOR"
+      },
+      {
+        "text": "SEHAD\u003EBEANR",
+        "vessels": 1,
+        "fixes": 9122,
+        "shape": "Route",
+        "normalised": "SEHAD\u003EBEANR"
+      },
+      {
+        "text": "FIPOR",
+        "vessels": 1,
+        "fixes": 9074,
+        "shape": "UnLocode",
+        "normalised": "FIPOR"
+      },
+      {
+        "text": "USGLS",
+        "vessels": 1,
+        "fixes": 9070,
+        "shape": "UnLocode",
+        "normalised": "USGLS"
+      },
+      {
+        "text": "SINGAPORE",
+        "vessels": 2,
+        "fixes": 8996,
+        "shape": "FreeText",
+        "normalised": "SINGAPORE"
+      },
+      {
+        "text": "DKBAL STS",
+        "vessels": 1,
+        "fixes": 8943,
+        "shape": "FreeText",
+        "normalised": "DKBALSTS"
+      },
+      {
+        "text": "ESAVS \u003E DKNBG",
+        "vessels": 1,
+        "fixes": 8743,
+        "shape": "Route",
+        "normalised": "ESAVS\u003EDKNBG"
+      },
+      {
+        "text": "CARIB FOR ORDERS",
+        "vessels": 1,
+        "fixes": 8726,
+        "shape": "ForOrders",
+        "normalised": "CARIBFORORDERS"
+      },
+      {
+        "text": "SKAW FOR ORDER",
+        "vessels": 1,
+        "fixes": 8673,
+        "shape": "ForOrders",
+        "normalised": "SKAWFORORDER"
+      },
+      {
+        "text": "XZ JOHAN CASTBERG",
+        "vessels": 1,
+        "fixes": 8645,
+        "shape": "FreeText",
+        "normalised": "XZJOHANCASTBERG"
+      },
+      {
+        "text": "DKEBJ",
+        "vessels": 3,
+        "fixes": 8558,
+        "shape": "UnLocode",
+        "normalised": "DKEBJ"
+      },
+      {
+        "text": "SESTO",
+        "vessels": 1,
+        "fixes": 8533,
+        "shape": "UnLocode",
+        "normalised": "SESTO"
+      },
+      {
+        "text": "FIHMN\u003ESEGOT",
+        "vessels": 1,
+        "fixes": 8532,
+        "shape": "Route",
+        "normalised": "FIHMN\u003ESEGOT"
+      },
+      {
+        "text": "RU ULU",
+        "vessels": 2,
+        "fixes": 8498,
+        "shape": "UnLocode",
+        "normalised": "RUULU"
+      },
+      {
+        "text": "DK KAL",
+        "vessels": 2,
+        "fixes": 8391,
+        "shape": "UnLocode",
+        "normalised": "DKKAL"
+      },
+      {
+        "text": "SEGOT \u003E SESAE",
+        "vessels": 1,
+        "fixes": 8353,
+        "shape": "Route",
+        "normalised": "SEGOT\u003ESESAE"
+      },
+      {
+        "text": "NOMON",
+        "vessels": 5,
+        "fixes": 8274,
+        "shape": "UnLocode",
+        "normalised": "NOMON"
+      },
+      {
+        "text": "DK KAL PEC 321",
+        "vessels": 1,
+        "fixes": 8178,
+        "shape": "FreeText",
+        "normalised": "DKKALPEC321"
+      },
+      {
+        "text": "SESTE\u003EUSMAH",
+        "vessels": 1,
+        "fixes": 8060,
+        "shape": "Route",
+        "normalised": "SESTE\u003EUSMAH"
+      },
+      {
+        "text": "SENYN\u003ESEGOT",
+        "vessels": 1,
+        "fixes": 8018,
+        "shape": "Route",
+        "normalised": "SENYN\u003ESEGOT"
+      },
+      {
+        "text": "BE ANR-PL GDN",
+        "vessels": 1,
+        "fixes": 7952,
+        "shape": "FreeText",
+        "normalised": "BEANR-PLGDN"
+      },
+      {
+        "text": "BROFJORDEN",
+        "vessels": 2,
+        "fixes": 7912,
+        "shape": "FreeText",
+        "normalised": "BROFJORDEN"
+      },
+      {
+        "text": "DERSK\u003EDKFRC",
+        "vessels": 1,
+        "fixes": 7871,
+        "shape": "Route",
+        "normalised": "DERSK\u003EDKFRC"
+      },
+      {
+        "text": "KIEL CANAL",
+        "vessels": 2,
+        "fixes": 7802,
+        "shape": "FreeText",
+        "normalised": "KIELCANAL"
+      },
+      {
+        "text": "OPEN SEA FOR ORDERS",
+        "vessels": 1,
+        "fixes": 7737,
+        "shape": "ForOrders",
+        "normalised": "OPENSEAFORORDERS"
+      },
+      {
+        "text": "BRAZIL FOR ORDER",
+        "vessels": 1,
+        "fixes": 7705,
+        "shape": "ForOrders",
+        "normalised": "BRAZILFORORDER"
+      },
+      {
+        "text": "NLMOE",
+        "vessels": 1,
+        "fixes": 7687,
+        "shape": "UnLocode",
+        "normalised": "NLMOE"
+      },
+      {
+        "text": "PRIMORSK",
+        "vessels": 1,
+        "fixes": 7686,
+        "shape": "FreeText",
+        "normalised": "PRIMORSK"
+      },
+      {
+        "text": "SE OER",
+        "vessels": 1,
+        "fixes": 7619,
+        "shape": "UnLocode",
+        "normalised": "SEOER"
+      },
+      {
+        "text": "DETRV",
+        "vessels": 2,
+        "fixes": 7508,
+        "shape": "UnLocode",
+        "normalised": "DETRV"
+      },
+      {
+        "text": "NL RTM\u003EDK SKA",
+        "vessels": 1,
+        "fixes": 7497,
+        "shape": "Route",
+        "normalised": "NLRTM\u003EDKSKA"
+      },
+      {
+        "text": "SE STE",
+        "vessels": 2,
+        "fixes": 7484,
+        "shape": "UnLocode",
+        "normalised": "SESTE"
+      },
+      {
+        "text": "GDLPN\u003ESESTE",
+        "vessels": 1,
+        "fixes": 7294,
+        "shape": "Route",
+        "normalised": "GDLPN\u003ESESTE"
+      },
+      {
+        "text": "NLAMS \u003E SEGOT",
+        "vessels": 1,
+        "fixes": 7195,
+        "shape": "Route",
+        "normalised": "NLAMS\u003ESEGOT"
+      },
+      {
+        "text": "BEANR VIA KIEL",
+        "vessels": 1,
+        "fixes": 7153,
+        "shape": "FreeText",
+        "normalised": "BEANRVIAKIEL"
+      },
+      {
+        "text": "SEUDD \u003E GBHRW",
+        "vessels": 1,
+        "fixes": 7126,
+        "shape": "Route",
+        "normalised": "SEUDD\u003EGBHRW"
+      },
+      {
+        "text": "DE KEL",
+        "vessels": 2,
+        "fixes": 6975,
+        "shape": "UnLocode",
+        "normalised": "DEKEL"
+      },
+      {
+        "text": "EGSKT\u003ELTBOT",
+        "vessels": 1,
+        "fixes": 6955,
+        "shape": "Route",
+        "normalised": "EGSKT\u003ELTBOT"
+      },
+      {
+        "text": "LT KLJ",
+        "vessels": 1,
+        "fixes": 6951,
+        "shape": "UnLocode",
+        "normalised": "LTKLJ"
+      },
+      {
+        "text": "FISKV\u003EBEANR VIA NOK",
+        "vessels": 1,
+        "fixes": 6938,
+        "shape": "Route",
+        "normalised": "FISKV\u003EBEANRVIANOK"
+      },
+      {
+        "text": "FI RAU",
+        "vessels": 1,
+        "fixes": 6928,
+        "shape": "UnLocode",
+        "normalised": "FIRAU"
+      },
+      {
+        "text": "UST-LUGA",
+        "vessels": 1,
+        "fixes": 6915,
+        "shape": "FreeText",
+        "normalised": "UST-LUGA"
+      },
+      {
+        "text": "INDIA FOR ORDERS",
+        "vessels": 1,
+        "fixes": 6904,
+        "shape": "ForOrders",
+        "normalised": "INDIAFORORDERS"
+      },
+      {
+        "text": "FRURO",
+        "vessels": 1,
+        "fixes": 6805,
+        "shape": "UnLocode",
+        "normalised": "FRURO"
+      },
+      {
+        "text": "LT KLJ \u003E DE BXN",
+        "vessels": 1,
+        "fixes": 6737,
+        "shape": "Route",
+        "normalised": "LTKLJ\u003EDEBXN"
+      },
+      {
+        "text": "BEANR\u003ESESTE",
+        "vessels": 1,
+        "fixes": 6693,
+        "shape": "Route",
+        "normalised": "BEANR\u003ESESTE"
+      },
+      {
+        "text": "DKFDH PEC546",
+        "vessels": 1,
+        "fixes": 6683,
+        "shape": "FreeText",
+        "normalised": "DKFDHPEC546"
+      },
+      {
+        "text": "MASFI",
+        "vessels": 1,
+        "fixes": 6592,
+        "shape": "UnLocode",
+        "normalised": "MASFI"
+      },
+      {
+        "text": "FIPRV VIA NOK",
+        "vessels": 1,
+        "fixes": 6452,
+        "shape": "FreeText",
+        "normalised": "FIPRVVIANOK"
+      },
+      {
+        "text": "MALMO",
+        "vessels": 2,
+        "fixes": 6429,
+        "shape": "UnLocode",
+        "normalised": "MALMO"
+      },
+      {
+        "text": "USCP6",
+        "vessels": 1,
+        "fixes": 6369,
+        "shape": "UnLocode",
+        "normalised": "USCP6"
+      },
+      {
+        "text": "NLHAR",
+        "vessels": 1,
+        "fixes": 6356,
+        "shape": "UnLocode",
+        "normalised": "NLHAR"
+      },
+      {
+        "text": "SE STO",
+        "vessels": 1,
+        "fixes": 6351,
+        "shape": "UnLocode",
+        "normalised": "SESTO"
+      },
+      {
+        "text": "LUUNT",
+        "vessels": 1,
+        "fixes": 6340,
+        "shape": "UnLocode",
+        "normalised": "LUUNT"
+      },
+      {
+        "text": "NOSAG \u003E LTKLJ",
+        "vessels": 1,
+        "fixes": 6281,
+        "shape": "Route",
+        "normalised": "NOSAG\u003ELTKLJ"
+      },
+      {
+        "text": "TRYAR",
+        "vessels": 1,
+        "fixes": 6278,
+        "shape": "UnLocode",
+        "normalised": "TRYAR"
+      },
+      {
+        "text": "USMAH \u003E SESTE",
+        "vessels": 1,
+        "fixes": 6210,
+        "shape": "Route",
+        "normalised": "USMAH\u003ESESTE"
+      },
+      {
+        "text": "SEKAN",
+        "vessels": 2,
+        "fixes": 6205,
+        "shape": "UnLocode",
+        "normalised": "SEKAN"
+      },
+      {
+        "text": "SETRG",
+        "vessels": 1,
+        "fixes": 6177,
+        "shape": "UnLocode",
+        "normalised": "SETRG"
+      },
+      {
+        "text": "NLTNZ",
+        "vessels": 1,
+        "fixes": 6163,
+        "shape": "UnLocode",
+        "normalised": "NLTNZ"
+      },
+      {
+        "text": "MALMO (NOK)",
+        "vessels": 1,
+        "fixes": 6130,
+        "shape": "FreeText",
+        "normalised": "MALMO(NOK)"
+      },
+      {
+        "text": "US NSS\u003E DE WVN",
+        "vessels": 1,
+        "fixes": 6046,
+        "shape": "Route",
+        "normalised": "USNSS\u003EDEWVN"
+      },
+      {
+        "text": "NO MON",
+        "vessels": 3,
+        "fixes": 6035,
+        "shape": "UnLocode",
+        "normalised": "NOMON"
+      },
+      {
+        "text": "PLGDN\u003ESEGOT",
+        "vessels": 1,
+        "fixes": 5975,
+        "shape": "Route",
+        "normalised": "PLGDN\u003ESEGOT"
+      },
+      {
+        "text": "FITKU",
+        "vessels": 1,
+        "fixes": 5968,
+        "shape": "UnLocode",
+        "normalised": "FITKU"
+      },
+      {
+        "text": "LVLPX",
+        "vessels": 1,
+        "fixes": 5918,
+        "shape": "UnLocode",
+        "normalised": "LVLPX"
+      },
+      {
+        "text": "MOLMO",
+        "vessels": 1,
+        "fixes": 5813,
+        "shape": "UnLocode",
+        "normalised": "MOLMO"
+      },
+      {
+        "text": "DKAAL",
+        "vessels": 1,
+        "fixes": 5799,
+        "shape": "UnLocode",
+        "normalised": "DKAAL"
+      },
+      {
+        "text": "SE STENUNGSUND",
+        "vessels": 1,
+        "fixes": 5756,
+        "shape": "FreeText",
+        "normalised": "SESTENUNGSUND"
+      },
+      {
+        "text": "GBDAG",
+        "vessels": 1,
+        "fixes": 5756,
+        "shape": "UnLocode",
+        "normalised": "GBDAG"
+      },
+      {
+        "text": "FRLNE\u003ESEGOT",
+        "vessels": 1,
+        "fixes": 5744,
+        "shape": "Route",
+        "normalised": "FRLNE\u003ESEGOT"
+      },
+      {
+        "text": "SEJAT",
+        "vessels": 1,
+        "fixes": 5677,
+        "shape": "UnLocode",
+        "normalised": "SEJAT"
+      },
+      {
+        "text": "DEBRB",
+        "vessels": 1,
+        "fixes": 5552,
+        "shape": "UnLocode",
+        "normalised": "DEBRB"
+      },
+      {
+        "text": "DK EBJ",
+        "vessels": 1,
+        "fixes": 5523,
+        "shape": "UnLocode",
+        "normalised": "DKEBJ"
+      },
+      {
+        "text": "DK RAN",
+        "vessels": 1,
+        "fixes": 5502,
+        "shape": "UnLocode",
+        "normalised": "DKRAN"
+      },
+      {
+        "text": "SEKOG",
+        "vessels": 1,
+        "fixes": 5492,
+        "shape": "UnLocode",
+        "normalised": "SEKOG"
+      },
+      {
+        "text": "NOSGE",
+        "vessels": 2,
+        "fixes": 5490,
+        "shape": "UnLocode",
+        "normalised": "NOSGE"
+      },
+      {
+        "text": "DKAAR PEC-48",
+        "vessels": 1,
+        "fixes": 5426,
+        "shape": "FreeText",
+        "normalised": "DKAARPEC-48"
+      },
+      {
+        "text": "FREDERIKSHAVN DK",
+        "vessels": 1,
+        "fixes": 5368,
+        "shape": "FreeText",
+        "normalised": "FREDERIKSHAVNDK"
+      },
+      {
+        "text": "MONGSTAD",
+        "vessels": 2,
+        "fixes": 5327,
+        "shape": "FreeText",
+        "normalised": "MONGSTAD"
+      },
+      {
+        "text": "DK AAR",
+        "vessels": 2,
+        "fixes": 5300,
+        "shape": "UnLocode",
+        "normalised": "DKAAR"
+      },
+      {
+        "text": "PORT SAID EGYPT",
+        "vessels": 1,
+        "fixes": 5232,
+        "shape": "FreeText",
+        "normalised": "PORTSAIDEGYPT"
+      },
+      {
+        "text": "GBTHP",
+        "vessels": 1,
+        "fixes": 5213,
+        "shape": "UnLocode",
+        "normalised": "GBTHP"
+      },
+      {
+        "text": "DKNAK",
+        "vessels": 1,
+        "fixes": 5173,
+        "shape": "UnLocode",
+        "normalised": "DKNAK"
+      },
+      {
+        "text": "NOSTU",
+        "vessels": 1,
+        "fixes": 5169,
+        "shape": "UnLocode",
+        "normalised": "NOSTU"
+      },
+      {
+        "text": "ARZAE",
+        "vessels": 1,
+        "fixes": 5148,
+        "shape": "UnLocode",
+        "normalised": "ARZAE"
+      },
+      {
+        "text": "KLAIPEDA LITHUANIA",
+        "vessels": 1,
+        "fixes": 5133,
+        "shape": "FreeText",
+        "normalised": "KLAIPEDALITHUANIA"
+      },
+      {
+        "text": "SEGOT ANCH",
+        "vessels": 1,
+        "fixes": 5119,
+        "shape": "FreeText",
+        "normalised": "SEGOTANCH"
+      },
+      {
+        "text": "KIEL LH",
+        "vessels": 1,
+        "fixes": 5045,
+        "shape": "FreeText",
+        "normalised": "KIELLH"
+      },
+      {
+        "text": "NOKAR(FOR ORDER)",
+        "vessels": 1,
+        "fixes": 5009,
+        "shape": "ForOrders",
+        "normalised": "NOKAR(FORORDER)"
+      },
+      {
+        "text": "OFF GOTHENBURG",
+        "vessels": 1,
+        "fixes": 5008,
+        "shape": "FreeText",
+        "normalised": "OFFGOTHENBURG"
+      },
+      {
+        "text": "BROFJORDEN FOR ORDER",
+        "vessels": 1,
+        "fixes": 4984,
+        "shape": "ForOrders",
+        "normalised": "BROFJORDENFORORDER"
+      },
+      {
+        "text": "SEMMA  \u003E  FRDON",
+        "vessels": 1,
+        "fixes": 4913,
+        "shape": "Route",
+        "normalised": "SEMMA\u003EFRDON"
+      },
+      {
+        "text": "SE GOT\u003EDK KOG",
+        "vessels": 1,
+        "fixes": 4751,
+        "shape": "Route",
+        "normalised": "SEGOT\u003EDKKOG"
+      },
+      {
+        "text": "SE NRK",
+        "vessels": 1,
+        "fixes": 4698,
+        "shape": "UnLocode",
+        "normalised": "SENRK"
+      },
+      {
+        "text": "NOMON\u003EDKFDH",
+        "vessels": 1,
+        "fixes": 4689,
+        "shape": "Route",
+        "normalised": "NOMON\u003EDKFDH"
+      },
+      {
+        "text": "DKFDH\u003ENOMON",
+        "vessels": 1,
+        "fixes": 4672,
+        "shape": "Route",
+        "normalised": "DKFDH\u003ENOMON"
+      },
+      {
+        "text": "GOTHENBUG",
+        "vessels": 1,
+        "fixes": 4606,
+        "shape": "FreeText",
+        "normalised": "GOTHENBUG"
+      },
+      {
+        "text": "STOCKHOLM",
+        "vessels": 1,
+        "fixes": 4583,
+        "shape": "FreeText",
+        "normalised": "STOCKHOLM"
+      },
+      {
+        "text": "OPL TALLINN",
+        "vessels": 1,
+        "fixes": 4552,
+        "shape": "FreeText",
+        "normalised": "OPLTALLINN"
+      },
+      {
+        "text": "SKAW FOR ORDERS",
+        "vessels": 2,
+        "fixes": 4550,
+        "shape": "ForOrders",
+        "normalised": "SKAWFORORDERS"
+      },
+      {
+        "text": "GAVLE",
+        "vessels": 1,
+        "fixes": 4534,
+        "shape": "UnLocode",
+        "normalised": "GAVLE"
+      },
+      {
+        "text": "DE MUK",
+        "vessels": 1,
+        "fixes": 4531,
+        "shape": "UnLocode",
+        "normalised": "DEMUK"
+      },
+      {
+        "text": "DK SOB",
+        "vessels": 1,
+        "fixes": 4525,
+        "shape": "UnLocode",
+        "normalised": "DKSOB"
+      },
+      {
+        "text": "GOT",
+        "vessels": 1,
+        "fixes": 4519,
+        "shape": "FreeText",
+        "normalised": "GOT"
+      },
+      {
+        "text": "GI GIB FOR ORDERS",
+        "vessels": 1,
+        "fixes": 4506,
+        "shape": "ForOrders",
+        "normalised": "GIGIBFORORDERS"
+      },
+      {
+        "text": "SWINOUJSCIE PILOT",
+        "vessels": 1,
+        "fixes": 4489,
+        "shape": "FreeText",
+        "normalised": "SWINOUJSCIEPILOT"
+      },
+      {
+        "text": "FISHING",
+        "vessels": 1,
+        "fixes": 4489,
+        "shape": "FreeText",
+        "normalised": "FISHING"
+      },
+      {
+        "text": "NOFRK \u003E DKFDH",
+        "vessels": 1,
+        "fixes": 4486,
+        "shape": "Route",
+        "normalised": "NOFRK\u003EDKFDH"
+      },
+      {
+        "text": "DKHHV",
+        "vessels": 1,
+        "fixes": 4482,
+        "shape": "UnLocode",
+        "normalised": "DKHHV"
+      },
+      {
+        "text": "ARNEC",
+        "vessels": 1,
+        "fixes": 4404,
+        "shape": "UnLocode",
+        "normalised": "ARNEC"
+      },
+      {
+        "text": "SKAGEN PEC-654",
+        "vessels": 1,
+        "fixes": 4400,
+        "shape": "FreeText",
+        "normalised": "SKAGENPEC-654"
+      },
+      {
+        "text": "NO SAD",
+        "vessels": 1,
+        "fixes": 4298,
+        "shape": "UnLocode",
+        "normalised": "NOSAD"
+      },
+      {
+        "text": "BALTIC SEA",
+        "vessels": 1,
+        "fixes": 4285,
+        "shape": "FreeText",
+        "normalised": "BALTICSEA"
+      },
+      {
+        "text": "SE VST PEC 321",
+        "vessels": 1,
+        "fixes": 4254,
+        "shape": "FreeText",
+        "normalised": "SEVSTPEC321"
+      },
+      {
+        "text": "NO FRK",
+        "vessels": 2,
+        "fixes": 4221,
+        "shape": "UnLocode",
+        "normalised": "NOFRK"
+      },
+      {
+        "text": "PLNOW",
+        "vessels": 1,
+        "fixes": 4139,
+        "shape": "UnLocode",
+        "normalised": "PLNOW"
+      },
+      {
+        "text": "DRODGEN",
+        "vessels": 1,
+        "fixes": 4115,
+        "shape": "FreeText",
+        "normalised": "DRODGEN"
+      },
+      {
+        "text": "GBIMM",
+        "vessels": 1,
+        "fixes": 4063,
+        "shape": "UnLocode",
+        "normalised": "GBIMM"
+      },
+      {
+        "text": "LTKLJ \u003E SEMMA",
+        "vessels": 1,
+        "fixes": 4033,
+        "shape": "Route",
+        "normalised": "LTKLJ\u003ESEMMA"
+      },
+      {
+        "text": "NODRM \u003E SEGOT",
+        "vessels": 1,
+        "fixes": 3961,
+        "shape": "Route",
+        "normalised": "NODRM\u003ESEGOT"
+      },
+      {
+        "text": "SESTE\u003EDEBRB",
+        "vessels": 1,
+        "fixes": 3956,
+        "shape": "Route",
+        "normalised": "SESTE\u003EDEBRB"
+      },
+      {
+        "text": "NOTRF   BASF",
+        "vessels": 1,
+        "fixes": 3956,
+        "shape": "FreeText",
+        "normalised": "NOTRFBASF"
+      },
+      {
+        "text": "USCRP",
+        "vessels": 1,
+        "fixes": 3948,
+        "shape": "UnLocode",
+        "normalised": "USCRP"
+      },
+      {
+        "text": "SE BRO PEC:10-0166",
+        "vessels": 1,
+        "fixes": 3926,
+        "shape": "FreeText",
+        "normalised": "SEBROPEC:10-0166"
+      },
+      {
+        "text": "SEUDD",
+        "vessels": 1,
+        "fixes": 3923,
+        "shape": "UnLocode",
+        "normalised": "SEUDD"
+      },
+      {
+        "text": "DK ODE",
+        "vessels": 1,
+        "fixes": 3916,
+        "shape": "UnLocode",
+        "normalised": "DKODE"
+      },
+      {
+        "text": "KALUNDBORG",
+        "vessels": 1,
+        "fixes": 3900,
+        "shape": "FreeText",
+        "normalised": "KALUNDBORG"
+      },
+      {
+        "text": "GRPME",
+        "vessels": 1,
+        "fixes": 3888,
+        "shape": "UnLocode",
+        "normalised": "GRPME"
+      },
+      {
+        "text": "NO TRD",
+        "vessels": 1,
+        "fixes": 3886,
+        "shape": "UnLocode",
+        "normalised": "NOTRD"
+      },
+      {
+        "text": "DE STA",
+        "vessels": 2,
+        "fixes": 3843,
+        "shape": "UnLocode",
+        "normalised": "DESTA"
+      },
+      {
+        "text": "SEHAD",
+        "vessels": 1,
+        "fixes": 3830,
+        "shape": "UnLocode",
+        "normalised": "SEHAD"
+      },
+      {
+        "text": "NOSTU\u003EDKSKA",
+        "vessels": 1,
+        "fixes": 3815,
+        "shape": "Route",
+        "normalised": "NOSTU\u003EDKSKA"
+      },
+      {
+        "text": "SEBRO\u003EDKSKA",
+        "vessels": 1,
+        "fixes": 3754,
+        "shape": "Route",
+        "normalised": "SEBRO\u003EDKSKA"
+      },
+      {
+        "text": "FRPJE",
+        "vessels": 1,
+        "fixes": 3720,
+        "shape": "UnLocode",
+        "normalised": "FRPJE"
+      },
+      {
+        "text": "SAYNB",
+        "vessels": 1,
+        "fixes": 3693,
+        "shape": "UnLocode",
+        "normalised": "SAYNB"
+      },
+      {
+        "text": "SKAGEN F.O",
+        "vessels": 1,
+        "fixes": 3561,
+        "shape": "FreeText",
+        "normalised": "SKAGENF.O"
+      },
+      {
+        "text": "USHOU",
+        "vessels": 2,
+        "fixes": 3557,
+        "shape": "UnLocode",
+        "normalised": "USHOU"
+      },
+      {
+        "text": "PA CTB",
+        "vessels": 1,
+        "fixes": 3553,
+        "shape": "UnLocode",
+        "normalised": "PACTB"
+      },
+      {
+        "text": "LIZA UNITY\u003ESEBRO",
+        "vessels": 1,
+        "fixes": 3507,
+        "shape": "Route",
+        "normalised": "LIZAUNITY\u003ESEBRO"
+      },
+      {
+        "text": "SE VST",
+        "vessels": 1,
+        "fixes": 3499,
+        "shape": "UnLocode",
+        "normalised": "SEVST"
+      },
+      {
+        "text": "PL GDY",
+        "vessels": 1,
+        "fixes": 3385,
+        "shape": "UnLocode",
+        "normalised": "PLGDY"
+      },
+      {
+        "text": "NODRM\u003ESEGOT",
+        "vessels": 1,
+        "fixes": 3367,
+        "shape": "Route",
+        "normalised": "NODRM\u003ESEGOT"
+      },
+      {
+        "text": "DE HAM",
+        "vessels": 6,
+        "fixes": 3345,
+        "shape": "UnLocode",
+        "normalised": "DEHAM"
+      },
+      {
+        "text": "NO RAF",
+        "vessels": 1,
+        "fixes": 3310,
+        "shape": "UnLocode",
+        "normalised": "NORAF"
+      },
+      {
+        "text": "ESSVQ",
+        "vessels": 1,
+        "fixes": 3308,
+        "shape": "UnLocode",
+        "normalised": "ESSVQ"
+      },
+      {
+        "text": "OPL TALLIN",
+        "vessels": 1,
+        "fixes": 3182,
+        "shape": "FreeText",
+        "normalised": "OPLTALLIN"
+      },
+      {
+        "text": "DKSKA \u003E USHOU",
+        "vessels": 1,
+        "fixes": 3150,
+        "shape": "Route",
+        "normalised": "DKSKA\u003EUSHOU"
+      },
+      {
+        "text": "NOSAD",
+        "vessels": 1,
+        "fixes": 3055,
+        "shape": "UnLocode",
+        "normalised": "NOSAD"
+      },
+      {
+        "text": "GOTHENBURG SE",
+        "vessels": 1,
+        "fixes": 3042,
+        "shape": "FreeText",
+        "normalised": "GOTHENBURGSE"
+      },
+      {
+        "text": "NOTBO",
+        "vessels": 1,
+        "fixes": 3022,
+        "shape": "UnLocode",
+        "normalised": "NOTBO"
+      },
+      {
+        "text": "DELBC",
+        "vessels": 2,
+        "fixes": 3008,
+        "shape": "UnLocode",
+        "normalised": "DELBC"
+      },
+      {
+        "text": "SKAGEN,DENMARK",
+        "vessels": 1,
+        "fixes": 2982,
+        "shape": "FreeText",
+        "normalised": "SKAGEN,DENMARK"
+      },
+      {
+        "text": "SOUTHHWOLD, UK",
+        "vessels": 1,
+        "fixes": 2909,
+        "shape": "FreeText",
+        "normalised": "SOUTHHWOLD,UK"
+      },
+      {
+        "text": "DKSKA\u003ETTPTS",
+        "vessels": 1,
+        "fixes": 2905,
+        "shape": "Route",
+        "normalised": "DKSKA\u003ETTPTS"
+      },
+      {
+        "text": "DKSKA\u003EDEV PT",
+        "vessels": 1,
+        "fixes": 2905,
+        "shape": "Route",
+        "normalised": "DKSKA\u003EDEVPT"
+      },
+      {
+        "text": "OPL HAMBURG",
+        "vessels": 1,
+        "fixes": 2903,
+        "shape": "FreeText",
+        "normalised": "OPLHAMBURG"
+      },
+      {
+        "text": "MARINER O/F",
+        "vessels": 1,
+        "fixes": 2872,
+        "shape": "FreeText",
+        "normalised": "MARINERO/F"
+      },
+      {
+        "text": "SESTE\u003EDKSKA",
+        "vessels": 1,
+        "fixes": 2841,
+        "shape": "Route",
+        "normalised": "SESTE\u003EDKSKA"
+      },
+      {
+        "text": "BE ZWL",
+        "vessels": 1,
+        "fixes": 2834,
+        "shape": "UnLocode",
+        "normalised": "BEZWL"
+      },
+      {
+        "text": "BE ANR \u003E NO RAF",
+        "vessels": 1,
+        "fixes": 2798,
+        "shape": "Route",
+        "normalised": "BEANR\u003ENORAF"
+      },
+      {
+        "text": "IT GOA",
+        "vessels": 1,
+        "fixes": 2705,
+        "shape": "UnLocode",
+        "normalised": "ITGOA"
+      },
+      {
+        "text": "FI SKV\u003EDK LIN",
+        "vessels": 1,
+        "fixes": 2694,
+        "shape": "Route",
+        "normalised": "FISKV\u003EDKLIN"
+      },
+      {
+        "text": "DK SKAW PEC258",
+        "vessels": 1,
+        "fixes": 2676,
+        "shape": "FreeText",
+        "normalised": "DKSKAWPEC258"
+      },
+      {
+        "text": "SEMMA\u003ESEHAD",
+        "vessels": 1,
+        "fixes": 2602,
+        "shape": "Route",
+        "normalised": "SEMMA\u003ESEHAD"
+      },
+      {
+        "text": "USCRP\u003E\u003EDEWVN",
+        "vessels": 1,
+        "fixes": 2525,
+        "shape": "Route",
+        "normalised": "USCRP\u003E\u003EDEWVN"
+      },
+      {
+        "text": "GB TEE",
+        "vessels": 1,
+        "fixes": 2417,
+        "shape": "UnLocode",
+        "normalised": "GBTEE"
+      },
+      {
+        "text": "LOMMA ANCH.\u0022B\u0022",
+        "vessels": 1,
+        "fixes": 2326,
+        "shape": "FreeText",
+        "normalised": "LOMMAANCH.\u0022B\u0022"
+      },
+      {
+        "text": "DE TRV",
+        "vessels": 1,
+        "fixes": 2277,
+        "shape": "UnLocode",
+        "normalised": "DETRV"
+      },
+      {
+        "text": "NO ELN",
+        "vessels": 1,
+        "fixes": 2236,
+        "shape": "UnLocode",
+        "normalised": "NOELN"
+      },
+      {
+        "text": "DEKCL",
+        "vessels": 1,
+        "fixes": 2189,
+        "shape": "UnLocode",
+        "normalised": "DEKCL"
+      },
+      {
+        "text": "ARA / FOR ORDERS",
+        "vessels": 1,
+        "fixes": 2149,
+        "shape": "ForOrders",
+        "normalised": "ARA/FORORDERS"
+      },
+      {
+        "text": "GB FAW",
+        "vessels": 1,
+        "fixes": 1970,
+        "shape": "UnLocode",
+        "normalised": "GBFAW"
+      },
+      {
+        "text": "NOMQN",
+        "vessels": 1,
+        "fixes": 1904,
+        "shape": "UnLocode",
+        "normalised": "NOMQN"
+      },
+      {
+        "text": "NORAF \u003E USMAH",
+        "vessels": 1,
+        "fixes": 1902,
+        "shape": "Route",
+        "normalised": "NORAF\u003EUSMAH"
+      },
+      {
+        "text": "SEGOT\u003ENODRM",
+        "vessels": 1,
+        "fixes": 1873,
+        "shape": "Route",
+        "normalised": "SEGOT\u003ENODRM"
+      },
+      {
+        "text": "NOFRK \u003E NOTBO",
+        "vessels": 1,
+        "fixes": 1873,
+        "shape": "Route",
+        "normalised": "NOFRK\u003ENOTBO"
+      },
+      {
+        "text": "DE EME",
+        "vessels": 1,
+        "fixes": 1833,
+        "shape": "UnLocode",
+        "normalised": "DEEME"
+      },
+      {
+        "text": "BEZWL",
+        "vessels": 1,
+        "fixes": 1833,
+        "shape": "UnLocode",
+        "normalised": "BEZWL"
+      },
+      {
+        "text": "NOOSL",
+        "vessels": 1,
+        "fixes": 1803,
+        "shape": "UnLocode",
+        "normalised": "NOOSL"
+      },
+      {
+        "text": "SEGOT\u003ESESTE",
+        "vessels": 1,
+        "fixes": 1799,
+        "shape": "Route",
+        "normalised": "SEGOT\u003ESESTE"
+      },
+      {
+        "text": "SINGAPORE FOR ORDERS",
+        "vessels": 1,
+        "fixes": 1796,
+        "shape": "ForOrders",
+        "normalised": "SINGAPOREFORORDERS"
+      },
+      {
+        "text": "GULLFAKS",
+        "vessels": 1,
+        "fixes": 1734,
+        "shape": "FreeText",
+        "normalised": "GULLFAKS"
+      },
+      {
+        "text": "BRUNSBUTTEL",
+        "vessels": 1,
+        "fixes": 1703,
+        "shape": "FreeText",
+        "normalised": "BRUNSBUTTEL"
+      },
+      {
+        "text": "WCI FOR ORDERS",
+        "vessels": 1,
+        "fixes": 1697,
+        "shape": "ForOrders",
+        "normalised": "WCIFORORDERS"
+      },
+      {
+        "text": "SKAGEN FOR ORDER",
+        "vessels": 1,
+        "fixes": 1666,
+        "shape": "ForOrders",
+        "normalised": "SKAGENFORORDER"
+      },
+      {
+        "text": "DK GRE",
+        "vessels": 1,
+        "fixes": 1586,
+        "shape": "UnLocode",
+        "normalised": "DKGRE"
+      },
+      {
+        "text": "GB TRA",
+        "vessels": 1,
+        "fixes": 1541,
+        "shape": "UnLocode",
+        "normalised": "GBTRA"
+      },
+      {
+        "text": "NO SKV",
+        "vessels": 1,
+        "fixes": 1509,
+        "shape": "UnLocode",
+        "normalised": "NOSKV"
+      },
+      {
+        "text": "TBA",
+        "vessels": 1,
+        "fixes": 1465,
+        "shape": "FreeText",
+        "normalised": "TBA"
+      },
+      {
+        "text": "STAVANGER",
+        "vessels": 1,
+        "fixes": 1428,
+        "shape": "FreeText",
+        "normalised": "STAVANGER"
+      },
+      {
+        "text": "SELYS ANCHORAGE",
+        "vessels": 1,
+        "fixes": 1385,
+        "shape": "FreeText",
+        "normalised": "SELYSANCHORAGE"
+      },
+      {
+        "text": "FN POR",
+        "vessels": 1,
+        "fixes": 1371,
+        "shape": "UnLocode",
+        "normalised": "FNPOR"
+      },
+      {
+        "text": "STS OFF FYNS HOVED",
+        "vessels": 1,
+        "fixes": 1357,
+        "shape": "FreeText",
+        "normalised": "STSOFFFYNSHOVED"
+      },
+      {
+        "text": "NO  OSL",
+        "vessels": 1,
+        "fixes": 1331,
+        "shape": "UnLocode",
+        "normalised": "NOOSL"
+      },
+      {
+        "text": "SUEZ FOR ORDERS",
+        "vessels": 1,
+        "fixes": 1310,
+        "shape": "ForOrders",
+        "normalised": "SUEZFORORDERS"
+      },
+      {
+        "text": "MARGATE OPL",
+        "vessels": 1,
+        "fixes": 1292,
+        "shape": "FreeText",
+        "normalised": "MARGATEOPL"
+      },
+      {
+        "text": "DEWVN",
+        "vessels": 1,
+        "fixes": 1220,
+        "shape": "UnLocode",
+        "normalised": "DEWVN"
+      },
+      {
+        "text": "NLRTM=\u003ENOSTU",
+        "vessels": 1,
+        "fixes": 1219,
+        "shape": "Route",
+        "normalised": "NLRTM=\u003ENOSTU"
+      },
+      {
+        "text": "USNYC",
+        "vessels": 1,
+        "fixes": 1210,
+        "shape": "UnLocode",
+        "normalised": "USNYC"
+      },
+      {
+        "text": "SEGOT  PEC# 10-0505",
+        "vessels": 1,
+        "fixes": 1192,
+        "shape": "FreeText",
+        "normalised": "SEGOTPEC#10-0505"
+      },
+      {
+        "text": "NOAES",
+        "vessels": 1,
+        "fixes": 1192,
+        "shape": "UnLocode",
+        "normalised": "NOAES"
+      },
+      {
+        "text": "NLRTM\u003ENOSPV",
+        "vessels": 1,
+        "fixes": 1186,
+        "shape": "Route",
+        "normalised": "NLRTM\u003ENOSPV"
+      },
+      {
+        "text": "IEAUG\u003EDEWVN",
+        "vessels": 1,
+        "fixes": 1184,
+        "shape": "Route",
+        "normalised": "IEAUG\u003EDEWVN"
+      },
+      {
+        "text": "NL MOE",
+        "vessels": 1,
+        "fixes": 1174,
+        "shape": "UnLocode",
+        "normalised": "NLMOE"
+      },
+      {
+        "text": "PTSIE",
+        "vessels": 1,
+        "fixes": 1173,
+        "shape": "UnLocode",
+        "normalised": "PTSIE"
+      },
+      {
+        "text": "FIHMN\u003ESEGOTPEC100028",
+        "vessels": 1,
+        "fixes": 1058,
+        "shape": "Route",
+        "normalised": "FIHMN\u003ESEGOTPEC100028"
+      },
+      {
+        "text": "FLORO",
+        "vessels": 1,
+        "fixes": 1057,
+        "shape": "UnLocode",
+        "normalised": "FLORO"
+      },
+      {
+        "text": "DKSKA PBA2",
+        "vessels": 1,
+        "fixes": 1055,
+        "shape": "FreeText",
+        "normalised": "DKSKAPBA2"
+      },
+      {
+        "text": "TENERIFE",
+        "vessels": 1,
+        "fixes": 1049,
+        "shape": "FreeText",
+        "normalised": "TENERIFE"
+      },
+      {
+        "text": "GLGOH",
+        "vessels": 1,
+        "fixes": 1026,
+        "shape": "UnLocode",
+        "normalised": "GLGOH"
+      },
+      {
+        "text": "TRAVEMUNDE",
+        "vessels": 1,
+        "fixes": 1008,
+        "shape": "FreeText",
+        "normalised": "TRAVEMUNDE"
+      },
+      {
+        "text": "NL AMSTERDAM",
+        "vessels": 1,
+        "fixes": 1006,
+        "shape": "FreeText",
+        "normalised": "NLAMSTERDAM"
+      },
+      {
+        "text": "GBSOW",
+        "vessels": 1,
+        "fixes": 969,
+        "shape": "UnLocode",
+        "normalised": "GBSOW"
+      },
+      {
+        "text": "NO HSO",
+        "vessels": 1,
+        "fixes": 918,
+        "shape": "UnLocode",
+        "normalised": "NOHSO"
+      },
+      {
+        "text": "DO HAI",
+        "vessels": 1,
+        "fixes": 900,
+        "shape": "UnLocode",
+        "normalised": "DOHAI"
+      },
+      {
+        "text": "NYBORG",
+        "vessels": 1,
+        "fixes": 898,
+        "shape": "FreeText",
+        "normalised": "NYBORG"
+      },
+      {
+        "text": "PORVOO",
+        "vessels": 1,
+        "fixes": 886,
+        "shape": "FreeText",
+        "normalised": "PORVOO"
+      },
+      {
+        "text": "NO  MON",
+        "vessels": 1,
+        "fixes": 816,
+        "shape": "UnLocode",
+        "normalised": "NOMON"
+      },
+      {
+        "text": "DK FRC",
+        "vessels": 1,
+        "fixes": 809,
+        "shape": "UnLocode",
+        "normalised": "DKFRC"
+      },
+      {
+        "text": "RU\u003CPWE",
+        "vessels": 1,
+        "fixes": 803,
+        "shape": "Route",
+        "normalised": "RU\u003CPWE"
+      },
+      {
+        "text": "SE KPS",
+        "vessels": 1,
+        "fixes": 794,
+        "shape": "UnLocode",
+        "normalised": "SEKPS"
+      },
+      {
+        "text": "RULED",
+        "vessels": 1,
+        "fixes": 789,
+        "shape": "UnLocode",
+        "normalised": "RULED"
+      },
+      {
+        "text": "NO RAF\u003EES SCI",
+        "vessels": 1,
+        "fixes": 759,
+        "shape": "Route",
+        "normalised": "NORAF\u003EESSCI"
+      },
+      {
+        "text": "AVILES",
+        "vessels": 1,
+        "fixes": 751,
+        "shape": "FreeText",
+        "normalised": "AVILES"
+      },
+      {
+        "text": "FAWLEY",
+        "vessels": 1,
+        "fixes": 741,
+        "shape": "FreeText",
+        "normalised": "FAWLEY"
+      },
+      {
+        "text": "PLSZZ VIA NOK",
+        "vessels": 1,
+        "fixes": 727,
+        "shape": "FreeText",
+        "normalised": "PLSZZVIANOK"
+      },
+      {
+        "text": "NO KAS \u003E BE ANR",
+        "vessels": 1,
+        "fixes": 678,
+        "shape": "Route",
+        "normalised": "NOKAS\u003EBEANR"
+      },
+      {
+        "text": "GIBRALTAR",
+        "vessels": 1,
+        "fixes": 657,
+        "shape": "FreeText",
+        "normalised": "GIBRALTAR"
+      },
+      {
+        "text": "SEMAM",
+        "vessels": 1,
+        "fixes": 643,
+        "shape": "UnLocode",
+        "normalised": "SEMAM"
+      },
+      {
+        "text": "SE KLR",
+        "vessels": 1,
+        "fixes": 615,
+        "shape": "UnLocode",
+        "normalised": "SEKLR"
+      },
+      {
+        "text": "NOSTU=\u003EMQFDF",
+        "vessels": 1,
+        "fixes": 572,
+        "shape": "Route",
+        "normalised": "NOSTU=\u003EMQFDF"
+      },
+      {
+        "text": "GDLPN\u003ESEGOT",
+        "vessels": 1,
+        "fixes": 533,
+        "shape": "Route",
+        "normalised": "GDLPN\u003ESEGOT"
+      },
+      {
+        "text": "NOFRO\u003ENOFRK",
+        "vessels": 1,
+        "fixes": 520,
+        "shape": "Route",
+        "normalised": "NOFRO\u003ENOFRK"
+      },
+      {
+        "text": "SEGOT644\u003ESEGOT551",
+        "vessels": 1,
+        "fixes": 508,
+        "shape": "Route",
+        "normalised": "SEGOT644\u003ESEGOT551"
+      },
+      {
+        "text": "DEHAM\u003ENLRTM",
+        "vessels": 1,
+        "fixes": 487,
+        "shape": "Route",
+        "normalised": "DEHAM\u003ENLRTM"
+      },
+      {
+        "text": "IMMINGHAM FOR ORDERS",
+        "vessels": 1,
+        "fixes": 485,
+        "shape": "ForOrders",
+        "normalised": "IMMINGHAMFORORDERS"
+      },
+      {
+        "text": "DEEME",
+        "vessels": 1,
+        "fixes": 429,
+        "shape": "UnLocode",
+        "normalised": "DEEME"
+      },
+      {
+        "text": "SE SOE",
+        "vessels": 1,
+        "fixes": 406,
+        "shape": "UnLocode",
+        "normalised": "SESOE"
+      },
+      {
+        "text": "ARA FOR ORDERS",
+        "vessels": 1,
+        "fixes": 406,
+        "shape": "ForOrders",
+        "normalised": "ARAFORORDERS"
+      },
+      {
+        "text": "SEKKA",
+        "vessels": 1,
+        "fixes": 372,
+        "shape": "UnLocode",
+        "normalised": "SEKKA"
+      },
+      {
+        "text": "CASJB",
+        "vessels": 1,
+        "fixes": 362,
+        "shape": "UnLocode",
+        "normalised": "CASJB"
+      },
+      {
+        "text": "GB PTL\u003ENO RAF",
+        "vessels": 1,
+        "fixes": 354,
+        "shape": "Route",
+        "normalised": "GBPTL\u003ENORAF"
+      },
+      {
+        "text": "SE KSD",
+        "vessels": 1,
+        "fixes": 351,
+        "shape": "UnLocode",
+        "normalised": "SEKSD"
+      },
+      {
+        "text": "SELAA PEC-48",
+        "vessels": 1,
+        "fixes": 345,
+        "shape": "FreeText",
+        "normalised": "SELAAPEC-48"
+      },
+      {
+        "text": "YME",
+        "vessels": 1,
+        "fixes": 335,
+        "shape": "FreeText",
+        "normalised": "YME"
+      },
+      {
+        "text": "SKAW ANCHORAGE",
+        "vessels": 1,
+        "fixes": 334,
+        "shape": "FreeText",
+        "normalised": "SKAWANCHORAGE"
+      },
+      {
+        "text": "DKGFH",
+        "vessels": 1,
+        "fixes": 290,
+        "shape": "UnLocode",
+        "normalised": "DKGFH"
+      },
+      {
+        "text": "***** ***",
+        "vessels": 1,
+        "fixes": 282,
+        "shape": "Unreadable",
+        "normalised": "********"
+      },
+      {
+        "text": "NOMON  \u003E NOENG",
+        "vessels": 1,
+        "fixes": 243,
+        "shape": "Route",
+        "normalised": "NOMON\u003ENOENG"
+      },
+      {
+        "text": "SE FAG",
+        "vessels": 1,
+        "fixes": 177,
+        "shape": "UnLocode",
+        "normalised": "SEFAG"
+      },
+      {
+        "text": "DKNBG",
+        "vessels": 1,
+        "fixes": 174,
+        "shape": "UnLocode",
+        "normalised": "DKNBG"
+      },
+      {
+        "text": "NLTNZ\u003E\u003E\u003EDESTA",
+        "vessels": 1,
+        "fixes": 161,
+        "shape": "Route",
+        "normalised": "NLTNZ\u003E\u003E\u003EDESTA"
+      },
+      {
+        "text": "SEFAG",
+        "vessels": 1,
+        "fixes": 142,
+        "shape": "UnLocode",
+        "normalised": "SEFAG"
+      },
+      {
+        "text": "SOUTHHWOLD",
+        "vessels": 1,
+        "fixes": 134,
+        "shape": "FreeText",
+        "normalised": "SOUTHHWOLD"
+      },
+      {
+        "text": "IMMER FLEISSIG",
+        "vessels": 1,
+        "fixes": 127,
+        "shape": "FreeText",
+        "normalised": "IMMERFLEISSIG"
+      },
+      {
+        "text": "BEANR\u003EDEHAM",
+        "vessels": 1,
+        "fixes": 122,
+        "shape": "Route",
+        "normalised": "BEANR\u003EDEHAM"
+      },
+      {
+        "text": "DK GED",
+        "vessels": 1,
+        "fixes": 111,
+        "shape": "UnLocode",
+        "normalised": "DKGED"
+      },
+      {
+        "text": "STADE",
+        "vessels": 1,
+        "fixes": 102,
+        "shape": "UnLocode",
+        "normalised": "STADE"
+      },
+      {
+        "text": "US GULF FOR ORDERS",
+        "vessels": 1,
+        "fixes": 94,
+        "shape": "ForOrders",
+        "normalised": "USGULFFORORDERS"
+      },
+      {
+        "text": "DE HAM \u003E SE GOT",
+        "vessels": 1,
+        "fixes": 84,
+        "shape": "Route",
+        "normalised": "DEHAM\u003ESEGOT"
+      },
+      {
+        "text": "NO KAR\u003EFR DKK",
+        "vessels": 1,
+        "fixes": 69,
+        "shape": "Route",
+        "normalised": "NOKAR\u003EFRDKK"
+      },
+      {
+        "text": "FR LEH",
+        "vessels": 1,
+        "fixes": 54,
+        "shape": "UnLocode",
+        "normalised": "FRLEH"
+      },
+      {
+        "text": "NOTRD",
+        "vessels": 1,
+        "fixes": 49,
+        "shape": "UnLocode",
+        "normalised": "NOTRD"
+      },
+      {
+        "text": "FI INK",
+        "vessels": 1,
+        "fixes": 29,
+        "shape": "UnLocode",
+        "normalised": "FIINK"
+      },
+      {
+        "text": "GIGIB           *,(]",
+        "vessels": 1,
+        "fixes": 25,
+        "shape": "Unreadable",
+        "normalised": "GIGIB*,(]"
+      },
+      {
+        "text": "SEGOT PEC10-0033",
+        "vessels": 1,
+        "fixes": 22,
+        "shape": "FreeText",
+        "normalised": "SEGOTPEC10-0033"
+      },
+      {
+        "text": "BERGS",
+        "vessels": 1,
+        "fixes": 21,
+        "shape": "UnLocode",
+        "normalised": "BERGS"
+      },
+      {
+        "text": "NO SLG",
+        "vessels": 1,
+        "fixes": 18,
+        "shape": "UnLocode",
+        "normalised": "NOSLG"
+      },
+      {
+        "text": "NLRTM\u003EDEHAM",
+        "vessels": 1,
+        "fixes": 14,
+        "shape": "Route",
+        "normalised": "NLRTM\u003EDEHAM"
+      },
+      {
+        "text": "SEGOT\u003CSEKLR",
+        "vessels": 1,
+        "fixes": 13,
+        "shape": "Route",
+        "normalised": "SEGOT\u003CSEKLR"
+      },
+      {
+        "text": "GI GIB",
+        "vessels": 1,
+        "fixes": 11,
+        "shape": "UnLocode",
+        "normalised": "GIGIB"
+      },
+      {
+        "text": "GERMANY FOR ORDERS",
+        "vessels": 1,
+        "fixes": 10,
+        "shape": "ForOrders",
+        "normalised": "GERMANYFORORDERS"
+      },
+      {
+        "text": "GBTEE\u003EDERSK",
+        "vessels": 1,
+        "fixes": 10,
+        "shape": "Route",
+        "normalised": "GBTEE\u003EDERSK"
+      },
+      {
+        "text": "SEGOT\u003CSEKAL",
+        "vessels": 1,
+        "fixes": 7,
+        "shape": "Route",
+        "normalised": "SEGOT\u003CSEKAL"
+      },
+      {
+        "text": "RAFNES",
+        "vessels": 1,
+        "fixes": 4,
+        "shape": "FreeText",
+        "normalised": "RAFNES"
+      },
+      {
+        "text": "US HOU",
+        "vessels": 1,
+        "fixes": 1,
+        "shape": "UnLocode",
+        "normalised": "USHOU"
+      }
+    ],
+    "distinctStrings": 443,
+    "distinctIgnoringSpacingAndCase": 390
+  },
+  "cargo": {
+    "callsWithDraughtAtBothEnds": 180,
+    "callsWithoutDraught": 0,
+    "discharged": 26,
+    "loaded": 27,
+    "unchanged": 127,
+    "berthedCalls": 66,
+    "berthedWithAChange": 33,
+    "anchorageOnlyCalls": 114,
+    "anchorageOnlyWithAChange": 20,
+    "berthedSharePercent": 50,
+    "anchorageOnlySharePercent": 17.54385964912281,
+    "timesLikelierWhenBerthed": 2.8499999999999996,
+    "isBalanced": true
   }
 }

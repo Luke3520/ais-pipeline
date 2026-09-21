@@ -1,0 +1,121 @@
+---
+import Base from '../layouts/Base.astro';
+import data from '../data/pipeline.json';
+
+const { cargo: c } = data;
+const n = (v: number, d = 0) =>
+  v.toLocaleString('en-GB', { minimumFractionDigits: d, maximumFractionDigits: d });
+
+const moved = c.discharged + c.loaded;
+const rows = [
+  ['Worked alongside', c.berthedWithAChange, c.berthedCalls, c.berthedSharePercent],
+  ['Anchorage only', c.anchorageOnlyWithAChange, c.anchorageOnlyCalls, c.anchorageOnlySharePercent],
+] as const;
+---
+<Base
+  title="Did the cargo move? — a second opinion on the berth, from a field the crew types"
+  description="The pipeline decides a vessel worked alongside from drift geometry. Reported draught is a different signal for the same event — and the two agree nearly three times better than chance."
+>
+  <h1>A second opinion on the berth</h1>
+
+  <p class="lede prose">
+    A tanker that arrives drawing 12.4 metres and leaves drawing 7.1 has discharged. That is not a
+    conclusion from where it sat or how long it stayed — it is the vessel's own draught field,
+    reaching the same event by a completely different route from the geometry this pipeline
+    normally uses.
+  </p>
+
+  <h2>Do the two agree?</h2>
+
+  <p class="prose">
+    The pipeline calls a stop a <strong>berth</strong> when the vessel barely drifted for how long
+    it stayed, and an <strong>anchorage</strong> when it swung. That judgement never sees a draught.
+    So: of the calls the geometry put alongside, how many reported that their cargo moved?
+  </p>
+
+  <div class="scroll">
+    <table>
+      <thead>
+        <tr><th>the geometry says</th><th class="n">reported a change</th><th class="n">of</th><th class="n">share</th></tr>
+      </thead>
+      <tbody>
+        {rows.map(([label, part, whole, share]) => (
+          <tr>
+            <td><strong>{label}</strong></td>
+            <td class="n">{n(part)}</td>
+            <td class="n">{n(whole)}</td>
+            <td class="n">
+              <span class="bar" style={`width:${Math.max(2, Math.round((share ?? 0) * 1.6))}px`}></span>
+              {share === null ? <span class="too-few">too few</span> : `${n(share, 1)}%`}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+
+  <p class="prose">
+    A call the geometry puts alongside is <strong>{n(c.timesLikelierWhenBerthed ?? 0, 2)} times</strong>{' '}
+    likelier to report that its cargo moved. Two signals with nothing in common but the event they
+    describe, agreeing well ahead of chance.
+  </p>
+
+  <h2>Why that is corroboration and not proof</h2>
+
+  <blockquote class="prose">
+    <p>
+      Draught is <strong>typed in</strong>. It arrives in the same hand-entered voyage message as
+      the destination and the ETA — the two fields this site has already shown to be the least
+      reliable things in the feed. A draught change is a crew's <em>report</em> that cargo moved,
+      never an observation that it did.
+    </p>
+  </blockquote>
+
+  <div class="prose">
+    <p>
+      So this is independent of the <em>geometry</em>, not of human diligence, and the numbers show
+      the cost. Half the calls the pipeline puts alongside — {n(c.berthedCalls - c.berthedWithAChange)}{' '}
+      of {n(c.berthedCalls)} — report no change at all. That is not evidence the vessel did not
+      work. It is evidence that nobody said.
+    </p>
+    <p>
+      And {n(c.anchorageOnlyWithAChange)} calls reported a change while the geometry only ever saw
+      them swinging at anchor. Some of that is real: ship-to-ship transfer and lightering happen at
+      anchorages and move plenty of cargo. Some of it is a crew updating the field hours late, or
+      early, or on the way out. A radio signal cannot separate the two, so this page does not try.
+    </p>
+  </div>
+
+  <h2>What the fleet reported</h2>
+
+  <ul class="stats">
+    <li class="stat"><b>{n(c.discharged)}</b><span>reported discharging</span></li>
+    <li class="stat"><b>{n(c.loaded)}</b><span>reported loading</span></li>
+    <li class="stat"><b>{n(c.unchanged)}</b><span>reported no change</span></li>
+    <li class="stat"><b>{n(c.callsWithDraughtAtBothEnds)}</b><span>complete calls examined</span></li>
+  </ul>
+
+  <p class="note prose">
+    {n(c.discharged)} + {n(c.loaded)} + {n(c.unchanged)} = {n(c.callsWithDraughtAtBothEnds)}. Every
+    call examined is accounted for by exactly one outcome — the same arithmetic the ingest applies
+    to rows. A call reporting no draught at either end is counted as
+    <strong>unknown</strong> and never as unchanged: "the crew said nothing moved" and "the crew
+    said nothing" are different statements.
+  </p>
+
+  <h2>It does not touch the laytime</h2>
+
+  <p class="prose">
+    Waiting hours, working hours and every figure in a laytime statement come from measured position
+    alone. Reported draught stays out of them, deliberately: those numbers feed a commercial claim,
+    and folding a hand-typed field into one would put a figure resting on a crew's diligence inside
+    something a charterer argues money over. It sits <em>beside</em> the statement as a second
+    opinion, and never inside it.
+  </p>
+
+  <p class="note prose">
+    Half a metre is the threshold for calling a change a change. Crews round — 12.0, 12.5 and 13.0
+    are far commoner than 12.3 — so anything finer would read rounding as cargo. It is a heuristic,
+    chosen from how the field is reported rather than from what it produces.
+  </p>
+</Base>

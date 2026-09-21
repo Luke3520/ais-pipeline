@@ -29,7 +29,9 @@ public static class ExportBuilder
         DateTime lastFixUtc,
         IReadOnlyList<PortCallHours> portCallHours,
         IReadOnlyList<PortCall> callsForPricing,
-        IReadOnlyList<EtaHorizonBin> etaBins)
+        IReadOnlyList<EtaHorizonBin> etaBins,
+        IReadOnlyList<DestinationCount> destinations,
+        DestinationTypists typists)
     {
         var firstRunPerFile = runs
             .OrderBy(r => r.Id)
@@ -118,6 +120,9 @@ public static class ExportBuilder
             Priceability = Priceability(callsForPricing),
             Thresholds = new ExportThresholds(),
             EtaHorizon = EtaHorizonBuilder.Build(etaBins),
+            Destinations = TypedDestinationsBuilder.Build(
+                destinations, typists.Vessels, typists.VesselsThatChangedIt),
+            Cargo = ReportedCargoBuilder.Build(callsForPricing),
         };
     }
 

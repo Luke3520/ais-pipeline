@@ -126,6 +126,11 @@ public sealed class StopDetector
 
         var reported = ModalStatus(fixes);
 
+        // First and last draught actually reported inside the stop. Fixes carrying none are
+        // skipped rather than treated as zero: a vessel that did not say is not a vessel drawing
+        // nothing. Both null means the crew never reported one at all, which is its own answer.
+        var draughts = fixes.Where(f => f.DraughtM is not null).ToList();
+
         stops.Add(new StopEvent
         {
             Mmsi = fixes[0].Mmsi,
@@ -141,6 +146,9 @@ public sealed class StopDetector
             // R10. The speed said stationary; if the vessel's own status said otherwise, that
             // disagreement is the finding and is recorded rather than resolved.
             StatusAgrees = NavigationalStatus.Classify(reported) != ReportedActivity.UnderWay,
+
+            DraughtFirstM = draughts.Count > 0 ? draughts[0].DraughtM : null,
+            DraughtLastM = draughts.Count > 0 ? draughts[^1].DraughtM : null,
 
             IsComplete = complete && !openAtEdge,
             FirstPositionId = fixes[0].Id,

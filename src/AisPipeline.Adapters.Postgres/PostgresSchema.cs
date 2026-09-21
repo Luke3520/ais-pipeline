@@ -99,6 +99,8 @@ internal static class PostgresSchema
           status_agrees BOOLEAN NOT NULL,
           is_complete BOOLEAN NOT NULL,
           first_position_id BIGINT NOT NULL REFERENCES position_report(id),
+          draught_first_m DOUBLE PRECISION,
+          draught_last_m DOUBLE PRECISION,
           last_position_id BIGINT NOT NULL REFERENCES position_report(id),
           UNIQUE (mmsi, started_utc)
         );
@@ -155,5 +157,7 @@ internal static class PostgresSchema
         ALTER TABLE port_call ADD COLUMN IF NOT EXISTS port_name TEXT;
         ALTER TABLE port_call ADD COLUMN IF NOT EXISTS port_country TEXT;
         ALTER TABLE port_call ADD COLUMN IF NOT EXISTS port_distance_nm DOUBLE PRECISION;
+        ALTER TABLE stop_event ADD COLUMN IF NOT EXISTS draught_first_m DOUBLE PRECISION;
+        ALTER TABLE stop_event ADD COLUMN IF NOT EXISTS draught_last_m DOUBLE PRECISION;
         """;
 }

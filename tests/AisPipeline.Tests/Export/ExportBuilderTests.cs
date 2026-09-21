@@ -29,7 +29,8 @@ public class ExportBuilderTests
         IReadOnlyList<StoredRun>? runs = null,
         IReadOnlyList<PortCallHours>? portCallHours = null,
         IReadOnlyList<PortCall>? callsForPricing = null,
-        IReadOnlyList<EtaHorizonBin>? etaBins = null) =>
+        IReadOnlyList<EtaHorizonBin>? etaBins = null,
+        IReadOnlyList<DestinationCount>? destinations = null) =>
         ExportBuilder.Build(
             T0,
             runs ??
@@ -45,7 +46,9 @@ public class ExportBuilderTests
             lastFixUtc: T0.AddDays(7),
             portCallHours ?? [],
             callsForPricing ?? [],
-            etaBins ?? []);
+            etaBins ?? [],
+            destinations ?? [],
+            new DestinationTypists());
 
     [Fact]
     public void A_vessel_appearing_in_both_lists_becomes_one_record()

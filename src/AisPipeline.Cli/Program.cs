@@ -16,6 +16,7 @@ using AisPipeline.Core.Sof;
 using AisPipeline.Core.Query;
 using AisPipeline.Core.Ports;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using AisPipeline.Core.Detection;
 using AisPipeline.Core.Export;
 using AisPipeline.Core.Geo;
@@ -897,7 +898,9 @@ static int Export(string[] args)
         stops.Count > 0 ? stops.Max(s => s.EndedUtc) : DateTime.UnixEpoch,
         queries.PortCallHoursForBenchmarks(),
         callsForPricing,
-        queries.EtaHorizon());
+        queries.EtaHorizon(),
+        queries.TypedDestinations(),
+        queries.DestinationTypists());
 
     Directory.CreateDirectory(outDir);
     var path = Path.Combine(outDir, "pipeline.json");
@@ -906,6 +909,11 @@ static int Export(string[] args)
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         WriteIndented = true,
+
+        // Enums by name. The document is the contract a site reads (ADR-0039), and "shape": 2 is
+        // a number whose meaning lives in a C# file the reader does not have -- renumber the enum
+        // and every published figure silently changes meaning.
+        Converters = { new JsonStringEnumConverter() },
     };
 
     File.WriteAllText(path, JsonSerializer.Serialize(document, options));

@@ -156,6 +156,23 @@ public sealed record ExportDocument
     /// visible at a glance, where the prose describing them takes a paragraph.
     /// </summary>
     public required EtaHorizon EtaHorizon { get; init; }
+
+    /// <summary>
+    /// What the crew typed where the destination goes.
+    ///
+    /// Strings, and counts of them. No vessel is named against any string -- the interesting claim
+    /// is about the field, not about who filled it in.
+    /// </summary>
+    public required TypedDestinations Destinations { get; init; }
+
+    /// <summary>
+    /// What reported draught says the cargo did, and whether it agrees with the drift geometry.
+    ///
+    /// Counts of calls, never a named vessel: "33 of 66 berthed calls reported a change" is a
+    /// statement about the feed, where "this tanker discharged" is a statement about somebody's
+    /// business.
+    /// </summary>
+    public required ReportedCargo Cargo { get; init; }
 }
 
 /// <summary>The constants a reader needs in order to argue with a figure in this document.</summary>

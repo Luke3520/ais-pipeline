@@ -102,6 +102,12 @@ public interface IAisQueries : IDisposable
     /// </summary>
     IReadOnlyList<EtaHorizonBin> EtaHorizon();
 
+    /// <summary>Every distinct string typed into the destination field, with how far it spread.</summary>
+    IReadOnlyList<DestinationCount> TypedDestinations();
+
+    /// <summary>How many vessels typed a destination at all, and how many ever changed it.</summary>
+    DestinationTypists DestinationTypists();
+
     IReadOnlyList<RuleHitCount> QualityReport();
 
     /// <summary>

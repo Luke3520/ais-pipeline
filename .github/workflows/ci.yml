@@ -89,7 +89,7 @@ jobs:
             offered=$((offered + 1))
           done
           echo "$offered page(s) offered by the navigation, all present"
-          test "$offered" -ge 6 || { echo "only $offered nav pages found; the nav did not render"; exit 1; }
+          test "$offered" -ge 8 || { echo "only $offered nav pages found; the nav did not render"; exit 1; }
 
           # The investigation's own pages, which the top navigation no longer links directly.
           for page in arrivals departures findings; do

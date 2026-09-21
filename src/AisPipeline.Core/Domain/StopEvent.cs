@@ -66,6 +66,12 @@ public sealed record StopEvent
     /// </summary>
     public required bool IsComplete { get; init; }
 
+    /// <summary>First draught reported during this stop, or null when none was.</summary>
+    public double? DraughtFirstM { get; init; }
+
+    /// <summary>Last draught reported during this stop, or null when none was.</summary>
+    public double? DraughtLastM { get; init; }
+
     public required long FirstPositionId { get; init; }
     public required long LastPositionId { get; init; }
 }
