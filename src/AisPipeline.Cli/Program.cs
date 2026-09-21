@@ -1,10 +1,13 @@
 using System.Globalization;
+using AisPipeline.Adapters.Archive;
 using AisPipeline.Adapters.Csv;
 using AisPipeline.Adapters.Postgres;
 using AisPipeline.Adapters.Sof;
 using AisPipeline.Adapters.Sqlite;
 using AisPipeline.Adapters.Sql;
 using AisPipeline.Core.Annotate;
+using AisPipeline.Core.Archive;
+using AisPipeline.Core.Retention;
 using AisPipeline.Core.Domain;
 using AisPipeline.Core.Laytime;
 using AisPipeline.Core.Reconciliation;
@@ -36,6 +39,7 @@ return args[0] switch
     "portcalls" => PortCalls(args[1..]),
     "export" => Export(args[1..]),
     "prune" => Prune(args[1..]),
+    "archive" => ReadArchive(args[1..]),
     _ => Unknown(args[0]),
 };
 
@@ -56,6 +60,7 @@ static void Usage() => Console.WriteLine("""
       ais quality [--db <path> | --postgres <conn>]
       ais export --out <dir> [--db <path> | --postgres <conn>]
       ais prune --keep-days <n> [--archive <dir>] [--force] [--db <path> | --postgres <conn>]
+      ais archive <file.json> [--mmsi <n>]
       ais stops [--mmsi <n>] [--min-hours <h>] [--complete-only] [--disagreements] [--limit <n>]
       ais portcalls [--mmsi <n>] [--min-waiting-hours <h>] [--complete-only] [--limit <n>]
 
@@ -82,6 +87,11 @@ static void Usage() => Console.WriteLine("""
     fix older than --keep-days. Projections go too, on purpose: they are a total function of the
     log, and a derived layer over a partly-pruned log is a contradiction that produces a defect
     at every seam. Run detect afterwards to rebuild from what remains (ADR-0045).
+
+    archive reads back what prune wrote. Past the cutoff that file is the only record a port
+    call ever happened -- the fixes it was derived from are gone and rule 5 means nothing can
+    rebuild it -- so it is the one document here that has to be readable years after the code
+    that wrote it. This verb is what proves it still is.
 
     export writes the derived layer as JSON for a static site to build from. It carries its own
     provenance -- which source files, which window, how many rows -- so a published figure can say
@@ -687,72 +697,139 @@ static int Prune(string[] args)
         return 2;
     }
 
-    Directory.CreateDirectory(archiveDir);
-    var archivePath = Path.Combine(archiveDir, $"port-calls-before-{cutoff:yyyyMMddTHHmmss}Z.json");
+    using var store = OpenStore(args);
+    store.EnsureSchema();
 
-    var phases = queries.GetPhasesForPortCalls([.. losing.Select(c => c.Id)]);
+    // The order -- archive, read it back, and only then delete -- is decided in Core and tested
+    // there without a database (ADR-0046). What is left here is fetching and printing.
+    var result = new PrunePass(store, new JsonFileArchive(archiveDir)).Run(
+        cutoff,
+        DateTime.UtcNow,
+        losing,
+        queries.ListRuns(),
+        queries.GetPhasesForPortCalls([.. losing.Select(c => c.Id)]));
 
-    var archive = new
+    if (result.RefusedBecause is { } refusal)
     {
-        archivedUtc = DateTime.UtcNow,
-        cutoffUtc = cutoff,
-        sourceFiles = queries.ListRuns().OrderBy(r => r.Id).Select(r => r.SourceFile).Distinct(),
-        portCalls = losing.Select(call => new
-        {
-            call.Id,
-            call.Mmsi,
-            call.ArrivedUtc,
-            call.DepartedUtc,
-            call.WaitingHours,
-            call.WorkingHours,
-            call.UnclassifiedHours,
-            call.IsComplete,
-            call.PortName,
-            call.PortCountry,
-            call.PortDistanceNm,
-            phases = phases.Where(p => p.Phase.PortCallId == call.Id)
-                .OrderBy(p => p.Phase.Sequence)
-                .Select(p => new
-                {
-                    p.Phase.Sequence,
-                    p.Phase.Phase,
-                    p.Stop.StartedUtc,
-                    p.Stop.EndedUtc,
-                    p.Stop.ObservedDurationHours,
-                    p.Stop.IsComplete,
-                    p.Stop.ReportedStatus,
-                    p.Stop.StatusAgrees,
-                }),
-        }),
-    };
-
-    File.WriteAllText(
-        archivePath,
-        JsonSerializer.Serialize(archive, new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            WriteIndented = true,
-        }));
-
-    // Written and readable before a single row is deleted. An archive that failed to write, on a
-    // prune that succeeded, loses the history permanently.
-    if (!File.Exists(archivePath) || new FileInfo(archivePath).Length == 0)
-    {
-        Console.Error.WriteLine($"  archive at {archivePath} is missing or empty; nothing removed");
+        Console.Error.WriteLine($"  {refusal}");
         return 1;
     }
 
-    Console.WriteLine($"  archived to {archivePath} ({new FileInfo(archivePath).Length / 1024.0:F0} KB)");
+    Console.WriteLine(result.ArchivePath is { } written
+        ? $"  archived to {written} ({new FileInfo(written).Length / 1024.0:F0} KB), read back and verified"
+        : "  no port call to archive; pruning fixes only");
 
-    using var store = OpenStore(args);
-    store.EnsureSchema();
-    var removed = store.PruneBefore(cutoff, losing.Count, archivePath);
-
-    Console.WriteLine($"  removed {removed:N0} position report(s) and every projection");
+    Console.WriteLine($"  removed {result.FixesRemoved:N0} position report(s) and every projection");
     Console.WriteLine("  run detect to rebuild stops and port calls from what remains.");
 
     return 0;
 }
+
+static int ReadArchive(string[] args)
+{
+    if (args.Length == 0 || args[0].StartsWith("--", StringComparison.Ordinal))
+    {
+        Console.Error.WriteLine("archive needs a file: ais archive <file.json>");
+        return 2;
+    }
+
+    var path = args[0];
+
+    if (!File.Exists(path))
+    {
+        Console.Error.WriteLine($"no archive at {path}");
+        return 2;
+    }
+
+    ArchiveDocument document;
+
+    try
+    {
+        document = ArchiveJson.ReadFile(path);
+    }
+    catch (Exception e) when (e is InvalidDataException or IOException)
+    {
+        // Loud, and non-zero. An unreadable archive is the worst state this project has -- the
+        // rows are gone and the record of them will not parse -- so it must never be mistaken
+        // for an empty one.
+        Console.Error.WriteLine(e.Message);
+        return 1;
+    }
+
+    var calls = document.PortCalls;
+    var mmsi = OptionalMmsi(args);
+
+    if (mmsi is { } only)
+    {
+        calls = [.. calls.Where(c => c.Mmsi == only)];
+    }
+
+    Console.WriteLine(
+        $"{path}: {document.PortCalls.Count} port call(s) archived " +
+        $"{document.ArchivedUtc:yyyy-MM-dd HH:mm} UTC");
+    Console.WriteLine(
+        $"  cutoff    : everything arriving before {document.CutoffUtc:yyyy-MM-dd HH:mm} UTC");
+    Console.WriteLine(
+        $"  source    : {string.Join(", ", document.SourceFiles)}");
+
+    if (calls.Count == 0)
+    {
+        Console.WriteLine();
+        Console.WriteLine($"  no call in this archive is vessel {mmsi}.");
+        return 0;
+    }
+
+    Console.WriteLine();
+    Console.WriteLine(
+        "  id     mmsi       arrived (UTC)      waiting  working  unclassified  nearest port");
+
+    foreach (var call in calls)
+    {
+        Console.WriteLine(
+            $"  {call.Id,-6} {call.Mmsi,-10} {call.ArrivedUtc:yyyy-MM-dd HH:mm}  " +
+            $"{call.WaitingHours,9:F1}{call.WorkingHours,9:F1}" +
+            $"{call.UnclassifiedHours,14:F1}  {ArchivedPort(call)}" +
+            $"{(call.IsComplete ? "" : "  (open)")}");
+
+        if (mmsi is not null)
+        {
+            // One vessel asked for by name gets its phases too. Across the whole archive they
+            // would be thousands of lines; for one vessel they are the answer to the question
+            // that made someone open a pruned record at all.
+            foreach (var phase in call.Phases)
+            {
+                Console.WriteLine(
+                    $"         {phase.Sequence}. {phase.Phase,-10} " +
+                    $"{phase.StartedUtc:yyyy-MM-dd HH:mm} -> {phase.EndedUtc:yyyy-MM-dd HH:mm}  " +
+                    $"{Hours(phase.IsComplete ? phase.ObservedDurationHours : null, phase.ObservedDurationHours)}h  " +
+                    $"{phase.ReportedStatus ?? "(no status)"}" +
+                    $"{(phase.StatusAgrees ? "" : "  (contradicted by its own speed)")}");
+            }
+        }
+    }
+
+    var open = calls.Count(c => !c.IsComplete);
+    if (open > 0)
+    {
+        Console.WriteLine();
+        Console.WriteLine(
+            $"  {open} marked (open): true extent unknown and now permanently so. An incomplete " +
+            "call could once be finished by ingesting the days around it; the fixes are gone.");
+    }
+
+    Console.WriteLine();
+    Console.WriteLine(
+        "  This is the record itself, not a projection of one. Nothing can rebuild these calls.");
+
+    return 0;
+}
+
+/// <summary>An archived call's port, marked the same way a live one is (ADR-0034).</summary>
+static string ArchivedPort(ArchivedPortCall call) =>
+    call.PortName is null
+        ? "(none named)"
+        : $"{(call.PortDistanceNm <= PortAttributionThresholds.PlausiblyAtPortNm ? " " : "~")}" +
+          $"{call.PortName} {call.PortDistanceNm!.Value.ToString("F1", CultureInfo.InvariantCulture)} nm";
 
 static int Export(string[] args)
 {

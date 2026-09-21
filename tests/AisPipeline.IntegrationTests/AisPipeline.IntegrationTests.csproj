@@ -21,6 +21,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\AisPipeline.Core\AisPipeline.Core.csproj" />
+    <ProjectReference Include="..\..\src\AisPipeline.Adapters.Archive\AisPipeline.Adapters.Archive.csproj" />
     <ProjectReference Include="..\..\src\AisPipeline.Adapters.Csv\AisPipeline.Adapters.Csv.csproj" />
     <ProjectReference Include="..\..\src\AisPipeline.Adapters.Sqlite\AisPipeline.Adapters.Sqlite.csproj" />
     <ProjectReference Include="..\..\src\AisPipeline.Adapters.Postgres\AisPipeline.Adapters.Postgres.csproj" />

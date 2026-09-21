@@ -64,6 +64,7 @@ the design.
 | [0043](0043-port-benchmarks-carry-their-sample.md) | A port benchmark carries the sample it rests on | Accepted |
 | [0044](0044-retention-and-what-it-collides-with.md) | Retention: attempted, and rejected for now | Superseded by ADR-0045 |
 | [0045](0045-prune-whole-periods-archive-first.md) | Prune whole periods, and archive before deleting | Accepted |
+| [0046](0046-an-archive-nothing-reads-is-not-an-archive.md) | An archive nothing reads is not an archive | Accepted |
 
 ### † Measurement corrected, 2026-09-12
 

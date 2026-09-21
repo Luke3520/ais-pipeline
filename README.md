@@ -6,8 +6,9 @@ when each tanker stopped, for how long, and whether it was waiting at anchor or 
 
 That last distinction is the raw material of a laytime calculation.
 
-> **Status:** in progress. M7 (reconciliation) complete — see [Milestones](#milestones).
-> Seven days of AIS in; a Statement of Facts compared against it, and the difference priced.
+> **Status:** in progress. M11 (retention) complete — see [Milestones](#milestones).
+> Seven days of AIS in; a Statement of Facts compared against it, and the difference priced; and
+> the store now has a way to forget, which it did not before.
 
 ## Why
 
@@ -85,6 +86,12 @@ detected across 452 vessels (35.0s)
   stops 809  (complete 517)  port calls 362
   stops where the vessel's own status contradicted its speed: 299 (37.0%)
 ```
+
+Those rule counts are **pair firings, not rows**, and that is why `ais quality` further down
+reports larger ones for the same three rules — 776, 1,348 and 2,869. A sequence rule judges a
+*pair* of consecutive fixes and both halves are flagged, because the earlier fix is often the one
+carrying the bad position and leaving it unflagged would let it back into the geometry (ADR-0021).
+One firing, two rows marked. The two numbers count different things and neither is wrong.
 
 **517 of 809 stops are complete** — their true start and end are both inside the window. One day
 alone would have yielded 30–50, because roughly a third of tankers are stationary across any given
@@ -271,7 +278,6 @@ uploaded, which is a write surface and a separate trigger.
 
 ```bash
 ais export --out site/src/data     # refresh the data the site builds from
-ais prune --keep-days 90 --force   # archive old port calls, then drop what is past the time bar
 cd site && npm install && npm run dev
 ```
 
@@ -300,6 +306,13 @@ static data from the same equipment, which the site says out loud rather than qu
 Four ideas, each with a decision record behind it:
 
 - **Provenance.** Every normalized record references the ingest run and source line it came from.
+- **The log keeps what the feed said.** Six more of the feed's columns are stored — rate of turn,
+  draught, destination and ETA on the row, cargo type and position fixing device on the vessel —
+  split by how they behave rather than by which AIS message carries them, since a rule needs to know
+  what a vessel was claiming *at a given moment* ([ADR-0040](docs/adr/0040-store-the-rest-of-the-feed.md)).
+  Destination repeats on every row and that duplication is accepted: a deduplicated voyage table
+  would be a projection, and inventing one now would put a derived table in front of the log it
+  derives from. Four columns are deliberately still not read, and that record says which and why.
 - **Quarantine versus flag.** A rule either *rejects* a row — which quarantines it with the rule id
   and raw text — or *flags* it, keeping the observation and the doubt together. Nothing is dropped
   silently. ([ADR-0006](docs/adr/0006-quarantine-versus-flag.md))
@@ -393,6 +406,9 @@ ais laytime --mmsi 219018271             # a statement for the most recent compl
 ais reconcile --sof statement.json       # that statement against what AIS observed
 ais stops --min-hours 6 --complete-only  # detected stops, longest first
 ais portcalls --min-waiting-hours 6      # waiting and working hours per call, with the port
+ais export --out site/src/data           # the static site's data contract
+ais prune --keep-days 90 --force         # archive old port calls, then drop what is past the bar
+ais archive archive/port-calls-*.json    # read back what prune wrote
 ```
 
 `detect` names each port call against a committed extract of the **World Port Index**
@@ -432,8 +448,8 @@ and picking one would silently decide which timeline a demurrage figure is measu
 
 `ais quality` reports **both** things a rule can do, because a rule does exactly one of two things
 and there is no third (ADR-0006): it *rejects* a row into `quarantine`, or it *keeps* the row and
-flags the doubt. Reporting only the first hides every rule that flags — R7, R8, R11 — and an
-invisible doubt reads as no doubt at all (ADR-0032). A registered rule that never fired prints zero
+flags the doubt. Reporting only the first hides every rule that flags — R7, R8,
+R11, R12, R13 — and an invisible doubt reads as no doubt at all (ADR-0032). A registered rule that never fired prints zero
 and is named as silent, because silence and absence are different claims:
 
 ```
@@ -445,11 +461,26 @@ and is named as silent, because silence and absence are different claims:
   R7               0          776  Implied speed over 50 kn across more than 0.5 nm
   R8               0        1,348  No fix for more than 60 minutes
   R11              0        2,869  Reported speed contradicted by movement over more than 0.1 nm
+  R12              0        4,055  Reported status claims stationary while speed says under way
+  R13              0      353,069  ETA more than 60 days ahead; a stale one the decoder rolled over
 
   R1 ran and never fired on this data.
 
-  totals: 230 rejected into quarantine, 5,330 kept with a flag.
+  totals: 230 rejected into quarantine, 362,454 kept with a flag.
 ```
+
+**R13 is 97% of that flag total on its own** — 353,069 rows of 5.37M, one in fifteen. It only
+became visible once the voyage fields were stored at all (ADR-0040), and what it catches is not a
+corrupt number but a human one: ETA is typed in by the crew, and a value left from a previous
+voyage rolls over into a date months ahead rather than expiring. The threshold of 60 days sits in a
+run of days where no fix lands at all, measured at 42-76 across the seven days
+([ADR-0041](docs/adr/0041-r13-a-stale-eta-goes-forward-not-backward.md)), so its exact value cannot
+change the classification. Nothing is rejected: a stale ETA is still what the vessel broadcast.
+
+R12 is the mirror of R10 — a status claiming stationary while the speed says under way, where R10
+is a status claiming under way while the vessel sits still
+([ADR-0038](docs/adr/0038-r12-the-mirror-of-r10.md)). The two together are why the dial on the
+bridge, not the receiver, is the least reliable part of this feed.
 
 That table earned its keep the first time it ran. R6 was documented for months as a guard that had
 never fired — true of the 1.7M-row sample it was written against, and false of the seven-day window,
@@ -472,6 +503,66 @@ flagged, both readings are stored, and neither wins.
 
 The counts are over what the store holds, not over lines read — `ais ingest` reports the latter,
 and it is legitimately the larger number once duplicates in the file collapse onto one natural key.
+
+## Forgetting things
+
+The store only ever accumulated. Measured, one day is 766,885 rows and 149 MB, so a year is 280M
+rows and 53 GB against 42 GB free — disk binds at about nine months, and before CPU does.
+
+The obvious policy was to prune raw fixes on the 90-day demurrage time bar and keep the derived
+layer forever, which costs 25 KB a day against the raw log's 149 MB. **That design does not work,
+and [ADR-0044](docs/adr/0044-retention-and-what-it-collides-with.md) is the record of it failing** —
+two foreign keys, a unique constraint, and detection fabricating stops out of the anchor rows kept
+to satisfy the first foreign key. The root cause is in rule 5: the derived layer is a total function
+of the log, so a store holding derived rows over a partly-pruned log is a contradiction, and every
+seam between the rebuilt half and the frozen half produced a defect.
+
+What replaced it ([ADR-0045](docs/adr/0045-prune-whole-periods-archive-first.md)) drops **every**
+projection along with the old fixes — not the projections for the pruned period, all of them.
+`detect` rebuilds them in seconds, and dropping the lot removes every ordering question, dangling
+reference and collision at once. Nothing is preserved across the cutoff, so nothing can straddle it.
+
+```bash
+ais prune --keep-days 90 --force
+```
+
+Deleting is not forgetting quietly, so **prune writes its own archive first** — every port call
+that will no longer be derivable, with its phases, stops, hours and attributed port. ADR-0044 had
+claimed the export already was that archive; it is not, since the export carries the manifest, the
+rule counts and the lapse analysis and no port calls at all, and pruning against it would have
+destroyed the history it was meant to preserve.
+
+**And prune reads that archive back before it deletes anything**
+([ADR-0046](docs/adr/0046-an-archive-nothing-reads-is-not-an-archive.md)). The original check was
+that the file was non-empty, which is not the same claim as readable: a prune interrupted between
+opening the file and flushing it leaves valid-looking JSON that simply stops, and it would have
+passed. So prune now performs the only verification that means anything — the one a future reader
+will perform. It parses the file, counts the calls, and refuses to delete on any mismatch. Fail
+closed: a prune that does not happen costs disk, and a prune that happens against a broken archive
+costs the history.
+
+```bash
+ais archive archive/port-calls-before-20260905T115704Z.json --mmsi 230687000
+```
+
+```
+  id     mmsi       arrived (UTC)      waiting  working  unclassified  nearest port
+  94     230687000  2026-09-01 00:00      100.2      0.0           0.0  ~Kerteminde 6.7 nm  (open)
+         0. Anchorage  2026-09-01 00:00 -> 2026-09-04 08:43    >=80.7h  Moored
+         1. Anchorage  2026-09-04 10:18 -> 2026-09-05 05:48      19.5h  At anchor
+```
+
+The archive is the one document this pipeline produces that it **cannot regenerate** — everything
+else is a projection, and `detect` rebuilds it. So it carries a `formatVersion` and is refused by
+name when it is not one this build understands, rather than deserialised into whatever still fits;
+an unparseable one, or one carrying no calls, is refused the same way. A bound stays a bound across
+the trip: `>=80.7h` above is a stop touching a coverage gap, and it is now permanently censored,
+because the fixes that could once have completed it are gone.
+
+Measured on the real store rather than the fixture: 222 calls archived to 275 KB, 3.29M fixes and
+every projection removed, `detect` rebuilding 346 stops and 193 port calls, and a second run landing
+on the same numbers. A call that began before the cutoff and ended after it comes back truncated and
+marked incomplete — which is true, and is the same censoring the edge of the window already applies.
 
 ## Working on it
 
@@ -498,6 +589,7 @@ the same failure mode as having no check at all.
 | **M8** | Port resolution — World Port Index gazetteer, named with a distance | ✅ complete |
 | **M9** | Read-only browser UI over the derived layer | ✅ complete |
 | **M10** | R12, the export contract, and the static site | ✅ complete |
+| **M11** | Retention — prune whole periods, archive first | ✅ complete |
 | M5 | OpenTelemetry → Prometheus + Grafana, k6 | deferred — infrastructure, and the read side is still small enough to reason about without it |
 
 ## Where this is going
@@ -528,12 +620,17 @@ AIS provides is an independently verifiable timeline to check the Statement of F
 - Drift and gap thresholds are heuristics, calibrated on a sample and re-calibrated at M2.
 - MMSI is not a durable vessel identity; it can be reassigned between voyages.
 - Scoped to tankers. The quality report covers the whole feed; the store holds tankers only.
+- Pruning is irreversible by design. Past the cutoff, the JSON archive prune writes is the only
+  record of a port call, and it cannot be re-derived — the fixes underneath it are gone. It is
+  readable with `ais archive`, but it is JSON, not SQL: no joins, no benchmarks, no API over it.
 
 ## Architecture decisions
 
-Twenty-eight decisions are recorded in [`docs/adr/`](docs/adr/), including the ones where the answer was
+Forty-one decisions are recorded in [`docs/adr/`](docs/adr/), including the ones where the answer was
 *no*: why not microservices, why not MongoDB, why not event sourcing, and why the redundant index was
-deleted rather than justified.
+deleted rather than justified. Two of them supersede an earlier record rather than editing it — an
+accepted ADR is never edited and never deleted, so a design that failed stays on the shelf next to
+the one that replaced it, and ADR-0044 and ADR-0045 are the clearest pair to read that way.
 
 ## Reviewing changes
 

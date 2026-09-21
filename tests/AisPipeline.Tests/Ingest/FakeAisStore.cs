@@ -84,9 +84,19 @@ internal sealed class FakeAisStore : IAisStore
         }
     }
 
-    /// <summary>Retention is a store concern; the integration suite covers it on both engines.</summary>
-    public long PruneBefore(DateTime cutoffUtc, long portCallsArchived, string archivePath) =>
-        throw new NotSupportedException("the fake store does not retain, so it cannot prune");
+    /// <summary>Every prune this store was asked for, in order.</summary>
+    public List<(DateTime CutoffUtc, long PortCallsArchived, string ArchivePath)> Prunes { get; } = [];
+
+    /// <summary>What the next prune reports removing. The deleting itself is a store concern,
+    /// and the integration suite covers it on both engines; what Core decides is WHETHER this is
+    /// called at all (ADR-0046).</summary>
+    public long FixesRemovedPerPrune { get; set; } = 1_000;
+
+    public long PruneBefore(DateTime cutoffUtc, long portCallsArchived, string archivePath)
+    {
+        Prunes.Add((cutoffUtc, portCallsArchived, archivePath));
+        return FixesRemovedPerPrune;
+    }
 
     public void ReplaceDetections(IReadOnlyList<PortCall> portCalls)
     {
