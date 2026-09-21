@@ -108,8 +108,8 @@ rule: **a number you cannot trace is a number you cannot trust.**
   whose true extent is unknown, `?` for a drift from too few surviving fixes, `~Goteborg 7.7 nm` for
   near-but-not-alongside, `open` for a call still in progress.
 
-The reasoning behind each of those is in [`docs/adr/`](docs/adr/README.md) — 42 records, none edited
-after acceptance.
+The reasoning behind each of those is in [`docs/adr/`](docs/adr/README.md), where a record is never
+edited after acceptance — a reversed decision gets a new one that supersedes it.
 
 ## What AIS cannot tell you
 
