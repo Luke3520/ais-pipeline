@@ -114,9 +114,9 @@ app.MapGet("/portcalls", (IAisQueries q, long? mmsi, double? minWaitingHours,
 app.MapGet("/portcalls/{id:long}/laytime", (
         IAisQueries q,
         long id,
-        double allowedHours = 72.0,
-        double ratePerDay = 28_000.0,
-        double turnHours = 6.0,
+        double allowedHours = CharterPartyDefaults.AllowedHours,
+        double ratePerDay = CharterPartyDefaults.RatePerDay,
+        double turnHours = CharterPartyDefaults.TurnHours,
         string? currency = null,
         DateTime? norUtc = null) =>
     {
@@ -144,7 +144,7 @@ app.MapGet("/portcalls/{id:long}/laytime", (
         var terms = new CharterPartyTerms
         {
             LaytimeAllowedHours = allowedHours,
-            DemurrageRatePerDay = Money.FromMajor((decimal)ratePerDay, currency ?? "USD"),
+            DemurrageRatePerDay = Money.FromMajor((decimal)ratePerDay, currency ?? CharterPartyDefaults.Currency),
             NoticeOfReadinessUtc = nor,
             NoticeOfReadinessIsAssumed = assumed,
             TurnTimeHours = turnHours,

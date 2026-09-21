@@ -1,3 +1,4 @@
+using AisPipeline.Core.Benchmarks;
 using System.Globalization;
 using AisPipeline.Adapters.Archive;
 using AisPipeline.Adapters.Csv;
@@ -294,11 +295,13 @@ static int Laytime(string[] args)
 
     var terms = new CharterPartyTerms
     {
-        LaytimeAllowedHours = Number(args, "--allowed", 72.0),
-        DemurrageRatePerDay = Money.FromMajor((decimal)Number(args, "--rate", 28_000.0), "USD"),
+        LaytimeAllowedHours = Number(args, "--allowed", CharterPartyDefaults.AllowedHours),
+        DemurrageRatePerDay = Money.FromMajor(
+            (decimal)Number(args, "--rate", CharterPartyDefaults.RatePerDay),
+            CharterPartyDefaults.Currency),
         NoticeOfReadinessUtc = nor,
         NoticeOfReadinessIsAssumed = norAssumed,
-        TurnTimeHours = Number(args, "--turn", 6.0),
+        TurnTimeHours = Number(args, "--turn", CharterPartyDefaults.TurnHours),
     };
 
     var assessment = LaytimeAssessor.Assess(portCall, terms);
@@ -455,14 +458,16 @@ static int Reconcile(string[] args)
 
     var terms = new CharterPartyTerms
     {
-        LaytimeAllowedHours = Number(args, "--allowed", 72.0),
-        DemurrageRatePerDay = Money.FromMajor((decimal)Number(args, "--rate", 28_000.0), "USD"),
+        LaytimeAllowedHours = Number(args, "--allowed", CharterPartyDefaults.AllowedHours),
+        DemurrageRatePerDay = Money.FromMajor(
+            (decimal)Number(args, "--rate", CharterPartyDefaults.RatePerDay),
+            CharterPartyDefaults.Currency),
         // The document supplies the notice, so nothing is assumed here -- unlike `laytime`,
         // which has to substitute arrival when no charter party is to hand.
         NoticeOfReadinessUtc = sof.First(SofEventKind.NoticeOfReadinessTendered)?.TimestampUtc
             ?? call.ArrivedUtc,
         NoticeOfReadinessIsAssumed = sof.First(SofEventKind.NoticeOfReadinessTendered) is null,
-        TurnTimeHours = Number(args, "--turn", 6.0),
+        TurnTimeHours = Number(args, "--turn", CharterPartyDefaults.TurnHours),
     };
 
     Reconciliation result;
@@ -861,6 +866,17 @@ static int Export(string[] args)
     var stops = queries.ListStops(new StopFilter { Limit = 5_000 });
     var portCalls = queries.ListPortCalls(new PortCallFilter { Limit = 5_000 });
 
+    // Rebuilt into domain calls so the export can ask the laytime assessor how many of them it
+    // would decline, and why. One phase query for the whole set rather than one per call.
+    var phasesByCall = queries.GetPhasesForPortCalls([.. portCalls.Select(c => c.Id)])
+        .GroupBy(p => p.Phase.PortCallId)
+        .ToDictionary(g => g.Key, g => (IReadOnlyList<(StoredPhase, StoredStop)>)[.. g]);
+
+    var callsForPricing = portCalls
+        .Select(c => PortCallRebuilder.FromStored(
+            c, phasesByCall.GetValueOrDefault(c.Id, [])))
+        .ToList();
+
     // Names for the vessels that appear, not the whole register: the document is downloaded by a
     // browser, and ten thousand unused names is most of the file.
     var named = queries.GetVessels(
@@ -878,7 +894,9 @@ static int Export(string[] args)
         named,
         portCalls.Count,
         stops.Count > 0 ? stops.Min(s => s.StartedUtc) : DateTime.UnixEpoch,
-        stops.Count > 0 ? stops.Max(s => s.EndedUtc) : DateTime.UnixEpoch);
+        stops.Count > 0 ? stops.Max(s => s.EndedUtc) : DateTime.UnixEpoch,
+        queries.PortCallHoursForBenchmarks(),
+        callsForPricing);
 
     Directory.CreateDirectory(outDir);
     var path = Path.Combine(outDir, "pipeline.json");
@@ -904,6 +922,32 @@ static int Export(string[] args)
         $"{document.Summary.VesselsAlwaysRight} never got it wrong " +
         $"(at least {ExportSummary.HabitMinimumStops} stops each)");
     Console.WriteLine($"  vessels   : {document.Vessels.Count} with at least one lapse");
+
+    var ports = document.Ports;
+    Console.WriteLine(
+        $"  ports     : {ports.Count} with a call, " +
+        $"{ports.Count(p => p.MedianWaitingHours is not null)} with enough usable calls for a median " +
+        $"(needs {BenchmarkMinimums.ForMedian}), " +
+        $"{ports.Sum(p => p.UsableCalls):N0} usable of {ports.Sum(p => p.AttributedCalls):N0} attributed");
+
+    // The refusals are reported beside the count, not behind it. A figure saying AIS prices port
+    // calls, without saying how many it declines, would overstate what the pipeline does.
+    var priceable = document.Priceability;
+    Console.WriteLine(
+        $"  priceable : {priceable.Priceable:N0} of {priceable.CallsAssessed:N0} port calls; " +
+        $"{priceable.NoBerthPhase:N0} never went alongside, " +
+        $"{priceable.BerthGeometryUntrustworthy:N0} have berth hours the pipeline will not stand behind");
+
+    if (!priceable.IsBalanced)
+    {
+        // The same bar ingest holds itself to: a tally that does not decompose is a tally with an
+        // outcome nobody named, and publishing it would put an unexplained number on a web page.
+        Console.Error.WriteLine(
+            $"ACCOUNTING ERROR: {priceable.CallsAssessed} calls assessed but " +
+            $"{priceable.Priceable + priceable.NoBerthPhase + priceable.BerthGeometryUntrustworthy} " +
+            "accounted for");
+        return 1;
+    }
 
     return 0;
 }

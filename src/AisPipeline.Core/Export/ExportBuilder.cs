@@ -1,3 +1,6 @@
+using AisPipeline.Core.Benchmarks;
+using AisPipeline.Core.Domain;
+using AisPipeline.Core.Laytime;
 using AisPipeline.Core.Quality;
 using AisPipeline.Core.Query;
 
@@ -22,7 +25,9 @@ public static class ExportBuilder
         IReadOnlyDictionary<long, StoredVessel> vessels,
         long portCalls,
         DateTime firstFixUtc,
-        DateTime lastFixUtc)
+        DateTime lastFixUtc,
+        IReadOnlyList<PortCallHours> portCallHours,
+        IReadOnlyList<PortCall> callsForPricing)
     {
         var firstRunPerFile = runs
             .OrderBy(r => r.Id)
@@ -103,8 +108,49 @@ public static class ExportBuilder
             Rules = rules,
             StatusDisagreement = disagreement,
             Vessels = records,
+
+            // Built here rather than taken as a finished list, so the document and the /ports
+            // endpoint cannot drift: both go through PortBenchmarkBuilder, which is where the
+            // exclusions are counted and where the minimums for a median and a p90 live.
+            Ports = PortBenchmarkBuilder.Build(portCallHours),
+            Priceability = Priceability(callsForPricing),
         };
     }
+
+    /// <summary>
+    /// How many calls AIS can price, counted by asking the assessor rather than re-deriving it.
+    ///
+    /// The refusal does not depend on the charter party -- it turns on whether a berth phase exists
+    /// and whether its hours are trustworthy -- so the defaults are supplied only because the
+    /// assessor's signature needs terms, and no figure computed from them is published. Going
+    /// through <see cref="LaytimeAssessor"/> rather than re-testing the two conditions here is what
+    /// stops this count and the endpoint disagreeing about what "priceable" means.
+    /// </summary>
+    private static LaytimePriceability Priceability(IReadOnlyList<PortCall> calls)
+    {
+        var refusals = calls
+            .Select(call => LaytimeAssessor.Assess(call, TermsForPriceabilityOnly(call)).Refusal)
+            .ToList();
+
+        return new LaytimePriceability
+        {
+            CallsAssessed = calls.Count,
+            Priceable = refusals.Count(r => r == LaytimeRefusal.None),
+            NoBerthPhase = refusals.Count(r => r == LaytimeRefusal.NoBerthPhase),
+            BerthGeometryUntrustworthy =
+                refusals.Count(r => r == LaytimeRefusal.BerthGeometryUntrustworthy),
+        };
+    }
+
+    private static CharterPartyTerms TermsForPriceabilityOnly(PortCall call) => new()
+    {
+        LaytimeAllowedHours = CharterPartyDefaults.AllowedHours,
+        DemurrageRatePerDay = Money.FromMajor(
+            (decimal)CharterPartyDefaults.RatePerDay, CharterPartyDefaults.Currency),
+        NoticeOfReadinessUtc = call.ArrivedUtc,
+        NoticeOfReadinessIsAssumed = true,
+        TurnTimeHours = CharterPartyDefaults.TurnHours,
+    };
 
     private static VesselRecord WithVessel(long mmsi, IReadOnlyDictionary<long, StoredVessel> vessels)
     {

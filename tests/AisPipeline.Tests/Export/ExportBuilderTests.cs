@@ -1,3 +1,4 @@
+using AisPipeline.Core.Domain;
 using AisPipeline.Core.Export;
 using AisPipeline.Core.Quality;
 using AisPipeline.Core.Query;
@@ -24,7 +25,9 @@ public class ExportBuilderTests
         IReadOnlyList<VesselStopStatus> stopStatus,
         IReadOnlyList<VesselFixStatus> fixStatus,
         IReadOnlyDictionary<long, StoredVessel>? vessels = null,
-        IReadOnlyList<StoredRun>? runs = null) =>
+        IReadOnlyList<StoredRun>? runs = null,
+        IReadOnlyList<PortCallHours>? portCallHours = null,
+        IReadOnlyList<PortCall>? callsForPricing = null) =>
         ExportBuilder.Build(
             T0,
             runs ??
@@ -37,7 +40,9 @@ public class ExportBuilderTests
             vessels ?? new Dictionary<long, StoredVessel>(),
             portCalls: 3,
             firstFixUtc: T0,
-            lastFixUtc: T0.AddDays(7));
+            lastFixUtc: T0.AddDays(7),
+            portCallHours ?? [],
+            callsForPricing ?? []);
 
     [Fact]
     public void A_vessel_appearing_in_both_lists_becomes_one_record()
@@ -177,5 +182,114 @@ public class ExportBuilderTests
         var document = Build([Stops(1, 1, 5), Stops(2, 9, 10)], [Fixes(3, 100, 500)]);
 
         Assert.Equal([3, 2, 1], document.Vessels.Select(v => v.Mmsi).ToList());
+    }
+
+    private static PortCallHours Call(
+        double waitingHours, double distanceNm = 1.0, bool isComplete = true, int wpi = 1) =>
+        new()
+        {
+            WpiNumber = wpi,
+            PortName = wpi == 1 ? "Skagen Havn" : "Fredericia",
+            Country = "DK",
+            WaitingHours = waitingHours,
+            WorkingHours = 2.0,
+            DistanceNm = distanceNm,
+            IsComplete = isComplete,
+        };
+
+    [Fact]
+    public void Port_benchmarks_reach_the_document_with_the_sample_behind_them()
+    {
+        // Five usable calls is the minimum for a median (ADR-0043), so this is the smallest
+        // document that carries one at all.
+        var document = Build([], [], portCallHours:
+            [Call(1.0), Call(2.0), Call(3.0), Call(4.0), Call(5.0)]);
+
+        var port = Assert.Single(document.Ports);
+        Assert.Equal("Skagen Havn", port.PortName);
+        Assert.Equal(5, port.UsableCalls);
+        Assert.Equal(3.0, port.MedianWaitingHours);
+    }
+
+    [Fact]
+    public void A_port_with_too_few_usable_calls_publishes_no_median()
+    {
+        // The excluded calls still reach the document. A reader who is shown "no median" and not
+        // told that six calls were thrown away to get there cannot weigh the refusal.
+        var document = Build([], [], portCallHours:
+            [Call(1.0), Call(2.0),
+             Call(3.0, distanceNm: 40.0), Call(4.0, distanceNm: 40.0),
+             Call(5.0, isComplete: false)]);
+
+        var port = Assert.Single(document.Ports);
+        Assert.Equal(2, port.UsableCalls);
+        Assert.Null(port.MedianWaitingHours);
+        Assert.Equal(5, port.AttributedCalls);
+        Assert.Equal(1, port.ExcludedIncomplete);
+        Assert.Equal(2, port.ExcludedTooFar);
+    }
+
+    [Fact]
+    public void An_export_with_no_attributed_calls_carries_an_empty_port_list()
+    {
+        // Empty, never absent. A missing key and a port list with nothing in it are different
+        // claims, and the site branches on one of them.
+        Assert.Empty(Build([], []).Ports);
+    }
+
+    private static StopEvent Stop(double startHour, double hours, bool trustworthy = true) => new()
+    {
+        Mmsi = 219000001,
+        StartedUtc = T0.AddHours(startHour),
+        EndedUtc = T0.AddHours(startHour + hours),
+        CentroidLatitude = 56.0,
+        CentroidLongitude = 10.0,
+        MaxDriftNm = 0.002,
+        FixCount = 100,
+        ReliableFixCount = trustworthy ? 100 : 0,
+        ReportedStatus = "Moored",
+        StatusAgrees = true,
+        IsComplete = true,
+        FirstPositionId = 1,
+        LastPositionId = 2,
+    };
+
+    private static PortCall Call(params (StopPhase Phase, double Start, double Hours)[] phases) =>
+        new()
+        {
+            Mmsi = 219000001,
+            Phases = [.. phases.Select((p, i) =>
+                new PortCallPhase(i, p.Phase, Stop(p.Start, p.Hours, p.Phase != StopPhase.Unknown)))],
+        };
+
+    [Fact]
+    public void Every_assessed_call_is_accounted_for_by_exactly_one_outcome()
+    {
+        // The same identity IngestCounters applies to rows. A tally that does not add up is
+        // hiding a fourth outcome nobody named.
+        var document = Build([], [], callsForPricing:
+            [Call((StopPhase.Anchorage, 0, 10), (StopPhase.Berth, 12, 30)),
+             Call((StopPhase.Anchorage, 0, 10)),
+             Call((StopPhase.Berth, 0, 5), (StopPhase.Unknown, 6, 4), (StopPhase.Berth, 11, 20))]);
+
+        var priceability = document.Priceability;
+
+        Assert.Equal(3, priceability.CallsAssessed);
+        Assert.Equal(1, priceability.Priceable);
+        Assert.Equal(1, priceability.NoBerthPhase);
+        Assert.Equal(1, priceability.BerthGeometryUntrustworthy);
+        Assert.True(priceability.IsBalanced);
+    }
+
+    [Fact]
+    public void An_export_with_no_port_calls_still_balances()
+    {
+        // Zero of zero. The site branches on this figure, and a document that omitted the tally
+        // when there was nothing to tally would make "none priceable" indistinguishable from
+        // "never asked".
+        var priceability = Build([], []).Priceability;
+
+        Assert.Equal(0, priceability.CallsAssessed);
+        Assert.True(priceability.IsBalanced);
     }
 }

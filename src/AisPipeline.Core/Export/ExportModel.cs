@@ -1,3 +1,5 @@
+using AisPipeline.Core.Benchmarks;
+using AisPipeline.Core.Laytime;
 using AisPipeline.Core.Quality;
 using AisPipeline.Core.Query;
 
@@ -121,4 +123,52 @@ public sealed record ExportDocument
     public required IReadOnlyList<QualityReportLine> Rules { get; init; }
     public required StopStatusDisagreement StatusDisagreement { get; init; }
     public required IReadOnlyList<VesselRecord> Vessels { get; init; }
+
+    /// <summary>
+    /// How long calls at each port took, with the sample and the exclusions behind every figure.
+    ///
+    /// Publishable in a way a priced statement is not. A benchmark is a property of a port and
+    /// ranks rather than judges (ADR-0043); a demurrage figure names a vessel and a sum of money,
+    /// on charter terms supplied at request time, and stays on the operator's own machine
+    /// (ADR-0047). Nothing derived from <c>LaytimeStatement</c> belongs in this document.
+    /// </summary>
+    public required IReadOnlyList<PortBenchmark> Ports { get; init; }
+
+    /// <summary>How many calls AIS can price at all, and the named reason for each one it cannot.</summary>
+    public required LaytimePriceability Priceability { get; init; }
+}
+
+/// <summary>
+/// How many port calls could be priced from AIS alone, and why the rest could not.
+///
+/// Publishable where a priced statement is not, because it contains no money and no charter party.
+/// Whether a call can be priced depends only on its own geometry — a berth phase must exist, and
+/// the hours inside it must be trustworthy (<see cref="LaytimeAssessor"/>) — so this is a fact
+/// about the evidence, not about anyone's commercial terms.
+///
+/// It is also the honest half of the pitch. A page claiming AIS prices port calls, without saying
+/// that it declines four in five of them, would be selling something the pipeline does not do.
+/// </summary>
+public sealed record LaytimePriceability
+{
+    /// <summary>Port calls examined — the denominator.</summary>
+    public required int CallsAssessed { get; init; }
+
+    /// <summary>Calls a laytime statement could be produced for.</summary>
+    public required int Priceable { get; init; }
+
+    /// <summary>Refused: no berth phase, so there were no cargo operations to measure.</summary>
+    public required int NoBerthPhase { get; init; }
+
+    /// <summary>Refused: hours inside the berth span have geometry the pipeline will not stand behind.</summary>
+    public required int BerthGeometryUntrustworthy { get; init; }
+
+    /// <summary>
+    /// Every call is accounted for by exactly one outcome.
+    ///
+    /// The same identity <c>IngestCounters</c> applies to rows and <c>PortBenchmark</c> applies to
+    /// its exclusions. A tally that does not add up is hiding a fourth outcome nobody named.
+    /// </summary>
+    public bool IsBalanced =>
+        Priceable + NoBerthPhase + BerthGeometryUntrustworthy == CallsAssessed;
 }
