@@ -1,0 +1,115 @@
+---
+import Base from '../layouts/Base.astro';
+import data from '../data/pipeline.json';
+
+const { priceability } = data;
+const n = (v: number) => v.toLocaleString('en-GB');
+
+const supplies = [
+  ['Arrival at the anchorage', 'Notice of Readiness — an email, not a physical event'],
+  ['Berthing, to the minute', 'Hoses on and off; a tanker lies alongside for hours before pumping'],
+  ['Departure', 'Free pratique, customs clearance'],
+  ['Waiting versus working hours', 'The charter party terms themselves'],
+];
+---
+<Base
+  title="How laytime is counted — what AIS supplies, and what it cannot"
+  description="Every hour in a laytime statement belongs to exactly one line with a reason attached. This is where those lines come from, and where AIS stops being able to help."
+>
+  <h1>How laytime is counted here</h1>
+
+  <p class="lede prose">
+    A total nobody can decompose is a total nobody can dispute — and disputing it is the point. So
+    every hour between commencement and completion belongs to exactly one line, and every line says
+    why.
+  </p>
+
+  <h2>The four kinds of hour</h2>
+
+  <div class="scroll">
+    <table>
+      <thead><tr><th>line</th><th>what it means</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>BeforeCommencement</code></td>
+          <td>Time examined and not charged — turn time, or waiting before notice took effect.</td>
+        </tr>
+        <tr>
+          <td><code>Counted</code></td>
+          <td>Laytime running against the allowance.</td>
+        </tr>
+        <tr>
+          <td><code>Excepted</code></td>
+          <td>Time the charter party excludes. An input, not something AIS can detect.</td>
+        </tr>
+        <tr>
+          <td><code>OnDemurrage</code></td>
+          <td>The allowance is spent; this is what the rate is applied to.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="prose">
+    The lines are asserted to sum back to the elapsed time — the same accounting identity the
+    ingest applies to rows, where every row read is either inserted, a duplicate, quarantined or
+    filtered, and the counters must balance or the run fails.
+  </p>
+
+  <h2>What AIS supplies, and what it cannot</h2>
+
+  <div class="scroll">
+    <table>
+      <thead><tr><th>AIS supplies</th><th>AIS cannot supply</th></tr></thead>
+      <tbody>
+        {supplies.map(([can, cannot]) => (
+          <tr><td>{can}</td><td>{cannot}</td></tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+
+  <blockquote class="prose">
+    <p>
+      <strong>AIS cannot compute demurrage</strong>, and the output says so rather than quietly
+      filling the gap. Notice of Readiness is an email. Hoses on and off happen hours after
+      berthing. Free pratique is a document. What AIS supplies is precisely the half a Statement of
+      Facts is least able to prove: where the vessel physically was, and when it stopped moving.
+    </p>
+  </blockquote>
+
+  <p class="prose">
+    Where a notice time is not supplied, arrival is substituted and the statement <em>labels that
+    assumption</em> rather than presenting it as observed. A figure resting on an assumption and a
+    figure resting on a measurement are different figures, and a reader is entitled to know which
+    one they are holding.
+  </p>
+
+  <h2>When it declines</h2>
+
+  <p class="prose">
+    Of {n(priceability.callsAssessed)} port calls in this window,
+    {' '}<strong>{n(priceability.priceable)}</strong> can be priced.
+    {' '}{n(priceability.noBerthPhase)} cannot, because the vessel never went alongside — there
+    were no cargo operations to measure, and inventing a berth time from an anchorage would put a
+    fabricated timestamp into a commercial claim. A further
+    {' '}{n(priceability.berthGeometryUntrustworthy)} have hours inside the berth span whose
+    geometry the pipeline does not stand behind.
+  </p>
+
+  <p class="prose">
+    That last refusal is the one worth understanding. Excluding uncertain hours favours the
+    charterer; counting them favours the owner. Neither is supportable from the evidence, so no
+    figure is produced at all and the hours in question are named — leaving the judgement to a
+    human who has more than a radio signal to go on.
+  </p>
+
+  <h2>The terms are yours, not ours</h2>
+
+  <p class="prose">
+    Allowed hours, the demurrage rate, turn time and any exceptions are <em>inputs</em>. Anything
+    quoted on this site as an example uses illustrative tanker defaults — plausible numbers chosen
+    for a demonstration, never from a real charter party. The engine is correct for the terms it is
+    given; supplying the real ones is why the tool runs on your machine.
+  </p>
+</Base>

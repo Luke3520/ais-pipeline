@@ -74,11 +74,30 @@ jobs:
       - name: Every page the navigation offers must exist
         working-directory: site
         run: |
-          for page in index arrivals/index departures/index how-ais-works/index; do
-            test -s "dist/$page.html" || { echo "missing dist/$page.html"; exit 1; }
+          # Derived from the rendered navigation rather than listed here. A list is a second place
+          # to update, and the failure it guards against is exactly someone adding a nav item and
+          # not the page -- the same reasoning ShowcasePageTests gives for reading its URLs out of
+          # app.js instead of restating them.
+          # The root is checked by name: "/" reduces to an empty path, which a word-split loop
+          # drops silently -- so the home page would be the one page the check never checked.
+          test -s dist/index.html || { echo "missing dist/index.html"; exit 1; }
+
+          offered=1
+          for href in $(grep -o 'href="/[^"#]\+"' dist/index.html | sed 's|href="/||; s|"||' | sort -u); do
+            page="dist/$href/index.html"
+            test -s "$page" || { echo "navigation offers /$href but $page is missing"; exit 1; }
+            offered=$((offered + 1))
           done
+          echo "$offered page(s) offered by the navigation, all present"
+          test "$offered" -ge 5 || { echo "only $offered nav pages found; the nav did not render"; exit 1; }
+
+          # The investigation's own pages, which the top navigation no longer links directly.
+          for page in arrivals departures findings; do
+            test -s "dist/$page/index.html" || { echo "missing dist/$page/index.html"; exit 1; }
+          done
+
           count=$(find dist -name '*.html' | wc -l)
           echo "$count pages built"
-          # One per vessel in the export, plus the four fixed pages. A drop here means
-          # getStaticPaths stopped seeing the data rather than the data being empty.
+          # One per vessel in the export, plus the fixed pages. A drop here means getStaticPaths
+          # stopped seeing the data rather than the data being empty.
           test "$count" -gt 50 || { echo "only $count pages built"; exit 1; }

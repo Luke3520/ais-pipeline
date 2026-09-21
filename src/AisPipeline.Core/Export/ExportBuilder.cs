@@ -114,6 +114,7 @@ public static class ExportBuilder
             // exclusions are counted and where the minimums for a median and a p90 live.
             Ports = PortBenchmarkBuilder.Build(portCallHours),
             Priceability = Priceability(callsForPricing),
+            Thresholds = new ExportThresholds(),
         };
     }
 

@@ -1,6 +1,6 @@
 {
   "manifest": {
-    "generatedUtc": "2026-09-21T13:20:42.364467Z",
+    "generatedUtc": "2026-09-21T13:33:03.508649Z",
     "sourceFiles": [
       "aisdk-2026-09-01.zip",
       "aisdk-2026-09-02.zip",
@@ -2594,5 +2594,11 @@
     "noBerthPhase": 198,
     "berthGeometryUntrustworthy": 0,
     "isBalanced": true
+  },
+  "thresholds": {
+    "plausiblyAtPortNm": 5,
+    "minimumCallsForMedian": 5,
+    "minimumCallsForPercentile": 10,
+    "habitMinimumStops": 3
   }
 }

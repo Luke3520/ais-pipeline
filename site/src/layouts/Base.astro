@@ -10,10 +10,11 @@ const path = Astro.url.pathname.replace(/\/+$/, '') || '/';
 
 const window = `${manifest.firstFixUtc.slice(0, 10)} to ${manifest.lastFixUtc.slice(0, 10)}`;
 const nav = [
-  ['/', 'Findings'],
+  ['/', 'What the wait cost'],
+  ['/ports', 'Port waits'],
+  ['/how-laytime-is-counted', 'How laytime is counted'],
   ['/how-ais-works', 'How AIS works'],
-  ['/arrivals', 'Forgot on arrival'],
-  ['/departures', 'Forgot on departure'],
+  ['/findings', 'Data quality'],
 ];
 ---
 <!doctype html>
@@ -28,7 +29,7 @@ const nav = [
   <header class="site">
     <div class="wrap">
       <nav>
-        <a class="brand" href="/">Who forgot the dial?</a>
+        <a class="brand" href="/">ais-pipeline</a>
         {nav.map(([href, label]) => (
           <a href={href} aria-current={path === href ? 'page' : undefined}>{label}</a>
         ))}

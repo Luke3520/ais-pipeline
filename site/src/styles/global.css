@@ -97,3 +97,9 @@ code { font-family: var(--mono); font-size: .88em; background: var(--panel); bor
 dl.fields { display: grid; grid-template-columns: auto 1fr; gap: .35rem 1rem; margin: 1rem 0; font-size: .9rem; }
 dl.fields dt { font-family: var(--mono); color: var(--ink-soft); }
 dl.fields dd { margin: 0; }
+
+/* Never measured, as against measured-but-untrustworthy. Different claims, different marks. */
+.too-few { color: var(--ink-soft); font-family: var(--mono); font-size: .82em; font-style: italic; }
+
+/* A rule or step description is a sentence, not a datum, so it may wrap. */
+td code { white-space: nowrap; }

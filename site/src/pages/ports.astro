@@ -1,0 +1,127 @@
+---
+import Base from '../layouts/Base.astro';
+import data from '../data/pipeline.json';
+
+const { ports, manifest, thresholds } = data;
+const n = (v: number, d = 0) =>
+  v.toLocaleString('en-GB', { minimumFractionDigits: d, maximumFractionDigits: d });
+
+// From the export, not restated here: the page has to explain an absence, and a caption naming a
+// threshold that has since changed is worse than no caption.
+const FOR_MEDIAN = thresholds.minimumCallsForMedian;
+const FOR_PERCENTILE = thresholds.minimumCallsForPercentile;
+const PLAUSIBLY_AT_PORT_NM = thresholds.plausiblyAtPortNm;
+
+const attributed = ports.reduce((t, p) => t + p.attributedCalls, 0);
+const usable = ports.reduce((t, p) => t + p.usableCalls, 0);
+const incomplete = ports.reduce((t, p) => t + p.excludedIncomplete, 0);
+const tooFar = ports.reduce((t, p) => t + p.excludedTooFar, 0);
+
+const ranked = [...ports].sort((a, b) => b.usableCalls - a.usableCalls);
+const withAMedian = ports.filter((p) => p.medianWaitingHours !== null).length;
+
+const window = `${manifest.firstFixUtc.slice(0, 10)} to ${manifest.lastFixUtc.slice(0, 10)}`;
+---
+<Base
+  title="Port waits — how long calls actually took, and the sample behind every figure"
+  description="Median and 90th-percentile waiting times per port, derived from AIS, each published with the number of calls it rests on and the calls excluded to get there."
+>
+  <h1>Port waits</h1>
+
+  <p class="lede prose">
+    Not "what is the median" but "was mine unusual". Every figure here carries the sample it rests
+    on and what was thrown away to get there.
+  </p>
+
+  <ul class="stats">
+    <li class="stat"><b>{n(attributed)}</b><span>calls attributed to a port</span></li>
+    <li class="stat ok"><b>{n(usable)}</b><span>usable for a benchmark</span></li>
+    <li class="stat"><b>{withAMedian}</b><span>ports with enough for a median</span></li>
+    <li class="stat"><b>{ports.length}</b><span>ports seen at all</span></li>
+  </ul>
+
+  <p class="note prose">
+    <strong>{n(attributed)} attributed = {n(usable)} usable + {n(incomplete)} with an unknown
+    extent + {n(tooFar)} further than {n(PLAUSIBLY_AT_PORT_NM, 1)} nm from the port named.</strong>
+    {' '}Every attributed call is accounted for by exactly one outcome. A call whose extent is unknown
+    has hours that are lower bounds, and averaging a bound would understate the wait; a call
+    nearest a port but well offshore was at an anchorage, not at that berth.
+  </p>
+
+  <div class="scroll">
+    <table>
+      <thead>
+        <tr>
+          <th>port</th><th>country</th>
+          <th class="n">attributed</th><th class="n">usable</th>
+          <th class="n">open</th><th class="n">too far</th>
+          <th class="n">median wait h</th><th class="n">p90 wait h</th><th class="n">median work h</th>
+        </tr>
+      </thead>
+      <tbody>
+        {ranked.map((p) => (
+          <tr>
+            <td>{p.portName}</td>
+            <td>{p.country}</td>
+            <td class="n">{n(p.attributedCalls)}</td>
+            <td class="n">{n(p.usableCalls)}</td>
+            <td class="n">{n(p.excludedIncomplete)}</td>
+            <td class="n">{n(p.excludedTooFar)}</td>
+            <td class="n">
+              {p.medianWaitingHours === null
+                ? <span class="too-few" title={`needs ${FOR_MEDIAN} usable calls`}>too few</span>
+                : n(p.medianWaitingHours, 1)}
+            </td>
+            <td class="n">
+              {p.p90WaitingHours === null
+                ? <span class="too-few" title={`needs ${FOR_PERCENTILE} usable calls`}>too few</span>
+                : n(p.p90WaitingHours, 1)}
+            </td>
+            <td class="n">
+              {p.medianWorkingHours === null
+                ? <span class="too-few" title={`needs ${FOR_MEDIAN} usable calls`}>too few</span>
+                : n(p.medianWorkingHours, 1)}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Why most of these cells say "too few"</h2>
+
+  <div class="prose">
+    <p>
+      A median needs {FOR_MEDIAN} usable calls and a 90th percentile needs {FOR_PERCENTILE}. Below
+      those the figure is absent rather than thin. With four calls the median is the mean of the
+      middle two and one congested call moves it by hours; a p90 drawn from nine observations is
+      the largest of nine, which is a maximum wearing a percentile's name.
+    </p>
+    <p>
+      Both minimums are stated rather than tuned, and the count is always published so you can
+      disagree. <strong>"Too few" is a different claim from an uncertain number</strong> — it says
+      the figure was never measured, not that it was measured badly.
+    </p>
+  </div>
+
+  <h2>What this sample cannot tell you</h2>
+
+  <div class="prose">
+    <p>
+      Seven days ({window}) is a short window to call anything normal. The one sample here that
+      comfortably supports a median is visibly two populations — a cluster of short calls and a
+      tail of long ones — and whether that tail is typical of the port or of one week in September,
+      this data cannot say.
+    </p>
+    <p>
+      The exclusions also bias the sample toward shorter visits: a call long enough to span the
+      edge of the ingested window is likelier to be truncated, so the longest calls are the ones
+      most often dropped. Assume these figures <em>understate</em> waiting times until a longer
+      window measures it.
+    </p>
+    <p>
+      And a position in a distribution is not a verdict. Whether a wait was reasonable depends on
+      the charter party, the berth and the cargo — none of which AIS can see.
+    </p>
+  </div>
+</Base>

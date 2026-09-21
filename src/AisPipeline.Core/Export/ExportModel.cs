@@ -136,6 +136,32 @@ public sealed record ExportDocument
 
     /// <summary>How many calls AIS can price at all, and the named reason for each one it cannot.</summary>
     public required LaytimePriceability Priceability { get; init; }
+
+    /// <summary>
+    /// The thresholds the site prints beside its figures, projected from the constants.
+    ///
+    /// A page that shows "too few" has to say how few is too few, and a page that excludes a call
+    /// has to say from what distance. Copying those numbers into the site would make captions that
+    /// can go stale beside live figures -- the defect this project exists to prevent, applied to a
+    /// label rather than to a number. The API answers the same question at /meta (ADR-0047).
+    /// </summary>
+    public required ExportThresholds Thresholds { get; init; }
+}
+
+/// <summary>The constants a reader needs in order to argue with a figure in this document.</summary>
+public sealed record ExportThresholds
+{
+    /// <summary>Beyond this, a call is nearest a port rather than at it (ADR-0034).</summary>
+    public double PlausiblyAtPortNm => Geo.PortAttributionThresholds.PlausiblyAtPortNm;
+
+    /// <summary>Usable calls needed before a median is published at all (ADR-0043).</summary>
+    public int MinimumCallsForMedian => BenchmarkMinimums.ForMedian;
+
+    /// <summary>Usable calls needed before a 90th percentile is published at all.</summary>
+    public int MinimumCallsForPercentile => BenchmarkMinimums.ForPercentile;
+
+    /// <summary>Stops a vessel needs before its record counts as a habit.</summary>
+    public int HabitMinimumStops => ExportSummary.HabitMinimumStops;
 }
 
 /// <summary>

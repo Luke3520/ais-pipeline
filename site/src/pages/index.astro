@@ -2,119 +2,137 @@
 import Base from '../layouts/Base.astro';
 import data from '../data/pipeline.json';
 
-const { summary, statusDisagreement, vessels } = data;
+const { manifest, summary, ports, priceability } = data;
 const n = (v: number, d = 0) =>
   v.toLocaleString('en-GB', { minimumFractionDigits: d, maximumFractionDigits: d });
 
-const share = (statusDisagreement.disagreeing / statusDisagreement.totalStops) * 100;
-const both = vessels.filter((v) => v.bothDirections).slice(0, 5);
-const eta = data.rules.find((r) => r.ruleId === 'R13');
+// The port with the most usable calls is the only one on this window whose median rests on a
+// sample worth leading with. Picked by sample size rather than by how interesting the figure is,
+// because choosing the number first is how a leaderboard becomes an argument.
+const best = ports.filter((p) => p.medianWaitingHours !== null)[0];
+
+const withAMedian = ports.filter((p) => p.medianWaitingHours !== null).length;
+const usable = ports.reduce((t, p) => t + p.usableCalls, 0);
+const attributed = ports.reduce((t, p) => t + p.attributedCalls, 0);
+
+const window = `${manifest.firstFixUtc.slice(0, 10)} to ${manifest.lastFixUtc.slice(0, 10)}`;
 ---
 <Base
-  title="Who forgot the dial? — AIS navigational status, checked against the ships' own movement"
-  description="Across seven days of Danish AIS, 37% of stopped ships still broadcast that they were under way. An open pipeline that checks a vessel's self-report against its own measured movement."
+  title="ais-pipeline — an independent record of when your vessel arrived, berthed and left"
+  description="A demurrage claim is argued from a Statement of Facts. This builds the other half of the story from the public AIS feed: when the vessel actually stopped, how long it waited, and what the difference is worth."
 >
-  <h1>A third of stopped ships still say they're under way</h1>
+  <h1>Your ship's own account of the port call</h1>
 
   <p class="lede prose">
-    Every AIS message carries two things: a position the receiver measured, and a navigational
-    status a human typed in. This is what happens when you check one against the other.
+    A Statement of Facts is what the parties agreed happened. AIS is what the ship's transponder
+    said happened — recorded by a device with no stake in the outcome, and published free by the
+    Danish Maritime Authority. When a demurrage claim turns on a contested timeline, that second
+    record is usually the missing evidence.
   </p>
 
   <ul class="stats">
-    <li class="stat alarm"><b>{n(share, 0)}%</b><span>of stops claimed "under way"</span></li>
-    <li class="stat"><b>{n(summary.hoursClaimingUnderWay)}</b><span>hours parked, claiming to steam</span></li>
-    <li class="stat alarm"><b>{n(summary.departureLapses)}</b><span>fixes claiming moored, while moving</span></li>
-    <li class="stat alarm"><b>{n(eta?.flagged ?? 0)}</b><span>messages with an ETA over a year out</span></li>
+    <li class="stat"><b>{n(priceability.callsAssessed)}</b><span>port calls detected</span></li>
+    <li class="stat ok"><b>{n(priceability.priceable)}</b><span>AIS can price</span></li>
+    <li class="stat"><b>{n(priceability.noBerthPhase)}</b><span>never went alongside</span></li>
+    <li class="stat"><b>{n(best.medianWaitingHours, 1)}h</b><span>median wait at {best.portName}</span></li>
   </ul>
 
-  <h2>The dial is set once, or never</h2>
+  <p class="note prose">
+    Seven days of the feed, {window}. {n(manifest.rowsRead)} rows read,
+    {' '}{n(manifest.rowsStored)} stored after filtering to tankers.
+  </p>
+
+  <h2>What it answers</h2>
+
+  <div class="prose">
+    <p>
+      <strong>When did she actually berth?</strong> Not when the document says — when the vessel
+      stopped moving, to the minute, from her own position reports. A charter party that starts
+      laytime on berthing turns an hour of disagreement into several hundred dollars.
+    </p>
+    <p>
+      <strong>Was that wait unusual?</strong> <a href="/ports">Port waits</a> ranks a wait against
+      what other vessels actually experienced at the same port — a position in a distribution, not
+      a verdict. On this window {n(best.usableCalls)} calls at {best.portName} give a median of
+      {' '}{n(best.medianWaitingHours, 1)} hours and a 90th percentile of
+      {' '}{n(best.p90WaitingHours, 1)}.
+    </p>
+    <p>
+      <strong>What is the difference worth?</strong> Running a Statement of Facts against the AIS
+      timeline prices both and reports the gap — because the same disagreement about berthing is
+      worth real money when laytime starts on berthing, and worth nothing at all when turn time
+      expires first.
+    </p>
+  </div>
+
+  <h2>And what it refuses to answer</h2>
 
   <p class="prose">
-    The interesting part isn't that crews forget. It's that they mostly don't forget <em>sometimes</em>.
-    Of the vessels that stopped at least {3} times in the window, <strong>{summary.vesselsAlwaysWrong}</strong>
-    got it wrong on <em>every single stop</em>, and <strong>{summary.vesselsAlwaysRight}</strong> got it
-    right on every single one. Far fewer sit in between than chance would put there.
+    Of {n(priceability.callsAssessed)} port calls in this window, a laytime statement can be
+    produced for <strong>{n(priceability.priceable)}</strong>. The other
+    {' '}{n(priceability.noBerthPhase + priceability.berthGeometryUntrustworthy)} are declined, and
+    each declines for a stated reason: {n(priceability.noBerthPhase)} never went alongside at all,
+    so there were no cargo operations to measure, and
+    {' '}{n(priceability.berthGeometryUntrustworthy)} have hours inside the berth span whose
+    geometry the pipeline will not stand behind.
   </p>
 
   <blockquote class="prose">
     <p>
-      That looks less like a crew occasionally forgetting and more like a setting configured once at
-      installation and never touched again — by some ships, and not by others.
+      Inventing a berth time from an anchorage would put a fabricated timestamp into a commercial
+      claim. Counting hours we are unsure about favours the owner; excluding them favours the
+      charterer. Neither is supportable, so no figure is produced at all — and the refusal says
+      which.
     </p>
   </blockquote>
 
-  <h2>Two ways to get it wrong</h2>
+  <p class="prose">
+    The same discipline runs through every figure here. Port medians appear for
+    {' '}<strong>{withAMedian} of {ports.length}</strong> ports, because below five usable calls a
+    median is an anecdote; {n(usable)} of {n(attributed)} attributed calls survive the exclusions,
+    and both numbers are published. <a href="/how-laytime-is-counted">What AIS can and cannot
+    supply</a> is stated rather than implied.
+  </p>
+
+  <h2>Why the timestamps are worth arguing from</h2>
 
   <div class="prose">
     <p>
-      <strong><a href="/arrivals">Forgot on arrival</a></strong> — the ship stops, and the status
-      stays on "under way using engine". Detected on {n(statusDisagreement.disagreeing)} of
-      {n(statusDisagreement.totalStops)} stops. These vessels moved a mean of 92 metres over a mean
-      of 5.7 hours; a ship genuinely under way at one knot covers ten kilometres in that time.
+      Position and speed in an AIS message are measured by a receiver. Navigational status, ETA and
+      the vessel's own name are <a href="/how-ais-works">typed in by a person</a> — and this data
+      shows what that costs: across this window, {n(summary.arrivalLapses)} of
+      {' '}{n(summary.stops)} stops were broadcast as "under way" by a vessel sitting still.
     </p>
     <p>
-      <strong><a href="/departures">Forgot on departure</a></strong> — the ship leaves, and the
-      status stays on "moored" or "at anchor". Detected on {n(summary.departureLapses)} position
-      reports. The fastest was doing 15.5 knots while telling the world it was tied up.
+      Every timestamp on this site comes from the measured half. Nothing here rests on a crew
+      remembering to turn a dial, which is exactly why it is worth checking a document against.
+      The <a href="/findings">data quality</a> work is the evidence for that claim, not a footnote
+      to it.
     </p>
   </div>
 
-  <h2>A third field, going stale sideways</h2>
+  <h2>Running it</h2>
 
   <p class="prose">
-    The ETA is hand-typed too, and it rots the same way — but it shows up <em>inverted</em>, because
-    of a quirk in the encoding. <strong>The AIS ETA field has no year.</strong> It carries month,
-    day, hour and minute and nothing else, so a decoder meeting a date that has already gone by has
-    to assume the next one. A forgotten ETA is never left behind in the past; it gets rolled forward
-    and reappears up to a year ahead.
-  </p>
-
-  <p class="prose">
-    You can see it in the data as a hole. Across {n(4800000)} messages carrying an ETA, the count
-    falls away smoothly to about a month out — and then there is <strong>not one single message</strong>
-    anywhere between 42 and 76 days ahead, before the numbers climb again and pile up at almost
-    exactly one year. Two populations with nothing in between: real voyage plans, and dates nobody
-    has touched since they passed. {n(eta?.flagged ?? 0)} messages sit in the far one.
-  </p>
-
-  <h2>Forgot in both directions</h2>
-
-  <p class="prose">
-    {both.length} vessels here managed both — leaving the dial alone on the way in and on the way out.
+    There is no hosted instance, deliberately. The pipeline is open source and runs on your
+    machine, against a database you build from the same public feed — which is also why it can
+    price a call on <em>your</em> charter party terms rather than on terms somebody else chose.
   </p>
 
   <div class="scroll">
     <table>
-      <thead>
-        <tr><th>vessel</th><th class="n">stops wrong</th><th class="n">fixes wrong</th><th class="n">fastest kn</th></tr>
-      </thead>
+      <thead><tr><th>step</th><th>command</th></tr></thead>
       <tbody>
-        {both.map((v) => (
-          <tr>
-            <td><a href={`/vessel/${v.mmsi}`}>{v.name ?? '(no name broadcast)'}</a></td>
-            <td class="n">{n(v.arrivalLapses)} of {n(v.totalStops)}</td>
-            <td class="n">{n(v.departureLapses)}</td>
-            <td class="n">{n(v.fastestKnWhileClaimingStationary, 1)}</td>
-          </tr>
-        ))}
+        <tr><td>build a database</td><td><code>./scripts/refresh.sh aisdk-2026-09-05.zip</code></td></tr>
+        <tr><td>price a call</td><td><code>ais laytime --mmsi 245313000 --allowed 72 --rate 28000</code></td></tr>
+        <tr><td>check a document against it</td><td><code>ais reconcile --sof statement.json</code></td></tr>
+        <tr><td>the browser page</td><td><code>cd src/AisPipeline.Api && dotnet run</code></td></tr>
       </tbody>
     </table>
   </div>
 
-  <h2>Before you blame anyone</h2>
-
-  <div class="prose">
-    <p>
-      Three things could produce these numbers: a crew that never touched the setting, an
-      installation that was configured once and left, or a decoding fault somewhere between the
-      transponder and this page. The evidence points at the first two — a decode fault would scatter
-      randomly, and this doesn't scatter — but the pipeline reports what was <em>broadcast</em>, and
-      never who was at fault.
-    </p>
-    <p>
-      There's a further wrinkle worth enjoying: the vessel names on this site are
-      <a href="/how-ais-works">also typed in by hand</a>.
-    </p>
-  </div>
+  <p class="note prose">
+    The browser page does the same work with the tables and the terms form. It is local to your
+    machine, so the link is a command rather than a URL.
+  </p>
 </Base>
