@@ -42,3 +42,8 @@ docs/reference/**
 !docs/reference/
 !docs/reference/**/
 !docs/reference/**/README.md
+
+# Codex artefacts. Not used on this project: the Codex CLI regenerates AGENTS.md (a copy of
+# CLAUDE.md) and .codex/agents/ on every launch, so ignore them rather than deleting them again.
+/AGENTS.md
+/.codex/
