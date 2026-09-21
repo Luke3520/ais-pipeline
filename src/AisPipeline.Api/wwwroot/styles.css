@@ -8,6 +8,7 @@
   --accent: #14532d;
   --warn: #8a5a00;
   --refuse: #8a2020;
+  --alarm: #96261f;
   --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
 }
 
@@ -21,6 +22,7 @@
     --accent: #7dd3a0;
     --warn: #e0b060;
     --refuse: #e88080;
+    --alarm: #ec8078;
   }
 }
 
@@ -54,7 +56,9 @@ section {
 .scroll { overflow-x: auto; }
 
 table { border-collapse: collapse; width: 100%; font-size: .875rem; }
-th, td { text-align: left; padding: .4rem .6rem; border-bottom: 1px solid var(--line); }
+th, td { text-align: left; padding: .4rem .6rem; border-bottom: 1px solid var(--line); white-space: nowrap; }
+/* The one column that may wrap: a rule's description is a sentence, not a datum. */
+#quality td:last-child { white-space: normal; min-width: 22rem; }
 th { font-weight: 600; color: var(--ink-soft); font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; }
 td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; font-family: var(--mono); }
 tbody tr:last-child td { border-bottom: none; }
@@ -76,3 +80,67 @@ tbody tr:last-child td { border-bottom: none; }
 code { font-family: var(--mono); font-size: .85em; background: var(--bg); padding: .1em .35em; border-radius: 3px; }
 a { color: var(--accent); }
 .fail { color: var(--refuse); }
+
+/* ---- masthead and routing ---- */
+header.site, footer.site { max-width: 1100px; margin: 0 auto; }
+header.site { padding-bottom: .8rem; border-bottom: 1px solid var(--line); margin-bottom: 1.2rem; }
+header.site nav { display: flex; gap: 1.2rem; align-items: baseline; flex-wrap: wrap; }
+header.site .brand { font-weight: 650; font-family: var(--mono); }
+header.site a { color: var(--ink-soft); text-decoration: none; font-size: .9rem; }
+header.site a:hover, header.site a[aria-current] { color: var(--ink); }
+
+footer.site { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--line); }
+
+.crumb { margin: 0 0 .6rem; font-size: .85rem; }
+.crumb a { text-decoration: none; }
+a.go { text-decoration: none; font-weight: 550; white-space: nowrap; }
+
+/* ---- the terms form: it builds a URL, it does not write anything ---- */
+.terms { display: flex; flex-wrap: wrap; gap: .8rem 1.1rem; align-items: flex-end; margin: 1rem 0 .4rem; }
+.terms label { display: flex; flex-direction: column; gap: .2rem; font-size: .76rem; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-soft); }
+.terms input {
+  font: inherit; font-family: var(--mono); font-size: .9rem;
+  padding: .35rem .5rem; width: 11rem;
+  background: var(--bg); color: var(--ink);
+  border: 1px solid var(--line); border-radius: 5px;
+}
+.terms button {
+  font: inherit; font-size: .9rem; font-weight: 550;
+  padding: .4rem 1rem; border-radius: 5px; cursor: pointer;
+  background: var(--accent); color: var(--bg); border: 1px solid var(--accent);
+}
+
+/* ---- a laytime statement ---- */
+.assumption {
+  border-left: 3px solid var(--warn);
+  background: var(--bg);
+  padding: .6rem .9rem; margin: 1rem 0;
+  font-size: .88rem; color: var(--ink-soft);
+  border-radius: 0 6px 6px 0;
+}
+table.statement td:nth-child(3) { font-family: var(--mono); }
+table.statement tr.excepted td { color: var(--ink-soft); }
+table.statement tr.demurrage td { color: var(--refuse); }
+
+.money { font-family: var(--mono); font-size: 1.8rem; letter-spacing: -.02em; margin: .8rem 0 .2rem; }
+.money.alarm { color: var(--alarm); }
+.tally div.alarm { color: var(--alarm); }
+
+/* ---- a refusal is an answer, and must not look like a fault ---- */
+.refusal {
+  border-left: 3px solid var(--warn);
+  background: var(--bg);
+  padding: .8rem 1rem; margin: 1rem 0;
+  border-radius: 0 6px 6px 0;
+}
+.refusal h2 { margin: 0 0 .3rem; font-size: 1rem; color: var(--warn); }
+.refusal .detail { margin: 0; font-size: .95rem; }
+
+/* Never measured, as against measured-but-untrustworthy. Different claims, different marks. */
+.too-few { color: var(--ink-soft); font-family: var(--mono); font-size: .82em; font-style: italic; }
+
+.ranking { font-size: 1.05rem; margin: 1rem 0 .2rem; }
+
+details { margin-top: 1.2rem; font-size: .9rem; }
+details summary { cursor: pointer; color: var(--ink-soft); }
+.mono { font-family: var(--mono); font-size: .8rem; color: var(--ink-soft); word-spacing: .3em; }

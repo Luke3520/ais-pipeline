@@ -3,6 +3,7 @@ using AisPipeline.Api;
 using AisPipeline.Api.GraphQL;
 using AisPipeline.Core.Ports;
 using AisPipeline.Core.Benchmarks;
+using AisPipeline.Core.Geo;
 using AisPipeline.Core.Laytime;
 using AisPipeline.Core.Quality;
 using AisPipeline.Core.Query;
@@ -276,6 +277,35 @@ app.MapGet("/quality", (IAisQueries q) =>
 
 app.MapGet("/runs", (IAisQueries q) => Results.Ok(q.ListRuns()))
    .WithSummary("Ingest runs and their counters");
+
+// The thresholds a reader needs in order to argue with a figure.
+//
+// The page has to state six of them -- why a call was excluded from a benchmark, why a median is
+// absent, why a p90 is, and the three charter party defaults its terms form starts from. Six
+// copies in JavaScript is six chances to drift from the constants they mirror, and a stale
+// threshold printed beside a live figure is a caption that lies. Projected from the constants
+// themselves so the only way to change one is to change the constant (ADR-0047).
+app.MapGet("/meta", () => Results.Ok(new
+{
+    plausiblyAtPortNm = PortAttributionThresholds.PlausiblyAtPortNm,
+    benchmarkMinimums = new
+    {
+        forMedian = BenchmarkMinimums.ForMedian,
+        forPercentile = BenchmarkMinimums.ForPercentile,
+    },
+
+    // Illustrative tanker defaults, not a charter party. Named as such here because the form
+    // that starts from them is the place a reader is likeliest to mistake them for a fixture.
+    charterPartyDefaults = new
+    {
+        allowedHours = CharterPartyDefaults.AllowedHours,
+        ratePerDay = CharterPartyDefaults.RatePerDay,
+        turnHours = CharterPartyDefaults.TurnHours,
+        currency = CharterPartyDefaults.Currency,
+        illustrative = true,
+    },
+}))
+   .WithSummary("The thresholds and defaults the surfaces state, projected from the constants");
 
 app.MapGraphQL();
 
