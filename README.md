@@ -1,5 +1,81 @@
 # ais-pipeline
 
+**A tanker radar for your terminal, on a pipeline that refuses to make anything up.**
+
+![ais radar replaying a night in the Kattegat, with the ship's log typing underneath](docs/demo/radar.gif)
+
+That's a week of the Danish Maritime Authority's open AIS feed (5.37 million position reports from
+452 tankers) replayed on a green screen. Arrows are ships under way, pointing along the course they
+reported. `o` is a ship stopped. An amber **`!`** is a ship contradicted by its own transponder,
+usually sitting at anchor while broadcasting *under way using engine*. In one measured day,
+[63% of tanker fixes below half a knot](docs/the-data.md) were claiming exactly that.
+
+Every line of the ship's log ends in a citation like `[r4·L16609354]`: ingest run 4, line
+16,609,354 of the file that run read. One query takes you back to the broadcast:
+
+```sql
+SELECT * FROM position_report WHERE ingest_run_id = 4 AND source_line = 16609354;
+```
+
+## Thirty seconds, no download
+
+The repository carries 744 real rows chosen to exercise every rule ([`fixtures/`](fixtures/MANIFEST.md)).
+You need .NET 10.
+
+```bash
+git clone https://github.com/Luke3520/ais-pipeline && cd ais-pipeline
+alias ais='dotnet run --project src/AisPipeline.Cli --'
+
+ais ingest fixtures/sample.csv --ship-type Tanker   # parse, check, store, with provenance
+ais detect                                          # stops, port calls, contradictions
+ais radar                                           # q to quit, space to pause, +/- for speed
+```
+
+The fixture is two and a half hours of one morning, so the scope is sparse. For the screen above,
+[download a day or a week](#try-it) and point the radar at `--region kattegat`. The findings are
+also [a website](https://luke3520.github.io/ais-pipeline/), built from the same data. `ais log --mmsi <n>`
+prints one vessel's whole log, and `ais radar --at <instant>` prints a single frame and exits.
+
+## The AI writes the log. A program checks every number.
+
+`ais log --mmsi 636025106 --narrate` hands the cited log to Claude and asks for it back in the
+voice of the ship's master. A fluent model will happily round *30.4 h* to *some thirty hours*,
+add two durations together, or produce a plausible time nobody recorded. All of those read well,
+and all of them are numbers you can't trace.
+
+So nothing the model writes is printed until [`CitedNarrative`](src/AisPipeline.Core/Narration/CitedNarrative.cs)
+has checked it. **Every sentence must cite a log line it was given, and every number in a sentence
+must appear in the lines that sentence cites.** Truncating 22:02:21 to 22:02 passes. Rounding,
+arithmetic across entries, and an invented hour don't. One failing sentence refuses the whole
+narration, which is never trimmed to its good half. The reader gets the reasons and then the plain
+log. A refusal looks like this (an illustration; the format is the program's):
+
+```
+NARRATION REFUSED: 1 problem(s) in what claude-opus-5-5 wrote.
+  - sentence 2 says 30, which none of its citations contain
+The plain log follows.
+```
+
+The validator can't catch a false claim made of words alone, and the output says so.
+[ADR-0050](docs/adr/0050-narration-is-cited-or-it-is-refused.md) has the reasoning, including what
+leaves the machine: one vessel's name and its log lines, nothing else.
+
+## Old school, new school
+
+| | |
+|---|---|
+| **Braille graphics** | Every dot on the scope is one of the eight in a Unicode braille cell. That's eight times the resolution of text, in any terminal |
+| **P1 phosphor** | The green radar screens and the VT100 shipped with. `--amber` gives you P3, which the people who stared at them all day asked for |
+| **A teletype log** | The newest line types itself out. If it falls behind, it prints at once, because a log that lags the scope lies about what just happened |
+| **An LLM on a leash** | It may write the log, but a regex decides whether anyone reads it |
+| **Decision records** | [Every decision](docs/adr/README.md), with the measurement it rests on. The radar has [one too](docs/adr/0049-the-radar-is-a-view-not-a-feature.md) |
+
+The radar decides nothing for itself. *Stopped*, *contradicting itself* and *on its Fredericia call*
+are all read from what detection and the quality rules already stored. A radar with its own opinion
+would be a second opinion that could disagree with the first.
+
+## What it's actually for
+
 **An independent record of when your vessel arrived, when it berthed, and when it left — built from
 the public AIS feed, and traceable line by line back to the broadcast it came from.**
 
@@ -13,7 +89,7 @@ calculation is built from.
 MIT licensed, runs on your own machine, and it declines to print any figure it will not stand
 behind.
 
-## What it costs you not to have this
+### What it costs you not to have this
 
 ```
 $ ais reconcile --sof statement-of-facts.json --allowed 48
@@ -52,7 +128,7 @@ for the demonstration; the engine is correct for the terms it is given, and the 
 ## Try it
 
 ```bash
-git clone <this repo> && cd ais-pipeline
+git clone https://github.com/Luke3520/ais-pipeline && cd ais-pipeline
 
 # One day of AIS from the Danish Maritime Authority, free to download.
 # Note the host: web.ais.dk now serves an expired certificate, so the archive is the S3 bucket.
@@ -138,7 +214,7 @@ stopped moving. ([ADR-0030](docs/adr/0030-laytime-engine.md))
 | [`docs/rules/checks-and-review.md`](docs/rules/checks-and-review.md) | What blocks a merge, and how to run the checks |
 | [`docs/adr/`](docs/adr/README.md) | Why the design is what it is |
 | [`docs/roadmap.md`](docs/roadmap.md) | Milestones, what is next, and what this does not do |
-| [`site/`](site/) | The static site, built from the committed export |
+| [`site/`](site/) | The static site, built from the committed export: [luke3520.github.io/ais-pipeline](https://luke3520.github.io/ais-pipeline/) |
 
 Architecture: a modular monolith, hexagonal, with a core that has no I/O dependencies at all
 ([ADR-0002](docs/adr/0002-modular-monolith-over-microservices.md),

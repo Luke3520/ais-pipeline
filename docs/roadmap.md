@@ -15,6 +15,7 @@
 | **M9** | Read-only browser UI over the derived layer | ✅ complete |
 | **M10** | R12, the export contract, and the static site | ✅ complete |
 | **M11** | Retention — prune whole periods, archive first | ✅ complete |
+| **M12** | `ais radar`, the cited ship's log, and narration a program must accept (ADR-0049, ADR-0050) | ✅ complete |
 | M5 | OpenTelemetry → Prometheus + Grafana, k6 | deferred — infrastructure, and the read side is still small enough to reason about without it |
 
 ## Where this is going
