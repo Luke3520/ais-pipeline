@@ -70,6 +70,20 @@ the design.
 | [0049](0049-the-radar-is-a-view-not-a-feature.md) | The radar is a view, not a feature | Accepted |
 | [0050](0050-narration-is-cited-or-it-is-refused.md) | Narration is cited or it is refused | Accepted |
 
+### † Validator tightened before publication, 2026-10-06 (ADR-0050)
+
+ADR-0050 lists "a date part" among the figures a narrated sentence may quote from the entries it
+cites. As built, that let an entry dated 2026-09-04 license a bare "4" or "9", so "waited 4
+hours" passed as quoted, and small integers are exactly what a model invents. Two review lanes
+found it independently, before the change was pushed. `CitedNarrative` now compares by kind: a
+date only as a whole calendar day (ISO, or a day beside a month name), a time only as a time, and
+every other figure only against the entry's text. A bare day number is refused, and the prompt
+says so.
+
+The decision is unaffected and made stricter, which the record already anticipated ("If a future
+change makes it more permissive... that is a reversal"). ADR-0050 has not been edited. Its list of
+figure kinds is simply looser than the code that shipped with it.
+
 ### † Measurement corrected, 2026-09-12
 
 Both records state in passing that **R6 has never fired**. Over the seven-day window it rejects 65

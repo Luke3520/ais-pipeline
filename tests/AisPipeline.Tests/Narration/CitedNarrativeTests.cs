@@ -29,7 +29,7 @@ public class CitedNarrativeTests
     public void A_fully_cited_passage_that_quotes_its_numbers_is_accepted()
     {
         var verdict = CitedNarrative.Validate(
-            "Brought up off Fredericia at 15:38 on the 3rd [r3·L11733590]. " +
+            "Brought up off Fredericia at 15:38 on 3 September [r3·L11733590]. " +
             "Weighed anchor at 22:02 after 30.4 h of waiting [r4·L16113623]. " +
             "Alongside by 22:47, and the transponder still swears we are under way using engine [r4·L16609354].",
             Log);
@@ -112,6 +112,38 @@ public class CitedNarrativeTests
         var verdict = CitedNarrative.Validate("On 4 September at 22:02 the anchor came up [r4·L16113623].", Log);
 
         Assert.True(verdict.Accepted, string.Join("; ", verdict.Problems));
+    }
+
+    [Theory]
+    [InlineData("Waited 4 hours [r4·L16113623].", "4")]
+    [InlineData("Made 9 knots [r4·L16113623].", "9")]
+    [InlineData("Anchored for 2026 minutes [r4·L16113623].", "2026")]
+    public void A_date_part_does_not_license_a_bare_number(string sentence, string invented)
+    {
+        // The cited entry is dated 2026-09-04. Its month, day and year are a date, not figures a
+        // sentence may reuse as a duration or a speed: small integers are what a model invents.
+        var verdict = CitedNarrative.Validate(sentence, Log);
+
+        Assert.Equal([$"sentence 1 says {invented}, which none of its citations contain"], verdict.Problems);
+    }
+
+    [Theory]
+    [InlineData("On 2026-09-04 at 22:02 the anchor came up [r4·L16113623].")]
+    [InlineData("On September 4th, 2026, at 22:02 the anchor came up [r4·L16113623].")]
+    [InlineData("On the 4th of September at 22:02 the anchor came up [r4·L16113623].")]
+    public void A_date_written_as_a_date_matches_the_cited_entrys_date(string sentence)
+    {
+        var verdict = CitedNarrative.Validate(sentence, Log);
+
+        Assert.True(verdict.Accepted, string.Join("; ", verdict.Problems));
+    }
+
+    [Fact]
+    public void A_date_the_cited_entry_does_not_carry_is_refused()
+    {
+        var verdict = CitedNarrative.Validate("On 5 September the anchor came up [r4·L16113623].", Log);
+
+        Assert.Equal(["sentence 1 says 5 September, which none of its citations is dated"], verdict.Problems);
     }
 
     [Fact]

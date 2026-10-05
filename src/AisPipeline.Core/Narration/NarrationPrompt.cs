@@ -25,7 +25,8 @@ public static class NarrationPrompt
            guess what the crew intended, or describe weather, cargo or anything else not stated.
         3. Write every number exactly as it appears in the entries you cite: times, durations,
            speeds, dates. Do not add, subtract, round, or convert numbers. Write no number that
-           is not in a cited entry. You may shorten a time like 22:02:21 to 22:02.
+           is not in a cited entry. You may shorten a time like 22:02:21 to 22:02. Write a date
+           as 2026-09-04 or as 4 September, never as a bare day number.
         4. Write prose only: no headings, no lists, no preamble, no sign-off. Between 4 and 10
            sentences, in time order.
 

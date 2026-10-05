@@ -74,11 +74,29 @@ public static partial class CitedNarrative
                 continue;
             }
 
+            var entries = cited.SelectMany(c => byCitation[c]).ToList();
+
+            // Typed facts, compared kind to kind. Taking every figure from the whole rendered entry
+            // let an entry dated 2026-09-04 license a bare "9" or "4", so "waited 4 hours" passed
+            // as quoted. Small integers are exactly what a model invents, so the date's parts are
+            // not figures: a date matches only a date, a time only a time, and everything else
+            // only the figures in the entry's text (durations, speeds, names).
+            var dates = entries.Select(e => (e.AtUtc.Month, e.AtUtc.Day)).ToHashSet();
             var facts = new HashSet<string>(
-                cited.SelectMany(c => byCitation[c]).SelectMany(e => Figures(WithoutCitations(e.Render(withDate: true)))),
+                entries.SelectMany(e => Figures(WithoutCitations(e.Text))
+                    .Concat(Figures(e.AtUtc.ToString("HH:mm:ss", CultureInfo.InvariantCulture)))),
                 StringComparer.Ordinal);
 
-            foreach (var figure in Figures(WithoutCitations(sentence)).Distinct())
+            var (remainder, stated) = TakeDates(WithoutCitations(sentence));
+            foreach (var (month, day, written) in stated)
+            {
+                if (!dates.Contains((month, day)))
+                {
+                    problems.Add($"{label} says {written}, which none of its citations is dated");
+                }
+            }
+
+            foreach (var figure in Figures(remainder).Distinct())
             {
                 if (!facts.Contains(figure))
                 {
@@ -121,8 +139,7 @@ public static partial class CitedNarrative
 
     /// <summary>
     /// Every figure in a piece of text, normalised so the same quantity compares equal however it
-    /// was written. A whole number loses leading zeros ("09" and "9" are one figure, and the log
-    /// writes dates as 2026-09-04). A time of day also yields its hours and minutes, so a sentence
+    /// was written. A whole number loses leading zeros, so "09" and "9" are one figure. A time of day also yields its hours and minutes, so a sentence
     /// may say 22:02 for an entry stamped 22:02:21. That is truncation, which drops the seconds
     /// and does not move the minute. Rounding would move it, and rounding is refused.
     /// </summary>
@@ -153,10 +170,50 @@ public static partial class CitedNarrative
     }
 
     /// <summary>
+    /// Dates written as dates, lifted out of a sentence before its figures are read: ISO
+    /// (2026-09-04), "4 September" or "September 4", with an optional ordinal suffix and year. Each
+    /// is compared as a whole calendar day against the dates of the cited entries. A day number on
+    /// its own, with no month beside it, is not a date and is read as an ordinary figure.
+    /// </summary>
+    public static (string Remainder, IReadOnlyList<(int Month, int Day, string Written)> Dates) TakeDates(string sentence)
+    {
+        var found = new List<(int, int, string)>();
+        var rest = IsoDate().Replace(sentence, m =>
+        {
+            found.Add((int.Parse(m.Groups["m"].Value, CultureInfo.InvariantCulture),
+                int.Parse(m.Groups["d"].Value, CultureInfo.InvariantCulture), m.Value));
+            return " ";
+        });
+        rest = WrittenDate().Replace(rest, m =>
+        {
+            var month = Array.IndexOf(Months, m.Groups["month1"].Success
+                ? m.Groups["month1"].Value.ToLowerInvariant()
+                : m.Groups["month2"].Value.ToLowerInvariant()) + 1;
+            var day = int.Parse(m.Groups["day1"].Success ? m.Groups["day1"].Value : m.Groups["day2"].Value,
+                CultureInfo.InvariantCulture);
+            found.Add((month, day, m.Value.Trim()));
+            return " ";
+        });
+        return (rest, found);
+    }
+
+    private static readonly string[] Months =
+    [
+        "january", "february", "march", "april", "may", "june",
+        "july", "august", "september", "october", "november", "december",
+    ];
+
+    /// <summary>
     /// Citations are provenance, not facts. Left in, "[r4·L16113623]" would make 4 a figure every
     /// sentence citing run 4 was allowed to state.
     /// </summary>
     private static string WithoutCitations(string text) => Citation.Pattern().Replace(text, " ");
+
+    [GeneratedRegex(@"\b\d{4}-(?<m>\d{2})-(?<d>\d{2})\b")]
+    private static partial Regex IsoDate();
+
+    [GeneratedRegex(@"\b(?:(?<day1>\d{1,2})(?:st|nd|rd|th)?\s+(?:of\s+)?(?<month1>January|February|March|April|May|June|July|August|September|October|November|December)|(?<month2>January|February|March|April|May|June|July|August|September|October|November|December)\s+(?<day2>\d{1,2})(?:st|nd|rd|th)?)\b(?:,?\s+\d{4})?", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    private static partial Regex WrittenDate();
 
     [GeneratedRegex(@"(?<=[.!?])\s+")]
     private static partial Regex SentenceBreak();
