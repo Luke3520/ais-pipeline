@@ -1,4 +1,5 @@
 ---
+import { url } from '../url';
 import Base from '../layouts/Base.astro';
 import data from '../data/pipeline.json';
 
@@ -51,7 +52,7 @@ const window = `${manifest.firstFixUtc.slice(0, 10)} to ${manifest.lastFixUtc.sl
       laytime on berthing turns an hour of disagreement into several hundred dollars.
     </p>
     <p>
-      <strong>Was that wait unusual?</strong> <a href="/ports">Port waits</a> ranks a wait against
+      <strong>Was that wait unusual?</strong> <a href={url('/ports')}>Port waits</a> ranks a wait against
       what other vessels actually experienced at the same port — a position in a distribution, not
       a verdict. On this window {n(best.usableCalls)} calls at {best.portName} give a median of
       {' '}{n(best.medianWaitingHours, 1)} hours and a 90th percentile of
@@ -90,7 +91,7 @@ const window = `${manifest.firstFixUtc.slice(0, 10)} to ${manifest.lastFixUtc.sl
     The same discipline runs through every figure here. Port medians appear for
     {' '}<strong>{withAMedian} of {ports.length}</strong> ports, because below five usable calls a
     median is an anecdote; {n(usable)} of {n(attributed)} attributed calls survive the exclusions,
-    and both numbers are published. <a href="/how-laytime-is-counted">What AIS can and cannot
+    and both numbers are published. <a href={url('/how-laytime-is-counted')}>What AIS can and cannot
     supply</a> is stated rather than implied.
   </p>
 
@@ -99,14 +100,14 @@ const window = `${manifest.firstFixUtc.slice(0, 10)} to ${manifest.lastFixUtc.sl
   <div class="prose">
     <p>
       Position and speed in an AIS message are measured by a receiver. Navigational status, ETA and
-      the vessel's own name are <a href="/how-ais-works">typed in by a person</a> — and this data
+      the vessel's own name are <a href={url('/how-ais-works')}>typed in by a person</a> — and this data
       shows what that costs: across this window, {n(summary.arrivalLapses)} of
       {' '}{n(summary.stops)} stops were broadcast as "under way" by a vessel sitting still.
     </p>
     <p>
       Every timestamp on this site comes from the measured half. Nothing here rests on a crew
       remembering to turn a dial, which is exactly why it is worth checking a document against.
-      The <a href="/findings">data quality</a> work is the evidence for that claim, not a footnote
+      The <a href={url('/findings')}>data quality</a> work is the evidence for that claim, not a footnote
       to it.
     </p>
   </div>

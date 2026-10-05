@@ -11,5 +11,9 @@ export default defineConfig({
   // which Netlify does and GitHub Pages does not -- a link that works locally and 404s once
   // deployed is exactly the failure that is hardest to notice.
   build: { format: 'directory' },
+  // GitHub Pages serves a project site under /<repo>/. The Pages workflow sets SITE_BASE; every
+  // other build (local, CI's nav check) is at the root, so the default stays '/'. Internal links
+  // all go through src/url.ts, which reads this.
+  base: process.env.SITE_BASE ?? '/',
   devToolbar: { enabled: false },
 });

@@ -1,4 +1,5 @@
 ---
+import { url } from '../url';
 import '../styles/global.css';
 import data from '../data/pipeline.json';
 
@@ -32,9 +33,9 @@ const nav = [
   <header class="site">
     <div class="wrap">
       <nav>
-        <a class="brand" href="/">ais-pipeline</a>
+        <a class="brand" href={url('/')}>ais-pipeline</a>
         {nav.map(([href, label]) => (
-          <a href={href} aria-current={path === href ? 'page' : undefined}>{label}</a>
+          <a href={url(href)} aria-current={path === (url(href).replace(/\/+$/, '') || '/') ? 'page' : undefined}>{label}</a>
         ))}
       </nav>
     </div>

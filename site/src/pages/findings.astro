@@ -1,4 +1,5 @@
 ---
+import { url } from '../url';
 import Base from '../layouts/Base.astro';
 import data from '../data/pipeline.json';
 
@@ -48,13 +49,13 @@ const eta = data.rules.find((r) => r.ruleId === 'R13');
 
   <div class="prose">
     <p>
-      <strong><a href="/arrivals">Forgot on arrival</a></strong> — the ship stops, and the status
+      <strong><a href={url('/arrivals')}>Forgot on arrival</a></strong> — the ship stops, and the status
       stays on "under way using engine". Detected on {n(statusDisagreement.disagreeing)} of
       {n(statusDisagreement.totalStops)} stops. These vessels moved a mean of 92 metres over a mean
       of 5.7 hours; a ship genuinely under way at one knot covers ten kilometres in that time.
     </p>
     <p>
-      <strong><a href="/departures">Forgot on departure</a></strong> — the ship leaves, and the
+      <strong><a href={url('/departures')}>Forgot on departure</a></strong> — the ship leaves, and the
       status stays on "moored" or "at anchor". Detected on {n(summary.departureLapses)} position
       reports. The fastest was doing 15.5 knots while telling the world it was tied up.
     </p>
@@ -92,7 +93,7 @@ const eta = data.rules.find((r) => r.ruleId === 'R13');
       <tbody>
         {both.map((v) => (
           <tr>
-            <td><a href={`/vessel/${v.mmsi}`}>{v.name ?? '(no name broadcast)'}</a></td>
+            <td><a href={url(`/vessel/${v.mmsi}`)}>{v.name ?? '(no name broadcast)'}</a></td>
             <td class="n">{n(v.arrivalLapses)} of {n(v.totalStops)}</td>
             <td class="n">{n(v.departureLapses)}</td>
             <td class="n">{n(v.fastestKnWhileClaimingStationary, 1)}</td>
@@ -114,7 +115,7 @@ const eta = data.rules.find((r) => r.ruleId === 'R13');
     </p>
     <p>
       There's a further wrinkle worth enjoying: the vessel names on this site are
-      <a href="/how-ais-works">also typed in by hand</a>.
+      <a href={url('/how-ais-works')}>also typed in by hand</a>.
     </p>
   </div>
 </Base>

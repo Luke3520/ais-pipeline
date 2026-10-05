@@ -1,4 +1,5 @@
 ---
+import { url } from '../url';
 interface Vessel {
   mmsi: number; name: string | null; shipType: string | null;
   arrivalLapses: number; totalStops: number; hoursClaimingUnderWay: number;
@@ -42,7 +43,7 @@ const n = (v: number, d = 0) =>
         const share = kind === 'arrival' ? v.arrivalSharePercent : v.departureSharePercent;
         return (
           <tr>
-            <td><a href={`/vessel/${v.mmsi}`}>{v.name ?? '(no name broadcast)'}</a></td>
+            <td><a href={url(`/vessel/${v.mmsi}`)}>{v.name ?? '(no name broadcast)'}</a></td>
             <td class="n">{v.mmsi}</td>
             <td class="n">{n(kind === 'arrival' ? v.arrivalLapses : v.departureLapses)}</td>
             <td class="n">{n(kind === 'arrival' ? v.totalStops : v.totalFixes)}</td>

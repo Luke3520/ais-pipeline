@@ -1,4 +1,5 @@
 ---
+import { url } from '../../url';
 import Base from '../../layouts/Base.astro';
 import data from '../../data/pipeline.json';
 
@@ -95,7 +96,7 @@ const clean = vessel.totalStops - vessel.arrivalLapses;
     <p>
       The name at the top of this page is itself a hand-entered field, broadcast by the same
       equipment. If the dial was never touched, there is no particular reason to assume the name
-      was. <a href="/how-ais-works">Here's what is typed and what is measured.</a>
+      was. <a href={url('/how-ais-works')}>Here's what is typed and what is measured.</a>
     </p>
   </div>
 </Base>
