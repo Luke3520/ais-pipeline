@@ -281,3 +281,10 @@ public sealed record StopFilter
 
     public int Limit { get; init; } = 100;
 }
+
+/// <summary>When the ingested feed begins and ends, as the vessel register records it.</summary>
+public sealed record FeedWindow
+{
+    public DateTime FirstUtc { get; init; }
+    public DateTime LastUtc { get; init; }
+}

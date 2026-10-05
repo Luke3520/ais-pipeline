@@ -117,6 +117,81 @@ public class QueryParityTests
 
     [Theory]
     [ClassData(typeof(StoreHarnesses))]
+    public void TrackStreamsTheWholeWindowInTimeOrderAndCarriesProvenance(Func<IStoreHarness> make)
+    {
+        // The radar's only read of position_report. Every fix in the window, in order, each with
+        // the run and line its log line will cite. A mapping that dropped source_line would not
+        // throw; it would cite line 0 on every sentence.
+        using var harness = make();
+        Populate(harness);
+        using var queries = QueriesOver(harness);
+
+        var window = queries.FeedWindow();
+        Assert.NotNull(window);
+
+        var fixes = queries.Track(window!.FirstUtc, window.LastUtc.AddSeconds(1), mmsi: null).ToList();
+
+        Assert.Equal(harness.Count("position_report"), fixes.Count);
+        Assert.Equal(fixes.OrderBy(f => f.TimestampUtc).ThenBy(f => f.Id).Select(f => f.Id), fixes.Select(f => f.Id));
+        Assert.All(fixes, f => Assert.True(f.IngestRunId > 0 && f.SourceLine > 1,
+            $"{harness.Name}: fix {f.Id} cites run {f.IngestRunId} line {f.SourceLine}"));
+
+        var sample = fixes[fixes.Count / 2];
+        Assert.Equal(sample.SourceLine,
+            harness.Scalar($"SELECT source_line FROM position_report WHERE id = {sample.Id}"));
+    }
+
+    [Theory]
+    [ClassData(typeof(StoreHarnesses))]
+    public void TrackWindowIsHalfOpenAndTheVesselFilterHolds(Func<IStoreHarness> make)
+    {
+        // Bounded windows are where the SQLite timestamp-parameter skew bites: a DateTime bound as
+        // "yyyy-MM-dd HH:mm:ss" against a column of "...T...Z" text returns nothing at all. These
+        // windows are second-wide on purpose, the shape the skew cannot hide from.
+        using var harness = make();
+        Populate(harness);
+        using var queries = QueriesOver(harness);
+
+        var window = queries.FeedWindow()!;
+        var all = queries.Track(window.FirstUtc, window.LastUtc.AddSeconds(1), mmsi: null).ToList();
+        var t = all[all.Count / 2].TimestampUtc;
+
+        var oneSecond = queries.Track(t, t.AddSeconds(1), mmsi: null).ToList();
+        Assert.NotEmpty(oneSecond);
+        Assert.All(oneSecond, f => Assert.Equal(t, f.TimestampUtc));
+        Assert.Equal(all.Count(f => f.TimestampUtc == t), oneSecond.Count);
+
+        Assert.Empty(queries.Track(t, t, mmsi: null));
+
+        var mmsi = all[0].Mmsi;
+        var oneVessel = queries.Track(window.FirstUtc, window.LastUtc.AddSeconds(1), mmsi).ToList();
+        Assert.Equal(all.Count(f => f.Mmsi == mmsi), oneVessel.Count);
+    }
+
+    [Theory]
+    [ClassData(typeof(StoreHarnesses))]
+    public void StopsAndPortCallsOverlappingAWindowAreUncapped(Func<IStoreHarness> make)
+    {
+        using var harness = make();
+        Populate(harness);
+        using var queries = QueriesOver(harness);
+
+        var window = queries.FeedWindow()!;
+        var to = window.LastUtc.AddSeconds(1);
+
+        Assert.Equal(harness.Count("stop_event"), queries.StopsOverlapping(window.FirstUtc, to, mmsi: null).Count);
+        Assert.Equal(harness.Count("port_call"), queries.PortCallsOverlapping(window.FirstUtc, to).Count);
+        Assert.Empty(queries.StopsOverlapping(window.FirstUtc.AddDays(-2), window.FirstUtc.AddDays(-1), mmsi: null));
+
+        // A stop whose last fix sits exactly on the window's opening is included: that fix is in
+        // the track the replay reads, and the replay needs to know which stop it belongs to.
+        var stop = queries.StopsOverlapping(window.FirstUtc, to, mmsi: null)[0];
+        Assert.Contains(queries.StopsOverlapping(stop.EndedUtc, stop.EndedUtc.AddHours(1), stop.Mmsi),
+            s => s.Id == stop.Id);
+    }
+
+    [Theory]
+    [ClassData(typeof(StoreHarnesses))]
     public void BooleanColumnsSurviveTheRoundTrip(Func<IStoreHarness> make)
     {
         // SQLite stores 0/1, Postgres true/false. A mapping that read every row as `true` would

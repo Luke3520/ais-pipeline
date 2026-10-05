@@ -137,4 +137,38 @@ public interface IAisQueries : IDisposable
     IReadOnlyList<VesselFixStatus> FixStatusByVessel();
 
     IReadOnlyList<StoredRun> ListRuns();
+
+    /// <summary>
+    /// The span of time the ingested feed covers, from the vessel register rather than a scan of
+    /// <c>position_report</c>. Null when nothing has been ingested.
+    ///
+    /// The register records when each vessel was first and last heard, so its extremes are the
+    /// feed's, and reading them costs a few thousand rows rather than five million. It is a
+    /// default for where a replay starts, not a measurement anything is computed from.
+    /// </summary>
+    FeedWindow? FeedWindow();
+
+    /// <summary>
+    /// Stored fixes in a half-open window [from, to), in time order, optionally for one vessel.
+    ///
+    /// **Streamed, not buffered.** A day is about 750,000 fixes and a week over five million; the
+    /// caller enumerates while the connection stays open and holds nothing it has passed. Dispose
+    /// the enumerator, or finish it, to release the connection.
+    ///
+    /// Carries each fix's ingest run and source line, because the radar's log cites them.
+    /// </summary>
+    IEnumerable<TrackFix> Track(DateTime fromUtc, DateTime toUtc, long? mmsi);
+
+    /// <summary>
+    /// Every stop sharing time with a window, optionally for one vessel. Uncapped: a replay that
+    /// silently lost stops past a limit would draw stopped vessels as moving (ADR-0028).
+    ///
+    /// Closed at the window's opening, unlike the per-vessel <see cref="PortCallsOverlapping(long, DateTime, DateTime)"/>:
+    /// a stop whose last fix lands exactly on <paramref name="fromUtc"/> has that fix in
+    /// <see cref="Track"/>'s window, so the replay needs the stop it belongs to.
+    /// </summary>
+    IReadOnlyList<StoredStop> StopsOverlapping(DateTime fromUtc, DateTime toUtc, long? mmsi);
+
+    /// <summary>Every vessel's port calls sharing time with a window. Uncapped, for the same reason.</summary>
+    IReadOnlyList<StoredPortCall> PortCallsOverlapping(DateTime fromUtc, DateTime toUtc);
 }

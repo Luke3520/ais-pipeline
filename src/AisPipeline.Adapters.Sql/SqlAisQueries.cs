@@ -405,6 +405,64 @@ public sealed class SqlAisQueries : IAisQueries
             """)];
     }
 
+    public FeedWindow? FeedWindow()
+    {
+        using var c = Open();
+        var row = c.QuerySingle<(DateTime? First, DateTime? Last)>(
+            "SELECT MIN(first_seen_utc) AS First, MAX(last_seen_utc) AS Last FROM vessel");
+        return row is (DateTime first, DateTime last)
+            ? new FeedWindow { FirstUtc = first, LastUtc = last }
+            : null;
+    }
+
+    public IEnumerable<TrackFix> Track(DateTime fromUtc, DateTime toUtc, long? mmsi)
+    {
+        using var c = Open();
+
+        // Two spellings rather than "(@mmsi IS NULL OR mmsi = @mmsi)". With the OR, SQLite cannot
+        // know at plan time which branch holds, so it scans the table even for one vessel; with the
+        // equality on its own it walks the (mmsi, ts_utc, ...) unique index by prefix (ADR-0013).
+        var vessel = mmsi is null ? "" : "mmsi = @mmsi AND ";
+
+        // Unbuffered: Dapper yields each row as the reader produces it, so a week streams through
+        // in constant memory. The `using` above holds the connection until the caller stops.
+        foreach (var fix in c.Query<TrackFix>($"""
+            SELECT id AS Id, mmsi AS Mmsi, ts_utc AS TimestampUtc, lat AS Latitude, lon AS Longitude,
+                   sog_kn AS SpeedOverGroundKn, cog AS CourseOverGroundDeg,
+                   nav_status AS NavigationalStatus, quality_flags AS QualityFlags,
+                   ingest_run_id AS IngestRunId, source_line AS SourceLine
+            FROM position_report
+            WHERE {vessel}ts_utc >= @from AND ts_utc < @to
+            ORDER BY ts_utc, id
+            """,
+            new { mmsi, from = _dialect.Timestamp(fromUtc), to = _dialect.Timestamp(toUtc) },
+            buffered: false))
+        {
+            yield return fix;
+        }
+    }
+
+    public IReadOnlyList<StoredStop> StopsOverlapping(DateTime fromUtc, DateTime toUtc, long? mmsi)
+    {
+        using var c = Open();
+        var vessel = mmsi is null ? "" : "mmsi = @mmsi AND ";
+        return [.. c.Query<StoredStop>($"""
+            {StopColumns}
+            WHERE {vessel}started_utc < @to AND ended_utc >= @from
+            ORDER BY mmsi, started_utc
+            """, new { mmsi, from = _dialect.Timestamp(fromUtc), to = _dialect.Timestamp(toUtc) })];
+    }
+
+    public IReadOnlyList<StoredPortCall> PortCallsOverlapping(DateTime fromUtc, DateTime toUtc)
+    {
+        using var c = Open();
+        return [.. c.Query<StoredPortCall>($"""
+            {PortCallColumns}
+            WHERE arrived_utc < @to AND departed_utc >= @from
+            ORDER BY mmsi, arrived_utc
+            """, new { from = _dialect.Timestamp(fromUtc), to = _dialect.Timestamp(toUtc) })];
+    }
+
     public void Dispose()
     {
         // Connections are opened and closed per query; nothing is held.
