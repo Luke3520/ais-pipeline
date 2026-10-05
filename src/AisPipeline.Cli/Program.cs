@@ -73,7 +73,7 @@ static void Usage() => Console.WriteLine("""
       ais prune --keep-days <n> [--archive <dir>] [--force] [--db <path> | --postgres <conn>]
       ais archive <file.json> [--mmsi <n>]
       ais radar [--region <name>] [--from <iso>] [--hours <h>] [--speed <x>] [--amber] [--at <iso>]
-      ais log --mmsi <n>
+      ais log --mmsi <n> [--narrate] [--model <id>]
       ais stops [--mmsi <n>] [--min-hours <h>] [--complete-only] [--disagreements] [--limit <n>]
       ais portcalls [--mmsi <n>] [--min-waiting-hours <h>] [--complete-only] [--limit <n>]
 
@@ -117,6 +117,9 @@ static void Usage() => Console.WriteLine("""
     --at prints one frame at an instant and exits; --amber is for people who prefer P3 phosphor.
 
     log prints one vessel's ship's log for the whole window, every line cited the same way.
+    --narrate has Claude rewrite it in the master's voice, then refuses the result unless every
+    sentence cites a log line and every number in it appears in the lines it cites (ADR-0050).
+    Needs ANTHROPIC_API_KEY; sends the vessel's name and log lines, nothing else.
 
     stops and portcalls list what detect derived, longest first -- not chronologically. A figure
     the pipeline will not stand behind prints as a bound (>=2.7) or as ?, never as a number.

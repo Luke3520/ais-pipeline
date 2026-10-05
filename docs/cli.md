@@ -136,7 +136,13 @@ to the vessels the log has just spoken about.
 | `--amber` | P3 phosphor instead of P1 green |
 | `--coast <file>` | another coastline (default `reference/coastline/danish-waters.csv`) |
 
-`log --mmsi` prints one vessel's log across the whole window.
+`log --mmsi` prints one vessel's log across the whole window. `--narrate` asks Claude
+(`claude-opus-5-5` unless `--model` says otherwise) to rewrite it in the master's voice, then
+refuses the result unless every sentence cites a line it was given and every number in a sentence
+appears in the lines that sentence cites. A refused narration prints its problems and then the
+plain log; it is never trimmed to the sentences that passed. Needs `ANTHROPIC_API_KEY`. Only the
+vessel's name and its log lines are sent
+([ADR-0050](adr/0050-narration-is-cited-or-it-is-refused.md)).
 
 The radar and the log decide nothing. Stopped, contradicting itself, and on a call at a named port
 are all read from what detection and the quality rules stored, and every line ends `[rN·LM]`: ingest

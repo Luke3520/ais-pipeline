@@ -2,7 +2,9 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Text;
 using AisPipeline.Adapters.Csv;
+using AisPipeline.Adapters.Narration;
 using AisPipeline.Adapters.Sql;
+using AisPipeline.Core.Narration;
 using AisPipeline.Core.Ports;
 using AisPipeline.Core.Query;
 using AisPipeline.Core.Radar;
@@ -133,6 +135,11 @@ internal static class RadarCommand
                 return 0;
             }
 
+            if (Present(args, "--narrate") && Narrate(name, entries, Value(args, "--model") ?? ClaudeNarrator.DefaultModel))
+            {
+                return 0;
+            }
+
             foreach (var e in entries)
             {
                 Console.WriteLine($"  {e.Render(withDate: true)}");
@@ -143,6 +150,61 @@ internal static class RadarCommand
             Console.WriteLine("  SELECT * FROM position_report WHERE ingest_run_id = N AND source_line = M;");
             return 0;
         }
+    }
+
+    /// <summary>
+    /// The log in a master's voice, printed only if every sentence survives the validator. Returns
+    /// false when it printed nothing but the reason, so the caller falls through to the
+    /// deterministic log. The reader always gets a log, and always learns which kind it is.
+    /// </summary>
+    private static bool Narrate(string vesselName, IReadOnlyList<LogEntry> entries, string model)
+    {
+        if (!ClaudeNarrator.Configured())
+        {
+            Console.WriteLine("  --narrate needs ANTHROPIC_API_KEY (or ANTHROPIC_AUTH_TOKEN). The plain log follows.");
+            Console.WriteLine();
+            return false;
+        }
+
+        INarrator narrator = new ClaudeNarrator(model);
+        var reply = narrator
+            .NarrateAsync(NarrationPrompt.System, NarrationPrompt.User(vesselName, entries), CancellationToken.None)
+            .GetAwaiter().GetResult();
+
+        if (reply.Text is not { } text)
+        {
+            Console.WriteLine($"  NARRATION UNAVAILABLE: {reply.Declined}. The plain log follows.");
+            Console.WriteLine();
+            return false;
+        }
+
+        var verdict = CitedNarrative.Validate(text, entries);
+        if (!verdict.Accepted)
+        {
+            // Refused whole. Printing the sentences that passed would present a narration the
+            // model did not write and the validator did not accept: the good half of a bad answer.
+            Console.WriteLine($"  NARRATION REFUSED: {verdict.Problems.Count} problem(s) in what {narrator.Name} wrote.");
+            foreach (var problem in verdict.Problems)
+            {
+                Console.WriteLine($"    - {problem}");
+            }
+
+            Console.WriteLine("  The plain log follows.");
+            Console.WriteLine();
+            return false;
+        }
+
+        foreach (var sentence in verdict.Sentences)
+        {
+            Console.WriteLine($"  {sentence}");
+        }
+
+        var citations = verdict.Sentences.Sum(s => AisPipeline.Core.Domain.Citation.FindAll(s).Count);
+        Console.WriteLine();
+        Console.WriteLine($"  Written by {narrator.Name}. Checked: {verdict.Sentences.Count} sentences, {citations} citations,");
+        Console.WriteLine("  every one in the log above it, and every number in each sentence found in the lines it cites.");
+        Console.WriteLine("  Not checkable: a claim made of words alone. Run without --narrate for the source log.");
+        return true;
     }
 
     /// <summary>One frame at an instant, for scripts and the README. Plain text when redirected.</summary>

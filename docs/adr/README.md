@@ -68,6 +68,7 @@ the design.
 | [0047](0047-the-page-shows-what-the-api-can-now-price.md) | The page shows what the API can now price | Accepted |
 | [0048](0048-reported-draught-corroborates-the-berth-it-does-not-prove-it.md) | Reported draught corroborates the berth, it does not prove it | Accepted |
 | [0049](0049-the-radar-is-a-view-not-a-feature.md) | The radar is a view, not a feature | Accepted |
+| [0050](0050-narration-is-cited-or-it-is-refused.md) | Narration is cited or it is refused | Accepted |
 
 ### † Measurement corrected, 2026-09-12
 
