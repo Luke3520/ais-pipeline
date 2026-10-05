@@ -1,6 +1,6 @@
 # The `ais` command
 
-The ten verbs, what they print, and the grammar they print it in. The source of truth is `Usage()`
+The twelve verbs, what they print, and the grammar they print it in. The source of truth is `Usage()`
 in [`src/AisPipeline.Cli/Program.cs`](../src/AisPipeline.Cli/Program.cs) — if this file and the
 program disagree, the program is right and this file is a bug.
 
@@ -15,6 +15,8 @@ ais portcalls --min-waiting-hours 6      # waiting and working hours per call, w
 ais export --out site/src/data           # the static site's data contract
 ais prune --keep-days 90 --force         # archive old port calls, then drop what is past the bar
 ais archive archive/port-calls-*.json    # read back what prune wrote
+ais radar --region kattegat              # the track replayed on a green screen
+ais log --mmsi 636025106                 # one vessel's ship's log, every line cited
 ```
 
 `detect` names each port call against a committed extract of the **World Port Index**
@@ -109,3 +111,39 @@ flagged, both readings are stored, and neither wins.
 
 The counts are over what the store holds, not over lines read — `ais ingest` reports the latter,
 and it is legitimately the larger number once duplicates in the file collapse onto one natural key.
+
+## `radar` and `log`
+
+```
+AIS RADAR -- KATTEGAT -- 2026-09-04 22:47:10Z -- x600
+  ...braille coastline, range rings, beam, blips...
+130 contacts, 9 contradicting themselves -- rings 20 nm
+22:10:37  TARNBRIS stopped on its Arhus call. Transponder says: UNDER WAY USING ENGINE. [r4·L16205100]
+22:47:10  STINGRAY stopped on its Fredericia call. [r4·L16609354]
+```
+
+`radar` replays the stored track. Arrows are moving vessels pointing along their reported course,
+a `+` is moving with no course reported, `o` is inside a detected stop, and `!` is a vessel whose
+transponder contradicts its own speed, whichever way round (R10 or R12). Names on the scope belong
+to the vessels the log has just spoken about.
+
+| flag | |
+|---|---|
+| `--region` | `danish-waters` (default), `kattegat`, `skagerrak`, `belts`, `oresund` |
+| `--from`, `--hours` | the window, default the first 24 hours of the feed |
+| `--speed` | feed seconds per wall second, default 600. `+`/`-` double and halve it live |
+| `--at <iso>` | print one frame at that instant and exit. Plain text when redirected |
+| `--amber` | P3 phosphor instead of P1 green |
+| `--coast <file>` | another coastline (default `reference/coastline/danish-waters.csv`) |
+
+`log --mmsi` prints one vessel's log across the whole window.
+
+The radar and the log decide nothing. Stopped, contradicting itself, and on a call at a named port
+are all read from what detection and the quality rules stored, and every line ends `[rN·LM]`: ingest
+run N, source line M. Check one with
+`SELECT * FROM position_report WHERE ingest_run_id = N AND source_line = M`. A stop whose true
+extent is unknown prints as `≥`, and times print to the second because they are never rounded
+([ADR-0049](adr/0049-the-radar-is-a-view-not-a-feature.md)).
+
+The first frame takes about five seconds on the seven-day store, because time order across vessels
+is a full scan. ADR-0049 has the measurement and the reason there is no index.

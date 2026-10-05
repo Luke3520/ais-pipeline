@@ -42,6 +42,8 @@ return args[0] switch
     "export" => Export(args[1..]),
     "prune" => Prune(args[1..]),
     "archive" => ReadArchive(args[1..]),
+    "radar" => RadarCommand.Radar(args[1..]),
+    "log" => RadarCommand.Log(args[1..]),
     _ => Unknown(args[0]),
 };
 
@@ -53,6 +55,13 @@ static int Unknown(string verb)
 }
 
 static void Usage() => Console.WriteLine("""
+
+       .--.        __ _ (_)___      _ __ (_)_ __   ___| (_)_ __   ___
+      ( (( )      / _` || / __|____| '_ \| | '_ \ / _ \ | | '_ \ / _ \
+       '--'  ))) | (_| || \__ \____| |_) | | |_) |  __/ | | | | |  __/
+        ||        \__,_||_|___/    | .__/|_| .__/ \___|_|_|_| |_|\___|
+     ~~~~~~~~                      |_|     |_|  nothing is dropped silently
+
     ais - AIS ingestion and analysis
 
       ais ingest <file.csv|file.zip> [--db <path> | --postgres <conn>] [--ship-type <type>] [--limit <n>]
@@ -63,6 +72,8 @@ static void Usage() => Console.WriteLine("""
       ais export --out <dir> [--db <path> | --postgres <conn>]
       ais prune --keep-days <n> [--archive <dir>] [--force] [--db <path> | --postgres <conn>]
       ais archive <file.json> [--mmsi <n>]
+      ais radar [--region <name>] [--from <iso>] [--hours <h>] [--speed <x>] [--amber] [--at <iso>]
+      ais log --mmsi <n>
       ais stops [--mmsi <n>] [--min-hours <h>] [--complete-only] [--disagreements] [--limit <n>]
       ais portcalls [--mmsi <n>] [--min-waiting-hours <h>] [--complete-only] [--limit <n>]
 
@@ -98,6 +109,14 @@ static void Usage() => Console.WriteLine("""
     export writes the derived layer as JSON for a static site to build from. It carries its own
     provenance -- which source files, which window, how many rows -- so a published figure can say
     where it came from (ADR-0039).
+
+    radar replays the stored track on a green screen: coastline, range rings, a sweeping beam,
+    every tanker as a blip, and a ship's log typing itself out underneath. A ! is a vessel whose
+    transponder contradicts its own speed (R10, R12). Every log line ends [rN·LM], the ingest run
+    and source line it rests on. Regions: danish-waters, kattegat, skagerrak, belts, oresund.
+    --at prints one frame at an instant and exits; --amber is for people who prefer P3 phosphor.
+
+    log prints one vessel's ship's log for the whole window, every line cited the same way.
 
     stops and portcalls list what detect derived, longest first -- not chronologically. A figure
     the pipeline will not stand behind prints as a bound (>=2.7) or as ?, never as a number.

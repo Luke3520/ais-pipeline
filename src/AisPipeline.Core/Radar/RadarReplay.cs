@@ -41,7 +41,7 @@ public sealed record VesselOnScope(
 /// </summary>
 public sealed class RadarReplay
 {
-    private readonly IReadOnlyDictionary<long, string> _names;
+    private readonly Func<long, string?> _nameOf;
     private readonly Dictionary<long, List<StoredStop>> _stopsByVessel;
     private readonly Dictionary<long, List<StoredPortCall>> _callsByVessel;
     private readonly Dictionary<long, Track> _tracks = [];
@@ -50,9 +50,9 @@ public sealed class RadarReplay
     public RadarReplay(
         IEnumerable<StoredStop> stops,
         IEnumerable<StoredPortCall> portCalls,
-        IReadOnlyDictionary<long, string> names)
+        Func<long, string?> nameOf)
     {
-        _names = names;
+        _nameOf = nameOf;
         _stopsByVessel = stops.GroupBy(s => s.Mmsi)
             .ToDictionary(g => g.Key, g => g.OrderBy(s => s.StartedUtc).ToList());
         _callsByVessel = portCalls.GroupBy(c => c.Mmsi)
@@ -88,7 +88,7 @@ public sealed class RadarReplay
         if (track.EndingStop is { } ended && fix.Id != ended.LastPositionId)
         {
             entries.Add(Entry(fix, LogKind.StopEnded,
-                $"{name} ends a {Hours(ended)} stop{AtPort(ended)}."));
+                $"{name} ends a {Hours(ended)} stop{OnCall(ended)}."));
             track.EndingStop = null;
         }
 
@@ -96,9 +96,9 @@ public sealed class RadarReplay
         if (stop is not null && fix.Id == stop.FirstPositionId)
         {
             entries.Add(stop.StatusAgrees
-                ? Entry(fix, LogKind.Stopped, $"{name} stopped{AtPort(stop)}.")
+                ? Entry(fix, LogKind.Stopped, $"{name} stopped{OnCall(stop)}.")
                 : Entry(fix, LogKind.StoppedClaimingUnderWay,
-                    $"{name} stopped{AtPort(stop)}. Transponder says: {Shout(stop.ReportedStatus)}."));
+                    $"{name} stopped{OnCall(stop)}. Transponder says: {Shout(stop.ReportedStatus)}."));
         }
 
         if (stop is not null && fix.Id == stop.LastPositionId)
@@ -193,11 +193,15 @@ public sealed class RadarReplay
     }
 
     /// <summary>
-    /// " at Fredericia" when the stop sits in a port call plausibly at a named port, otherwise
-    /// nothing. A port is named only where ADR-0034's distance says the vessel was plausibly
-    /// there; nearest-to is not at.
+    /// " on its Fredericia call" when the stop belongs to a port call plausibly at a named port,
+    /// otherwise nothing.
+    ///
+    /// Not " at Fredericia". The port is attributed to the call, from the call's centroid
+    /// (ADR-0034), and a call's first stop is often an anchorage miles outside the harbour. Saying
+    /// the stop was at the port would move the claim from the call to the stop, where nothing
+    /// measured it. And nearest-to is not at: a call that is not plausibly at its port gets no name.
     /// </summary>
-    private string AtPort(StoredStop stop)
+    private string OnCall(StoredStop stop)
     {
         if (!_callsByVessel.TryGetValue(stop.Mmsi, out var calls))
         {
@@ -205,7 +209,7 @@ public sealed class RadarReplay
         }
 
         var call = calls.FirstOrDefault(c => c.ArrivedUtc <= stop.StartedUtc && stop.StartedUtc <= c.DepartedUtc);
-        return call is { PlausiblyAtPort: true, PortName: { } port } ? $" at {port}" : "";
+        return call is { PlausiblyAtPort: true, PortName: { } port } ? $" on its {port} call" : "";
     }
 
     /// <summary>
@@ -222,8 +226,12 @@ public sealed class RadarReplay
     private static bool IsPositionUnreliable(TrackFix f) =>
         RuleIds.PositionUnreliable.Any(f.IsFlagged);
 
+    /// <summary>
+    /// Names are looked up rather than handed over, because which vessels a replay meets is only
+    /// known once the stream reaches them, and listing them up front costs a full scan.
+    /// </summary>
     private string NameOf(long mmsi) =>
-        _names.TryGetValue(mmsi, out var n) && !string.IsNullOrWhiteSpace(n)
+        _nameOf(mmsi) is { } n && !string.IsNullOrWhiteSpace(n)
             ? n.Trim()
             : string.Create(CultureInfo.InvariantCulture, $"MMSI {mmsi}");
 

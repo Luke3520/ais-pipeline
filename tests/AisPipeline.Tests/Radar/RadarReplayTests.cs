@@ -44,7 +44,7 @@ public class RadarReplayTests
         };
 
     private static RadarReplay Replay(params StoredStop[] stops) =>
-        new(stops, [], new Dictionary<long, string> { [Mmsi] = "STINGRAY " });
+        new(stops, [], mmsi => mmsi == Mmsi ? "STINGRAY " : null);
 
     private static List<LogEntry> Play(RadarReplay replay, params TrackFix[] fixes) =>
         [.. fixes.SelectMany(replay.Advance)];
@@ -197,7 +197,7 @@ public class RadarReplayTests
     [Fact]
     public void An_unnamed_vessel_is_called_by_its_mmsi()
     {
-        var replay = new RadarReplay([], [], new Dictionary<long, string>());
+        var replay = new RadarReplay([], [], _ => null);
 
         var log = Play(replay, Fix(1, 0, sog: 11.0, status: "At anchor", flags: "R12"));
 
@@ -205,7 +205,7 @@ public class RadarReplayTests
     }
 
     [Fact]
-    public void A_port_is_named_only_when_the_call_was_plausibly_at_it()
+    public void A_port_is_named_only_when_the_call_was_plausibly_at_it_and_only_as_the_calls()
     {
         var near = new StoredPortCall
         {
@@ -219,11 +219,11 @@ public class RadarReplayTests
 
         string StopLine(StoredPortCall call)
         {
-            var replay = new RadarReplay([Stop(1, 10, 2, 60)], [call], new Dictionary<long, string> { [Mmsi] = "X" });
+            var replay = new RadarReplay([Stop(1, 10, 2, 60)], [call], _ => "X");
             return Assert.Single(replay.Advance(Fix(1, 10))).Text;
         }
 
-        Assert.Equal("X stopped at Fredericia.", StopLine(near));
+        Assert.Equal("X stopped on its Fredericia call.", StopLine(near));
         Assert.Equal("X stopped.", StopLine(far));
     }
 
