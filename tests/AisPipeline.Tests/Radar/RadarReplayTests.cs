@@ -97,6 +97,18 @@ public class RadarReplayTests
     }
 
     [Fact]
+    public void An_incomplete_stop_is_only_ever_seen_stopped_never_stopped()
+    {
+        // Its first fix may be the first fix in the file: the vessel was stopped before the feed
+        // began, and the moment it stopped was never observed.
+        var replay = Replay(Stop(firstId: 1, 0, lastId: 3, 130, complete: false));
+
+        var log = Play(replay, Fix(1, 0));
+
+        Assert.Equal("STINGRAY seen stopped.", Assert.Single(log).Text);
+    }
+
+    [Fact]
     public void A_stop_already_under_way_when_the_replay_starts_is_not_announced()
     {
         // The window opened mid-stop: the fix that began it is not in the stream, so there is no

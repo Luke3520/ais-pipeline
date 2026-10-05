@@ -95,10 +95,14 @@ public sealed class RadarReplay
         var stop = StopContaining(fix);
         if (stop is not null && fix.Id == stop.FirstPositionId)
         {
+            // "Stopped" claims the moment it happened. A stop detection marked incomplete may have
+            // begun before the feed did, or before a coverage gap, so its first fix proves only that
+            // the vessel was seen stopped, and that is all the line says.
+            var verb = stop.IsComplete ? "stopped" : "seen stopped";
             entries.Add(stop.StatusAgrees
-                ? Entry(fix, LogKind.Stopped, $"{name} stopped{OnCall(stop)}.")
+                ? Entry(fix, LogKind.Stopped, $"{name} {verb}{OnCall(stop)}.")
                 : Entry(fix, LogKind.StoppedClaimingUnderWay,
-                    $"{name} stopped{OnCall(stop)}. Transponder says: {Shout(stop.ReportedStatus)}."));
+                    $"{name} {verb}{OnCall(stop)}. Transponder says: {Shout(stop.ReportedStatus)}."));
         }
 
         if (stop is not null && fix.Id == stop.LastPositionId)

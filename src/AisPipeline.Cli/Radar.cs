@@ -342,7 +342,10 @@ internal static class RadarCommand
         string header, int typed)
     {
         var scope = replay.Scope();
-        var radarRows = Math.Max(4, rows - LogLines - 3);
+        // Header, rule, status, the log and the footer: everything that is not radar. Off by one
+        // here scrolls the terminal by a line every frame and pushes the header off the top.
+        const int Chrome = 4;
+        var radarRows = Math.Max(4, rows - LogLines - Chrome);
 
         // The vessels the log just spoke about are the ones named on the scope, so a line in the
         // log and a blip on the chart can be matched by eye.
